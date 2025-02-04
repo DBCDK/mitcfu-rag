@@ -34,7 +34,7 @@ example of usage:
 """
 
 from fakta_chat_solr.solr.search import Searcher
-from fakta_chat.rag.rag import Reference
+from mitcfu_rag.rag.rag import Reference
 
 default_search_params = ["article_headline^50", 
                          "article_topics^50",

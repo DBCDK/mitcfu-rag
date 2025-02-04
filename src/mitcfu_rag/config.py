@@ -1,6 +1,6 @@
 #from fakta_chat.rag.dummy_rag import DummyRAG
 #from fakta_chat.rag.solr_rag import SolrRAG
-from fakta_chat.rag.streaming_rag import StreamingRAG
+from mitcfu_rag.rag.streaming_rag import StreamingRAG
 
 # the model that should be used in evaluation, chatUI
 RAG = StreamingRAG

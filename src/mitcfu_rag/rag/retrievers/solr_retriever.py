@@ -44,7 +44,7 @@ STOP_WORDS = ["ad","af","al","aldrig","alene","alle","allerede","alligevel","alt
 "vej","vi","via","vil","ville","vor","vore","vores","vær","være","været","with","www","you","øvrigt","åre", "srkive", "opgave", "skrive", "fungerer"]
 
 import logging
-from fakta_chat.rag.rag import Retriever, Reference
+from mitcfu_rag.rag.rag import Retriever, Reference
 import dbc_pyutils.solr
 from keybert import KeyBERT
 

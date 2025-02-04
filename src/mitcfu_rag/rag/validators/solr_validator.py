@@ -22,7 +22,7 @@ import random
 import logging
 import json
 from huggingface_hub import InferenceClient
-from fakta_chat.rag.rag import Validator, AnswerWithNumber
+from mitcfu_rag.rag.rag import Validator, AnswerWithNumber
 
 logger = logging.getLogger(__name__)
 

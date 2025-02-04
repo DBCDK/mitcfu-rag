@@ -23,7 +23,7 @@ DUMMY_DOCS = ['Dummy article: På visse biblioteker kan du låne fiskestænger, 
               '$Tøii']
 
 import logging
-from fakta_chat.rag.rag import Retriever
+from mitcfu_rag.rag.rag import Retriever
 
 logger = logging.getLogger(__name__)
 

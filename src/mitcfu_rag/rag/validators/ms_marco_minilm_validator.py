@@ -20,9 +20,9 @@ example of usage:
 """
 
 import logging
-from fakta_chat.rag.rag import Retriever, Reference, Validator
-from fakta_chat.tools import KNNSearch
-from fakta_chat.tools.embedder import HuggingfaceEmbedder
+from mitcfu_rag.rag.rag import Retriever, Reference, Validator
+from mitcfu_rag.tools import KNNSearch
+from mitcfu_rag.tools.embedder import HuggingfaceEmbedder
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 #from langchain.text_splitter import RecursiveCharacterTextSplitter

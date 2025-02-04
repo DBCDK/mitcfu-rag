@@ -20,8 +20,8 @@ import re
 import logging
 import argparse
 
-from fakta_chat.rag.rag import Retriever, Reference
-from fakta_chat.tools import solr_retrieval_tools
+from mitcfu_rag.rag.rag import Retriever, Reference
+from mitcfu_rag.tools import solr_retrieval_tools
 from fakta_chat_solr.solr.search import Searcher
 from fakta_chat_solr.keywords_generator import KeywordGenerator
 from collections import Counter

@@ -28,7 +28,7 @@ from tokenizers.models import BPE
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.trainers import BpeTrainer
 
-from fakta_chat.rag.rag import Reference
+from mitcfu_rag.rag.rag import Reference
 
 
 logger = logging.getLogger(__name__)
