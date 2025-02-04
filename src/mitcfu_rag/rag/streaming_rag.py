@@ -24,13 +24,13 @@ import logging
 import datetime
 import asyncio
 from typing import Generator, Any
-from fakta_chat.rag.rag import RAG, Reference
+from mitcfu_rag.rag.rag import RAG, Reference
 #from fakta_chat.rag.parsers.solr_parser import SolrParser
-from fakta_chat.rag.retrievers.solr_retriever import SolrRetriever
-from fakta_chat.rag.retrievers.bm25_retriever import BM25Retriever
-from fakta_chat.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
-from fakta_chat.rag.retrievers.streaming_multilingual_retriever import EmbeddingRetriever
-from fakta_chat.rag.generators.streaming_with_history_generator import EmbeddingGenerator
+from mitcfu_rag.rag.retrievers.solr_retriever import SolrRetriever
+from mitcfu_rag.rag.retrievers.bm25_retriever import BM25Retriever
+from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
+from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import EmbeddingRetriever
+from mitcfu_rag.rag.generators.streaming_with_history_generator import EmbeddingGenerator
 
 
 logger = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ from rich.prompt import Prompt
 from rich.panel import Panel
 from rich.align import Align
 from rich.live import Live
-from fakta_chat.config import RAG
+from mitcfu_rag.config import RAG
 
 
 # Config of colors
@@ -53,6 +53,7 @@ def chat(user_cfg: dict|None= None):
 
     ### MAIN LOOP
     logo = '''
+    Hov, jeg er indtil videre stadig bare en anden version af:
       _____     _    _         ____ _           _
      |  _____ _| | _| |_ __ _ / ___| |__   __ _| |_
      | |_ / _` | |/ | __/ _` | |   | '_ \ / _` | __|

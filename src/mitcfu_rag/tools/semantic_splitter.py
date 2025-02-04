@@ -36,7 +36,7 @@ import numpy as np
 from nltk import sent_tokenize
 from sklearn.metrics.pairwise import cosine_similarity
 
-from fakta_chat.tools.embedder import Embedder, HuggingfaceEmbedder
+from mitcfu_rag.tools.embedder import Embedder, HuggingfaceEmbedder
 
 __all__ = ['SemanticSplitter']
 

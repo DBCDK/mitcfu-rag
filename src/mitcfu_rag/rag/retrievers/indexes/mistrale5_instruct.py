@@ -26,8 +26,8 @@ import os
 
 import torch
 from torch import Tensor
-from fakta_chat.tools.knn_searcher import KNNSearch
-from fakta_chat.tools.embedder import Embedder
+from mitcfu_rag.tools.knn_searcher import KNNSearch
+from mitcfu_rag.tools.embedder import Embedder
 from transformers import AutoTokenizer, AutoModel
 #from langchain.vectorstores import FAISS
 #from langchain_community.vectorstores.utils import DistanceStrategy

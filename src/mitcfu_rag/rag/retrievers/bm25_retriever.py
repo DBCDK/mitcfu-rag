@@ -16,8 +16,8 @@ for usage, see `main` function.
 import logging
 import argparse
 
-from fakta_chat.rag.retrievers.indexes.bm25 import bm25Embedder, BPETokenizer
-from fakta_chat.rag.rag import Retriever, Reference
+from mitcfu_rag.rag.retrievers.indexes.bm25 import bm25Embedder, BPETokenizer
+from mitcfu_rag.rag.rag import Retriever, Reference
 
 
 logger = logging.getLogger(__name__)

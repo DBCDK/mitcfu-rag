@@ -20,7 +20,7 @@ example of usage:
 """
 import random
 import logging
-from fakta_chat.rag.rag import Generator
+from mitcfu_rag.rag.rag import Generator
 
 logger = logging.getLogger(__name__)
 

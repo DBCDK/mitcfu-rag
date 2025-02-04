@@ -26,7 +26,7 @@ import os
 import asyncio
 import aiohttp
 import requests
-from fakta_chat.rag.rag import Generator, SourcesWithScore, AnswerWithSource, Reference
+from mitcfu_rag.rag.rag import Generator, SourcesWithScore, AnswerWithSource, Reference
 
 roles_to_ignore = ["resetter", "summarizer"]
 
@@ -39,7 +39,7 @@ class EmbeddingGenerator(Generator):
         self.chat_bib_url = os.environ.get("CHAT_BIB_URL", None)
         self.system_message = "Du er FaktaChat, en kritisk chatbot der forholder sig til den viden du får fra brugerens kilder. Du svarer altid på dansk."
         self.prompt_template = """
-Du modtager et spørgsmål og nogle kilde. Din opgave er at besvare spørgsmål kun ved at bruge informationen i kilderne.
+Du modtager et spørgsmål og nogle kilder. Din opgave er at besvare spørgsmål kun ved at bruge informationen i kilderne.
 Det er ikke sikkert at nogen af kilderne er relevante for brugerens forespørgsel.
 Du overholder følgende regler:
 - Du svarer aldrig på spørgsmål, hvor du ikke kan finde svaret i kilderne.

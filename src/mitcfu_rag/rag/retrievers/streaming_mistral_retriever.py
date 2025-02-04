@@ -17,23 +17,25 @@ import logging
 import argparse
 import json
 import torch
+import asyncio
 import torch.nn.functional as F
 #from langchain_community.vectorstores.faiss import FAISS
 
-from fakta_chat.rag.rag import Retriever, Reference
-from fakta_chat.tools import KNNSearch
-from fakta_chat.rag.retrievers.indexes.mistrale5_instruct import e5mistralEmbedder
+from mitcfu_rag.rag.rag import Retriever, Reference
+from mitcfu_rag.tools import KNNSearch
+from mitcfu_rag.rag.retrievers.indexes.mistrale5_instruct import e5mistralEmbedder
 
 
 logger = logging.getLogger(__name__)
 
-PATH_TO_DOC_EMBEDDINGS = "/data/faktalink/e5_mistral_instruct_embeddings_faiss_index"
-PATH_TO_INDEX = '/data/faktalink/faktalink-extract-2023-old/index.json'
+PATH_TO_DOC_EMBEDDINGS = "e5_mistral_instruct_embeddings_faiss_index"
+PATH_TO_INDEX = 'index.json'
 
 class Mistrale5Retriever(Retriever):
-    def __init__(self, path_to_doc_embeddings: str = PATH_TO_DOC_EMBEDDINGS,
+    def __init__(self, path_to_embedding_model: str,
+                 path_to_doc_embeddings: str = PATH_TO_DOC_EMBEDDINGS,
                  path_to_index_file: str = PATH_TO_INDEX):
-        self.model = e5mistralEmbedder()
+        self.model = e5mistralEmbedder(path_to_embedding_model)
         self.max_length = 4096
         self.knn_searcher = KNNSearch.load(path_to_doc_embeddings + '/embeddings', 
                                            path_to_doc_embeddings + '/labels.npy')
@@ -53,11 +55,19 @@ class Mistrale5Retriever(Retriever):
         return index2references
     
     def retrieve(self, messages: list[str], n: int = 5) -> tuple[list[float], list[Reference]]:
-        message = messages[-1]['content']
+        #message = messages[-1]['content']
+        message = ""
+        for msg in messages:
+            if msg['role'] == 'user':
+                message += msg['content']
         qv = self.model.encode_query(message).numpy()
         top_n = self.knn_searcher.search(qv, n)
         indexes, scores = zip(*top_n)
         return scores, [self.index2references[i] for i in indexes]
+    
+    async def async_retrieve(self, messages: list[str], n: int = 5):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, lambda: self.retrieve(messages, n))
     
     def cosine_similarity(self, queries_emb: list, docs_emb):
         i = len(queries_emb)
@@ -84,4 +94,3 @@ if __name__ == "__main__":
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     main(args)
-

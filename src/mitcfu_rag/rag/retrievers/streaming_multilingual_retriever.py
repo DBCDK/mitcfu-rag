@@ -20,9 +20,11 @@ example of usage:
 """
 
 import logging
-from fakta_chat.rag.rag import Retriever, Reference
-from fakta_chat.tools import KNNSearch
-from fakta_chat.tools.embedder import HuggingfaceEmbedder
+import asyncio
+from mitcfu_rag.rag.rag import Retriever, Reference
+from mitcfu_rag.rag.validators.ms_marco_minilm_validator import MsValidator
+from mitcfu_rag.tools import KNNSearch
+from mitcfu_rag.tools.embedder import HuggingfaceEmbedder
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 #from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -43,10 +45,9 @@ class EmbeddingRetriever(Retriever):
         self.model = AutoModel.from_pretrained('/data/faktalink_models/intfloat/multilingual-e5-large/', device_map = 'auto')
         self.tokenizer = AutoTokenizer.from_pretrained('/data/faktalink_models/intfloat/multilingual-e5-large/', device_map = 'auto')
         self.model.to(self.device)
-        self.cross_sentence_model = AutoModelForSequenceClassification.from_pretrained("/home/nily/Git/fakta-chat/src/fakta_chat/ms-marco-MiniLM-L-6-v2")
-        self.cross_sentence_tokenizer = AutoTokenizer.from_pretrained("/home/nily/Git/fakta-chat/src/fakta_chat/ms-marco-MiniLM-L-6-v2")
         self.searcher = KNNSearch.load("/home/nily/Git/fakta-chat/notebooks/e5_large_index", "/home/nily/Git/fakta-chat/notebooks/e5_large_labels.npy")
         self.all_articles = self.initiate_articles()
+        self.validator = MsValidator()
 
     def initiate_articles(self):
         article_folder = "/data/faktalink/faktalink-extract-2023-old"
@@ -73,12 +74,15 @@ class EmbeddingRetriever(Retriever):
 
 
         return all_article_texts
+    
+    async def async_retrieve(self, messages: list[str], n: int = 5):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, lambda: self.retrieve(messages, n))
 
-    def retrieve(self, messages: list[str]):
+    def retrieve(self, messages: list[str], n: int = 3):
         #query = f"query: {' '.join([message['content'] for message in messages if message['role'] == 'user'])}"
         query = f"query: {messages[-1]['content']}"
-        #print("Query: ", query)
-        return self.get_docs(query)
+        return self.get_docs(query, n)
 
     # https://huggingface.co/intfloat/multilingual-e5-large
     def get_docs(self, query: str, limit: int = 3):
@@ -89,30 +93,7 @@ class EmbeddingRetriever(Retriever):
         embbeded_query = F.normalize(embeddings, p=2, dim=1).detach().cpu().numpy().astype(np.float32)
         hits = self.searcher.search(embbeded_query, limit)
         indexes, scores = zip(*hits)
-        #references = self.filter_by_score(query, [self.all_articles[int(i)] for i in indexes])
-        return list(scores), [self.all_articles[int(i)] for i in indexes][:limit]
-    
-    def filter_by_score(self, query, references, threshold=0.5):
-        scores = self.cross_scores([ref.text for ref in references], query)
-        return [ref for ref in references if scores[ref.text] > threshold]
-
-    
-    def cross_scores(self, sentences, query):
-        #print("\n\nNum sentences: ", len(sentences))
-        #print("\n\nSentences: ", sentences)
-        features = self.cross_sentence_tokenizer([query for i in range(len(sentences))], sentences,  padding=True, truncation=True, return_tensors="pt")
-        self.cross_sentence_model.eval()
-        with torch.no_grad():
-            scores = self.cross_sentence_model(**features).logits.flatten()
-
-        # Get indices of the top sentences sorted by cosine similarity
-        top_indices = np.argsort(-scores)
-        #print("Num top indices: ", len(top_indices))
-
-        # Collect the top sentences and their respective cosine scores
-        top_sentences_with_scores = {sentences[i]: float(scores[i]) for i in top_indices}
-
-        return top_sentences_with_scores
+        return list(scores), [self.all_articles[int(i)] for i in indexes]
         
     
 def average_pool(last_hidden_states: torch.Tensor,

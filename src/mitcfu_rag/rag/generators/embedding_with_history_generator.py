@@ -23,7 +23,7 @@ import logging
 import json
 import requests
 from huggingface_hub import InferenceClient
-from fakta_chat.rag.rag import Generator, SourcesWithScore, AnswerWithSource
+from mitcfu_rag.rag.rag import Generator, SourcesWithScore, AnswerWithSource
 
 roles_to_ignore = ["resetter", "summarizer"]
 
