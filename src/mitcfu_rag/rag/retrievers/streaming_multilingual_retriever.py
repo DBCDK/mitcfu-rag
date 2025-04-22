@@ -21,13 +21,15 @@ example of usage:
 
 import logging
 import asyncio
+from collections import defaultdict
 from mitcfu_rag.rag.rag import Retriever, Reference
 from mitcfu_rag.rag.validators.ms_marco_minilm_validator import MsValidator
 from mitcfu_rag.tools import KNNSearch
 from mitcfu_rag.tools.embedder import HuggingfaceEmbedder
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-#from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# from langchain.text_splitter import RecursiveCharacterTextSplitter
 from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
 import numpy as np
 import torch
@@ -38,65 +40,77 @@ from os.path import isfile, join
 
 logger = logging.getLogger(__name__)
 
+path_to_embeddings = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index/embeddings"
+path_to_labels = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index/labels.npy"
+path_to_JEDs = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds"
+
 
 class EmbeddingRetriever(Retriever):
     def __init__(self):
-        self.device = 'cpu'
-        self.model = AutoModel.from_pretrained('/data/faktalink_models/intfloat/multilingual-e5-large/', device_map = 'auto')
-        self.tokenizer = AutoTokenizer.from_pretrained('/data/faktalink_models/intfloat/multilingual-e5-large/', device_map = 'auto')
-        self.model.to(self.device)
-        self.searcher = KNNSearch.load("/home/nily/Git/fakta-chat/notebooks/e5_large_index", "/home/nily/Git/fakta-chat/notebooks/e5_large_labels.npy")
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model = AutoModel.from_pretrained(
+            "/data/mitCFU-models/multilingual-e5-large", device_map="auto"
+        )
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            "/data/mitCFU-models/multilingual-e5-large", device_map="auto"
+        )
+        #self.model.to(self.device)
+        self.searcher = KNNSearch.load(
+            path_to_embeddings,
+            path_to_labels,
+        )
         self.all_articles = self.initiate_articles()
         self.validator = MsValidator()
 
     def initiate_articles(self):
-        article_folder = "/data/faktalink/faktalink-extract-2023-old"
+        article_folder = path_to_JEDs
         onlyfiles = [f for f in listdir(article_folder) if isfile(join(article_folder, f))]
-        all_articles = []
+        all_articles = {}
 
         for file in onlyfiles:
             if ".json" in file and file != "index.json":
-                with open(article_folder + "/" + file, 'r') as f:
+                with open(article_folder + "/" + file, "r") as f:
                     article = json.load(f)
-                    all_articles.append(article)
+                    for id, content in article.items():
+                        text = content.get("abstract")
+                        if text:
+                            all_articles[str(id)] = Reference(
+                                id=str(id),
+                                article_headline=content.get("titles").get("full"),
+                                article_link="MitCFU-ID:" + str(id),
+                                score = 0.0,
+                                text=text[0],
+                            )
 
-        all_article_texts = []
-        for i, article in enumerate(all_articles):
-            if article.get("text"):
-                for headline, text in article["text"].items():
-                    if text:
-                        for t in text:
-                            if len(t) > 150:
-                                reference = Reference(id = "", article_headline =headline.strip(),
-                                                      article_link = article["metadata"]["@graph"][0]["mainEntityOfPage"],
-                                                      text = f"{headline.strip()}: {t.strip()}")
-                                all_article_texts.append(reference)
+        return all_articles
 
-
-        return all_article_texts
-    
     async def async_retrieve(self, messages: list[str], n: int = 5):
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, lambda: self.retrieve(messages, n))
 
     def retrieve(self, messages: list[str], n: int = 3):
-        #query = f"query: {' '.join([message['content'] for message in messages if message['role'] == 'user'])}"
+        # query = f"query: {' '.join([message['content'] for message in messages if message['role'] == 'user'])}"
         query = f"query: {messages[-1]['content']}"
         return self.get_docs(query, n)
 
     # https://huggingface.co/intfloat/multilingual-e5-large
     def get_docs(self, query: str, limit: int = 3):
-        batch_dict = self.tokenizer(query, max_length=512, padding=True, truncation=True, return_tensors='pt')
-        batch_dict = {k: v.to(self.device) for k, v in batch_dict.items()}
+        model_device = next(self.model.parameters()).device
+        batch_dict = self.tokenizer(query, max_length=512, padding=True, truncation=True, return_tensors="pt")
+        batch_dict = {k: v.to(model_device) for k, v in batch_dict.items()}
         outputs = self.model(**batch_dict)
-        embeddings = average_pool(outputs.last_hidden_state, batch_dict['attention_mask'])
+        embeddings = average_pool(outputs.last_hidden_state, batch_dict["attention_mask"])
         embbeded_query = F.normalize(embeddings, p=2, dim=1).detach().cpu().numpy().astype(np.float32)
         hits = self.searcher.search(embbeded_query, limit)
-        indexes, scores = zip(*hits)
-        return list(scores), [self.all_articles[int(i)] for i in indexes]
-        
-    
-def average_pool(last_hidden_states: torch.Tensor,
-                 attention_mask: torch.Tensor) -> torch.Tensor:
+        ids, scores = zip(*hits)
+        print(ids)
+        retrieved_articles = [self.all_articles[id] for id in ids if id in self.all_articles]
+        return list(scores), retrieved_articles
+
+
+# [self.all_articles[int(i)] for i in indexes]
+
+
+def average_pool(last_hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
     last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
     return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]

@@ -35,7 +35,7 @@ class DummyGenerator(Generator):
         intros = ["Jeg kunne finde de følgende artikler på Faktalink med relevante tekst passager:", 
                 "Her er nogle artikler jeg fandt på Faktalink:", 
                 "Her er nogle artikler jeg fandt:", 
-                "Jeg tænker denne artikler kunne var relevant for dig:"]
+                "Jeg tænker disse artikler kunne være relevante for dig:"]
         
         if not references:
             response_str = random.choice(fillers) + " " + "Jeg kunne ikke finde nogle relevante artikler på Faktalink. Kan jeg hjælpe dig med noget andre eller kan du finde en andre måde at beskrive hvad du søger?"

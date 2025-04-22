@@ -19,7 +19,7 @@ example of usage:
     print(f'preprocessed messaged: {preprocessed_messages}')
 """
 import logging
-from fakta_chat.rag.rag import Parser
+from mitcfu_rag.rag.rag import Parser
 
 logger = logging.getLogger(__name__)
 

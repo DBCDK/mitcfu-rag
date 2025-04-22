@@ -15,6 +15,7 @@ class Reference():
     id: str
     article_headline: str
     article_link: str
+    score: float
     text: str
     
     def __str__(self):
