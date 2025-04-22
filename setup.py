@@ -8,32 +8,54 @@ from setuptools import setup, find_packages
 # https://docs.python.org/3/distutils/apiref.html
 # https://docs.python.org/3/distutils/setupscript.html
 
-setup(name='mitcfu-rag',
-      version='0.1.0',
-      package_dir={'': 'src'},
-      packages=find_packages(where='src'),
-      description='Chatbot to MitCFU',
-      test_suite='tests',
-      # faiss skal tilføjes install_requires, når problemet med faiss er løst. 
-      install_requires=["streamlit", "scikit-learn", "numpy", "nltk", "sentence_transformers", 
-                        "rich", "rank_bm25", "transformers", "torch", "dbc_pyutils", "tornado",
-                        "pydantic", "aiohttp", "asyncio", "requests", "keybert", "tokenizers"],
-      extras_require={'evaluation': []},
-      provides=['mitcfu_rag'],
-      package_data={'mitcfu_rag.evaluation_tool': ['evaluation_tool/data/*']},
-      include_package_data=True,
-      entry_points={"console_scripts": [
-              "mitcfu-RAG-sh = mitcfu_rag.term_ui:cli",
-              "evaluate = mitcfu_rag.evaluation_tools.evaluation:run",
-              "evaluate-retrieval = mitcfu_rag.evaluation_tools.evaluate_retrieval:run",
-              "compare-retrievers = mitcfu_rag.evaluation_tools.compare_retrievers:run",
-              "streaming-service = mitcfu_rag.service:cli",
-      ]},
-      maintainer="ai",
-      maintainer_email="ai@dbc.dk",
-      zip_safe=False)
+setup(
+    name="mitcfu-rag",
+    version="0.1.0",
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
+    description="Chatbot to MitCFU",
+    test_suite="tests",
+    # faiss skal tilføjes install_requires, når problemet med faiss er løst.
+    install_requires=[
+        "streamlit",
+        "scikit-learn",
+        "numpy",
+        "nltk",
+        "sentence_transformers",
+        "rich",
+        "rank_bm25",
+        "transformers",
+        "torch",
+        "dbc_pyutils",
+        "tornado",
+        "pydantic",
+        "aiohttp",
+        "asyncio",
+        "requests",
+        "keybert",
+        "tokenizers",
+        "accelerate",
+    ],
+    extras_require={"evaluation": []},
+    provides=["mitcfu_rag"],
+    package_data={"mitcfu_rag.evaluation_tool": ["evaluation_tool/data/*"]},
+    include_package_data=True,
+    entry_points={
+        "console_scripts": [
+            "create-faiss-index = mitcfu_rag.rag.retrievers.indexes.multilinguale5_instruct:main",
+            "mitcfu-RAG-sh = mitcfu_rag.term_ui:cli",
+            "evaluate = mitcfu_rag.evaluation_tools.evaluation:run",
+            "evaluate-retrieval = mitcfu_rag.evaluation_tools.evaluate_retrieval:run",
+            "compare-retrievers = mitcfu_rag.evaluation_tools.compare_retrievers:run",
+            "streaming-service = mitcfu_rag.service:cli",
+        ]
+    },
+    maintainer="ai",
+    maintainer_email="ai@dbc.dk",
+    zip_safe=False,
+)
 
-#Standard setup
+# Standard setup
 # setup(name='MitCFU-RAG',
 #       version='0.1.0',
 #       package_dir={'': 'src'},

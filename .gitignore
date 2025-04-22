@@ -28,4 +28,7 @@ docs/_build/
 develop/
 
 #Jupyter notebook for testing
-mitcfu_sandbox_file.ipynb
+mitcfu-sandbox-file.ipynb
+
+#Example files
+Examples/
