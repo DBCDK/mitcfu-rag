@@ -33,12 +33,12 @@ logger = logging.getLogger(__name__)
 
 
 class AgenticRAG(RAG):
-    def __init__(self, embedding_model, faiss_index, article_index, validator_model):
+    def __init__(self, embedding_model, faiss_index, jed_document_path, validator_model=None):
         """
         Components used in the RAG model.
         """
         self.parser = None
-        self.retriever = EmbeddingRetriever()
+        self.retriever = EmbeddingRetriever(embedding_model, faiss_index, jed_document_path)
         self.reranker = None
         self.generator = AgentStreamingGenerator()
         if validator_model:

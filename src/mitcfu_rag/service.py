@@ -19,6 +19,7 @@ from dbc_pyutils import create_instance_id
 from dbc_pyutils import Statistics
 from dbc_pyutils import build_info
 from dbc_pyutils import JSONFormatter
+from dbc_pyutils import setup_logging
 from dbc_pyutils import StatusHandler
 from dbc_pyutils import PrometheusMixIn
 from dbc_pyutils import MetricsHandler
@@ -32,7 +33,7 @@ from mitcfu_rag.config import RAG_TEMPLATE, SIMPLE_TEMPLATE, ROUTER_TEMPLATE, FA
 
 INSTANCE_ID = create_instance_id(num_digits=8)
 STATS = {"query": Statistics(name="query")}
-logger = logging.getLogger(__name__)
+logger = setup_logging()
 
 path_to_embeddings = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index/embeddings"
 path_to_labels = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index/labels.npy"
@@ -174,7 +175,7 @@ class MetricsApp(PrometheusMixIn, tw.Application):
 
 
 def make_app(model):
-    info = build_info.get_info('fakta_chat')
+    info = build_info.get_info('mitcfu_rag')
     handlers = [(r"/", StreamingHandler, dict(model=model, info=info, stat_collector=STATS['query'])),
                 (r"/metrics", MetricsHandler),
                 ("/status", StatusHandler,

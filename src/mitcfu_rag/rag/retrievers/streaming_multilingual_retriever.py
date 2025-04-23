@@ -40,34 +40,34 @@ from os.path import isfile, join
 
 logger = logging.getLogger(__name__)
 
-path_to_embeddings = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index/embeddings"
-path_to_labels = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index/labels.npy"
-path_to_JEDs = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds"
-
+EMBEDDINGS_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index"
+JED_DOCUMENT_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds"
+MODEL_PATH =  "/data/mitCFU-models/multilingual-e5-large"
 
 class EmbeddingRetriever(Retriever):
-    def __init__(self):
+    def __init__(self, model_path=MODEL_PATH, embeddings_path=EMBEDDINGS_PATH, jed_document_path=JED_DOCUMENT_PATH):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = AutoModel.from_pretrained(
-            "/data/mitCFU-models/multilingual-e5-large", device_map="auto"
+            model_path, device_map="auto"
         )
         self.tokenizer = AutoTokenizer.from_pretrained(
-            "/data/mitCFU-models/multilingual-e5-large", device_map="auto"
+            model_path, device_map="auto"
         )
         #self.model.to(self.device)
         self.searcher = KNNSearch.load(
-            path_to_embeddings,
-            path_to_labels,
+            embeddings_path + '/embeddings',
+            embeddings_path + '/labels.npy'
         )
+        self.jed_document_path = jed_document_path
         self.all_articles = self.initiate_articles()
         self.validator = MsValidator()
 
     def initiate_articles(self):
-        article_folder = path_to_JEDs
-        onlyfiles = [f for f in listdir(article_folder) if isfile(join(article_folder, f))]
+        article_folder = self.jed_document_path
+        all_files = [f for f in listdir(article_folder) if isfile(join(article_folder, f))]
         all_articles = {}
 
-        for file in onlyfiles:
+        for file in all_files:
             if ".json" in file and file != "index.json":
                 with open(article_folder + "/" + file, "r") as f:
                     article = json.load(f)
@@ -88,8 +88,9 @@ class EmbeddingRetriever(Retriever):
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, lambda: self.retrieve(messages, n))
 
-    def retrieve(self, messages: list[str], n: int = 3):
+    def retrieve(self, input: list[str], n: int = 3):
         # query = f"query: {' '.join([message['content'] for message in messages if message['role'] == 'user'])}"
+        messages = input["input"]
         query = f"query: {messages[-1]['content']}"
         return self.get_docs(query, n)
 
