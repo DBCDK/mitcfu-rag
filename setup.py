@@ -17,6 +17,8 @@ setup(
     test_suite="tests",
     # faiss skal tilføjes install_requires, når problemet med faiss er løst.
     install_requires=[
+        "langgraph",
+        "langsmith",
         "streamlit",
         "scikit-learn",
         "numpy",

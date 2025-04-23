@@ -145,7 +145,7 @@ if prompt := st.chat_input("Indsæt dit spørgmål her ..."):
         with st.spinner(random.choice(fillers)):
             references = []
             response_stream = requests.post(
-                "http://fakta-chat-1-0.mi-prod.svc.cloud.dbc.dk",
+                "http://ai-p301:5011",
                 json={"messages": st.session_state.messages},
                 stream=True,
             )

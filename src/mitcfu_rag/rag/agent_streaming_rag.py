@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# -*- mode: python -*-
+"""
+:mod:`mitcfu_rag.solr_rag -- solr_rag model minimum example
+
+============
+AgenticRAG
+============
+
+EmbeddingRAG is a rag model for mitcfu.
+It takes chat messages as an input and returns a response.
+
+example of usage:
+    from mitcfu_rag.rag.solr_rag import EmbeddingRAG
+
+    d_rag = EmbeddingRAG()
+    messages = ["Hej", "Er der noget om miljø?"]
+
+    response = d_rag(messages)
+    print(f'response: {response}')
+"""
+import logging
+import datetime
+import asyncio
+from typing import Generator, Any
+from mitcfu_rag.rag.rag import RAG, Reference
+#from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
+from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import EmbeddingRetriever
+from mitcfu_rag.rag.generators.agent_streaming_generator import AgentStreamingGenerator
+
+logger = logging.getLogger(__name__)
+
+
+class AgenticRAG(RAG):
+    def __init__(self, embedding_model, faiss_index, article_index, validator_model):
+        """
+        Components used in the RAG model.
+        """
+        self.parser = None
+        self.retriever = EmbeddingRetriever()
+        self.reranker = None
+        self.generator = AgentStreamingGenerator()
+        if validator_model:
+            self.validator = None
+        self.summarizer = None
+
+    def get_response(self, messages: list[str], *args, **kwargs) -> str:
+        """
+        Revieves a list of chat messages and returns the next response given by the chatbot.
+        """
+        # processed_messages = self.parser(messages)
+        similarities, references = self.retriever(messages, n=3)
+
+        if logger.isEnabledFor(logging.DEBUG):
+            for i, (similarity, reference) in enumerate(zip(similarities, references)):
+                logger.debug(f'{i + 1}. similarity: {similarity:.2f} - {reference}\n')
+
+        generated_answer, generated_sources = self.generator(references, messages)
+
+        if not generated_sources or not generated_answer:
+            return "Jeg kan ikke finde svaret på dit spørgsmål. Kan du prøve at stille det på en anden måde?"
+
+        validation = self.validator(generated_answer + "\n" + " - ".join(generated_sources), references, messages)
+
+        if validation:
+            return generated_answer + "\n" + " - ".join(generated_sources)
+        else:
+            return "Jeg kan ikke finde svaret på dit spørgsmål. Kan du prøve at stille det på en anden måde?"
+
+    def evaluate(self, messages: list[str]):
+        """
+        yields response tokens from rag request.
+        """
+
+        def gen_wrapper(stream):
+            for item in stream:
+                for i in item:
+                    yield i
+
+        messages = [{"role": "user", "content": messages[0]}]
+
+        similarities, references = self.retriever(messages)
+
+        if logger.isEnabledFor(logging.DEBUG):
+            for i, (similarity, reference) in enumerate(zip(similarities, references)):
+                logger.debug(f'{i + 1}. similarity: {similarity:.2f} - {reference}\n')
+
+        stream = self.generator(references, messages)
+        response = "".join(gen_wrapper(stream))
+        return references, response
+
+    async def stream_response(self, input: list[dict[str, Any]], prompt_template, *args, **kwargs) -> Generator[
+        str, None, None]:
+        """
+        yields response tokens from rag request.
+        """
+
+        if input.get("agent", "") == "RAG":
+            results = await asyncio.gather(self.retriever.async_retrieve(input, n=3))
+            similarities, references = results[0]
+            similarities = similarities[:3]
+            references = references[:3]
+        else:
+            references = None
+
+        async for item in self.generator.generate(references, input, prompt_template):
+            yield item
