@@ -26,6 +26,7 @@ import os
 import time
 
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 from mitcfu_rag.tools.knn_searcher import KNNSearch
 from mitcfu_rag.tools.embedder import Embedder
@@ -43,8 +44,10 @@ class e5multilingualEmbedder(Embedder):
     def __init__(self, path_to_embedding_model: str):
         self.name = "multilingual-e5-large"
         self.max_length = 512
-        self.tokenizer = AutoTokenizer.from_pretrained(path_to_embedding_model)
-        self.model = AutoModel.from_pretrained(path_to_embedding_model)
+        #os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.tokenizer = AutoTokenizer.from_pretrained(path_to_embedding_model, device_map=self.device)
+        self.model = AutoModel.from_pretrained(path_to_embedding_model, device_map=self.device)
 
     def __call__(self, texts: list[str]) -> np.array:
         return self.embed_documents(texts)
@@ -67,38 +70,24 @@ class e5multilingualEmbedder(Embedder):
         )
 
         # Checking if GPU is available and switching
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(device)
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        logger.debug(f"Switching to device: {device}")
+        def average_pool(last_hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+            last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
+            return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-            embeddings = self.last_token_pool(outputs.last_hidden_state, inputs["attention_mask"])
-
-        # Move embeddings back to CPU if GPU was used
+        embeddings = []
+        # Tokenize the document
+        #batch_dict = self.tokenizer(texts, self.max_length, padding=True, truncation=True, return_tensors="pt")
+        batch_dict = {k: v.to(self.device) for k, v in inputs.items()}
+        outputs = self.model(**batch_dict)
+        embeddings = average_pool(outputs.last_hidden_state, batch_dict["attention_mask"])
+        embeddeded_passage = F.normalize(embeddings, p=2, dim=1).detach().cpu()
+        return embeddeded_passage
         return embeddings.cpu()
 
-        # embeddings = []
-
-        # for doc in texts:
-        #     # Tokenize the document
-        #     inputs = self.tokenizer(doc, return_tensors="pt", padding=True, truncation=True, max_length=self.max_length)
-
-        #     # Temporary debugging statement
-        #     if inputs["input_ids"].shape[1] > self.max_length:
-        #         logger.warning(f"Token length is {inputs['input_ids'].shape[1]} > max_length")
-
-        #     # Generate the embeddings
-        #     with torch.no_grad():
-        #         outputs = self.model(**inputs)
-        #         embeddings = self.last_token_pool(outputs.last_hidden_state, inputs["attention_mask"])
-        # return embeddings
-
     def encode_query(
-        self, query: str, task: str = "Given a search query, retrieve relevant passages that answer the query"
+        self, query: str
     ):
-        query = self.get_detailed_instruct(task, query)
+        query = self.get_detailed_instruct(query)
         return self.encode([query])
 
     def last_token_pool(self, last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
@@ -110,8 +99,23 @@ class e5multilingualEmbedder(Embedder):
             batch_size = last_hidden_states.shape[0]
             return last_hidden_states[torch.arange(batch_size, device=last_hidden_states.device), sequence_lengths]
 
-    def get_detailed_instruct(self, task_description: str, query: str) -> str:
-        return f"Instruct: {task_description}\nQuery: {query}"
+    def get_detailed_instruct(self, query: str) -> str:
+        return f"query: {query}"
+
+def validate_abstract(document):
+    id, doc = next(iter(document.items()))
+    abstract = doc.get('abstract')[0]
+    if abstract == []:
+        return False
+    # before appending, check if the text is non-string type
+    if not isinstance(abstract, str):
+        logger.debug(f"Abstract is not a string: {abstract} in doc {doc} with id {doc['id']}")
+        return False
+
+    if len(abstract) < 150:
+        return False
+
+    return True
 
 
 def parse_args():
@@ -119,25 +123,25 @@ def parse_args():
         description="Index documents with FAISS and multilingual-e5-large from Hugging Face"
     )
     parser.add_argument(
-        "--path_to_db",
+        "--path-to-db",
         type=str,
         required=True,
         help="The path where FAISS index and labels will be stored (i.e. the vector database)",
     )
     parser.add_argument(
-        "--path_to_folder",
+        "--path-to-folder",
         type=str,
         required=True,
         help="The path to the files that you want to create a vector database from",
     )
     parser.add_argument(
-        "--batch_size",
+        "--batch-size",
         type=int,
         default=False,
         help="The batch size for the embedding process. If not specified, it will be set to the length of the data.",
     )
     parser.add_argument(
-        "--create_new_index_extract", action="store_true", help="Create a new index extract from the folder"
+        "--create-new-index-extract", action="store_true", help="Create a new index extract from the folder"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Set logging level to DEBUG")
     return parser.parse_args()
@@ -154,19 +158,21 @@ def index_paragraph_docs_GPU_batches(path: str, path_to_folder: str, batch_size=
         for file in tqdm(onlyfiles):
             with open(os.path.join(path_to_folder, file), "r") as f:
                 data = json.load(f)
-                json_files.append(data)
+                if validate_abstract(data):
+                    json_files.append(data)
         # save data to a single file
-        with open(path + "/test5000_index_extract_14_04_2025.json", "w") as f:
+        with open("test5000_index_extract_14_04_2025.json", "w") as f:
             json.dump(json_files, f)
 
     # load data from the file
-    path_to_index_file = path + "/test5000_index_extract_14_04_2025.json"
+    path_to_index_file = "test5000_index_extract_14_04_2025.json"
     logger.info(f"Loading documents from {path_to_index_file}")
     # path_to_index_file = '/data/faktalink/solr_index/index_extract_2023.json'
     with open(path_to_index_file, "r") as file:
         data = json.load(file)
 
     e5_embedder = e5multilingualEmbedder("/data/mitCFU-models/multilingual-e5-large/")
+    logger.info(f"Using device: {e5_embedder.device}")
     db = None
 
     # texts = []
@@ -187,13 +193,11 @@ def index_paragraph_docs_GPU_batches(path: str, path_to_folder: str, batch_size=
     for doc in tqdm(data):
         for id in doc:
             # OBS: The abstract could be a list of strings, here we only use the first string. DETTE SKAL FIKSES:
-            text = doc[str(id)].get("abstract")[0]
-            if text == []:
+            if not validate_abstract(doc):
                 continue
-            # before appending, check if the text is non-string type
-            if not isinstance(text, str):
-                logger.debug(f"Abstract is not a string: {text} in doc {doc} with id {id}")
-                continue
+
+            abstract = doc[str(id)].get('abstract')[0]
+            text = f"passage: {abstract}"
             abstracts_to_embed_batch.append(text)
             labels_for_batch.append(str(id))
 
@@ -218,6 +222,7 @@ def index_paragraph_docs_GPU_batches(path: str, path_to_folder: str, batch_size=
     db = KNNSearch.build(np.array(embeddings), np.array(labels))
     db.save(index_path=path + "/embeddings", labels_path=path + "/labels")
     logger.info(f"FAISS db saved locally to {path}")
+
 
 def main():
     start = time.time()
