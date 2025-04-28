@@ -50,7 +50,7 @@ Du kan tjekke Faktalinks oversigt over temaer (https://faktalink.dk/tema) eller 
 
 Dit svar:
 """
-        logger.setLevel(logging.DEBUG)
+        self.session = aiohttp.ClientSession()
 
     async def generate(self, references: list[Reference], input: list[dict], prompt_template: str = None):
         logger.info(f"parsed_references: {references}")
@@ -174,21 +174,20 @@ Dit svar:
             "parameters": input["parameters"]
         }
         request_body_str = json.dumps(request_body)
-        async with aiohttp.ClientSession() as session:
-            async with session.post(self.chat_bib_url, headers=fetch_options["headers"],
-                                    data=request_body_str) as response:
-                async for chunk in response.content.iter_chunked(1024):
-                    if chunk:
-                        # yield chunk
-                        decoded_value = self.decode(chunk, stream=True)
-                        try:
-                            obj = json.loads(decoded_value.replace("data:", ""))
-                            if not obj.get("token", {}).get("text", {}) == "</s>":
-                                yield chunk
-                        except json.JSONDecodeError:
-                            pass
-                        except Exception as e:
-                            logger.info(f"Error during streaming: {e}")
+        async with self.session.post(self.chat_bib_url, headers=fetch_options["headers"],
+                                data=request_body_str) as response:
+            async for chunk in response.content.iter_chunked(1024):
+                if chunk:
+                    # yield chunk
+                    decoded_value = self.decode(chunk, stream=True)
+                    try:
+                        obj = json.loads(decoded_value.replace("data:", ""))
+                        if not obj.get("token", {}).get("text", {}) == "</s>":
+                            yield chunk
+                    except json.JSONDecodeError:
+                        pass
+                    except Exception as e:
+                        logger.info(f"Error during streaming: {e}")
 
         # filter references so that no two references have the same article_link
         if parsed_references:

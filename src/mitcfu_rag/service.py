@@ -102,9 +102,6 @@ class StreamingHandler(BaseHandler):
         self.flush()
 
         result = await self.graph.ainvoke({"input": messages})
-        print("RESULT\n\n")
-        print(result)
-        print("\n\n")
         # get model to call
         #route_result = await self.route_response(messages)
         #print(route_result)

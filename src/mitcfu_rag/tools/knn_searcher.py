@@ -49,8 +49,9 @@ from pathlib import Path
 
 import faiss
 import numpy as np
+import asyncio
 from sklearn.metrics.pairwise import cosine_similarity
-
+from concurrent.futures import ThreadPoolExecutor
 __all__ = ['KNNSearch']
 
 
@@ -72,6 +73,7 @@ class KNNSearch:
         for i, label in enumerate(self.labels):
             self.label2index[label].add(i)
         self.label2index = dict(self.label2index)
+        self.executor = ThreadPoolExecutor()
 
     @classmethod
     def build(cls, embeddings: np.array, labels: np.array):
@@ -98,7 +100,14 @@ class KNNSearch:
         index.add(embeddings_copy)
         return cls(index, labels)
 
-    def search(self, embedding: np.array, k: int = 10, min_similarity: float = 0.1) -> list[tuple[str, float]]:
+    def __search(self, embedding, k):
+        return self.index.search(embedding, k)
+
+    async def async_search(self, embedding, k):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self.executor, self.__search, embedding, k)
+
+    async def search(self, embedding: np.array, k: int = 10, min_similarity: float = 0.1) -> list[tuple[str, float]]:
         """
         Searches for k nearest neighbours among indexed embeddings using cosine similarity.
         
@@ -112,7 +121,7 @@ class KNNSearch:
             Minimum similarity of returned neighbours
         """
         embedding = self.__copy_and_normalize(embedding)
-        similarities, indices = self.index.search(embedding, k)
+        similarities, indices = await self.async_search(embedding, k)
         similarities = similarities[0,:]
         indices = indices[0,:]
             
