@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
-:mod:`mitcfu_rag.embedding_retriever - embedding_retriever
+:mod:`fakta_chat.embedding_retriever - embedding_retriever
 
 ============
 EmbeddingRetriever
 ============
 
 EmbeddingRetriever retrieves relevant references based on the messages from the chat sent.
+There is no underlying database and EmbeddingRetriever returns an dummy document.
 
 example of usage:
     from fakta_chat.embedding_retriever import EmbeddingRetriever
@@ -16,7 +17,6 @@ example of usage:
     messages = messages = ["Hej", "Er der noget om biblioteker?"]
     refs = d_retriever.retrieve(messages)
     print(f'relevant references: {refs}')
-You can also use the mitcfu-sandbox-file.ipynb to test the retriever by starting a service and querying it.
 """
 
 import logging
@@ -42,28 +42,29 @@ class EmbeddingRetriever(Retriever):
     def __init__(self):
         self.device = "cpu"
         self.model = AutoModel.from_pretrained(
-            "/data/mitCFU-models/multilingual-e5-large/", device_map="auto"
+            "/data/faktalink_models/intfloat/multilingual-e5-large/", device_map="auto"
         )
         self.tokenizer = AutoTokenizer.from_pretrained(
-            "/data/mitCFU-models/multilingual-e5-large/", device_map="auto"
+            "/data/faktalink_models/intfloat/multilingual-e5-large/", device_map="auto"
         )
         self.model.to(self.device)
         self.cross_sentence_model = AutoModelForSequenceClassification.from_pretrained(
-            "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
+            "/home/nily/Git/fakta-chat/src/fakta_chat/ms-marco-MiniLM-L-6-v2"
         )
         self.cross_sentence_tokenizer = AutoTokenizer.from_pretrained(
-            "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
+            "/home/nily/Git/fakta-chat/src/fakta_chat/ms-marco-MiniLM-L-6-v2"
         )
         # here, the searcher is loaded by specifying the path to the embeddings (index) and the labels.
         self.searcher = KNNSearch.load(
             "/data/mitcfu-rag/e5_mistral_instruct_embeddings_faiss_index/embeddings",
             "/data/mitcfu-rag/e5_mistral_instruct_embeddings_faiss_index/labels.npy",
         )
+        # old text: load("/home/nily/Git/fakta-chat/notebooks/e5_large_index", "/home/nily/Git/fakta-chat/notebooks/e5_large_labels.npy")
+
         self.all_articles = self.initiate_articles()
 
-    def initiate_articles(self, article_folder):
-        #this should also be changed, but for now this script is not used. We should probably also make the model and validator customizable
-        article_folder = "/data/mitcfu-rag/test1000-jeds" 
+    def initiate_articles(self):
+        article_folder = "/data/mitcfu-rag/test1000-jeds"
         onlyfiles = [f for f in listdir(article_folder) if isfile(join(article_folder, f))]
         all_articles = []
 
