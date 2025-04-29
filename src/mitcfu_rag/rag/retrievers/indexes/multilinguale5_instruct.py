@@ -1,20 +1,19 @@
 #!/usr/bin/env python
 """
-:mod:`mitcfu embedder med modellen multilingual-e5-large
+:mod:`fakta_chat.tools.mixtrale5_instruct -- Embeds texts with e5-mistral-7b-instruct
 
 ========
-e5multilingualEmbedder
+e5mistralEmbedder
 ========
 
-e5multilingualEmbedder embeds JEDs with e5-mistral-7b-instruct model from Huggingface.
-multilingual-e5-large ranks high on ScanEval for Danish (total: 60.7) and can encode 512 tokens.
+e5mistralEmbedder embeds faktalink articles with e5-mistral-7b-instruct model from Huggingface.
+e5-mistral-7b-instruct ranks high on ScanEval for Danish (total: 61.7) and can encode 4096 tokens.
 https://kennethenevoldsen.github.io/scandinavian-embedding-benchmark/
-Embeddings can be stored as FAISS db for fast retrieval.
-See:
-https://huggingface.co/intfloat/multilingual-e5-large
+Embeddings can be stored as FAISS db with for fast retrieval.
+Implementation from:
+https://huggingface.co/intfloat/e5-mistral-7b-instruct
 
-for usage, see `index_paragraph_docs_GPU_batches` function 
-or the example at the bottom of this file.
+for usage, see `index_paragraph_fakta_docs` function
 """
 
 import argparse
@@ -29,11 +28,9 @@ import time
 import torch
 import torch.nn.functional as F
 from torch import Tensor
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from mitcfu_rag.tools.knn_searcher import KNNSearch
 from mitcfu_rag.tools.embedder import Embedder
 from transformers import AutoTokenizer, AutoModel
-
 # from langchain.vectorstores import FAISS
 # from langchain_community.vectorstores.utils import DistanceStrategy
 
@@ -85,6 +82,13 @@ class e5multilingualEmbedder(Embedder):
         embeddings = average_pool(outputs.last_hidden_state, batch_dict["attention_mask"])
         embeddeded_passage = F.normalize(embeddings, p=2, dim=1).detach().cpu()
         return embeddeded_passage
+        return embeddings.cpu()
+
+    def encode_query(
+        self, query: str
+    ):
+        query = self.get_detailed_instruct(query)
+        return self.encode([query])
 
     def last_token_pool(self, last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
         left_padding = attention_mask[:, -1].sum() == attention_mask.shape[0]
@@ -131,11 +135,6 @@ def parse_args():
         help="The path to the files that you want to create a vector database from",
     )
     parser.add_argument(
-        "--path-to-index-file",
-        type=str,
-        default=None,
-        help="The path to/name of the index file")
-    parser.add_argument(
         "--batch-size",
         type=int,
         default=False,
@@ -149,7 +148,7 @@ def parse_args():
 
 
 # Alternative function definitions:
-def index_paragraph_docs_GPU_batches(path: str, path_to_folder: str, path_to_index_file: str, batch_size=False, create_new_index_extract=False):
+def index_paragraph_docs_GPU_batches(path: str, path_to_folder: str, batch_size=False, create_new_index_extract=False):
     if create_new_index_extract is True:
         logger.info(f"Creating new index extract at {path} using files from {path_to_folder}")
         onlyfiles = [f for f in os.listdir(path_to_folder) if os.path.isfile(os.path.join(path_to_folder, f))]
@@ -162,11 +161,13 @@ def index_paragraph_docs_GPU_batches(path: str, path_to_folder: str, path_to_ind
                 if validate_abstract(data):
                     json_files.append(data)
         # save data to a single file
-        with open(path_to_index_file, "w") as f:
+        with open("test5000_index_extract_14_04_2025.json", "w") as f:
             json.dump(json_files, f)
 
     # load data from the file
+    path_to_index_file = "test5000_index_extract_14_04_2025.json"
     logger.info(f"Loading documents from {path_to_index_file}")
+    # path_to_index_file = '/data/faktalink/solr_index/index_extract_2023.json'
     with open(path_to_index_file, "r") as file:
         data = json.load(file)
 
@@ -188,15 +189,6 @@ def index_paragraph_docs_GPU_batches(path: str, path_to_folder: str, path_to_ind
     abstracts_to_embed_batch = []
     labels_for_batch = []
     logger.info("Embedding documents with batch approach and indexing them into a FAISS db with KNNSearch.")
-    
-    #approach from: https://python.langchain.com/v0.1/docs/modules/data_connection/document_transformers/recursive_text_splitter/
-    #chunk size could prabably be higher, since RecursiveCharacterTextSplitter chunk_size argument is based on characters, not tokens
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=512,
-        chunk_overlap=20,
-        length_function=len,
-        is_seperator_regex=False,
-    )
 
     for doc in tqdm(data):
         for id in doc:
@@ -206,12 +198,8 @@ def index_paragraph_docs_GPU_batches(path: str, path_to_folder: str, path_to_ind
 
             abstract = doc[str(id)].get('abstract')[0]
             text = f"passage: {abstract}"
-        
-            chunks = text_splitter.split_text(text)
-            for i, chunk in enumerate(chunks):
-                abstracts_to_embed_batch.append(chunk)
-                labels_for_batch.append(f"{id}_chunk{i}")
-
+            abstracts_to_embed_batch.append(text)
+            labels_for_batch.append(str(id))
 
             # Check if the batch size is reached, so we can start embedding the current batch. Otherwise, we continue filling the batch
             if len(abstracts_to_embed_batch) >= batch_size:
@@ -249,7 +237,6 @@ def main():
     index_paragraph_docs_GPU_batches(
         path=args.path_to_db,
         path_to_folder=args.path_to_folder,
-        path_to_index_file=args.path_to_index_file,
         batch_size=args.batch_size,
         create_new_index_extract=args.create_new_index_extract,
     )
@@ -263,7 +250,7 @@ if __name__ == "__main__":
 """
 Example usage:
 While standing in the directory with the script, run (the Python environment needs to have faiss installed):
-create-faiss-index --path_to_db /data/mitcfu-rag/e5_mistral_instruct_embeddings_faiss_index_abstractover10_08_04_2025 --path_to_folder /data/mitcfu-rag/10plus-abstract-77295-jeds --path_to_index_file /data/mitcfu-rag/test1000-jeds/index_extract_2023.json --batch_size 1000 --create_new_index_extract
+python3 multilinguale5_instruct.py --path_to_db /data/mitcfu-rag/e5_mistral_instruct_embeddings_faiss_index_abstractover10_08_04_2025 --path_to_folder /data/mitcfu-rag/10plus-abstract-77295-jeds
 This will start the indexing of the documents in the folder "--path_to_folder" and save the FAISS index and labels in the path specified after "--path_to_db".
 """
 

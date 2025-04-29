@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
-:mod:`mitcfu_rag.solr_rag -- solr_rag model minimum example
+:mod:`fakta_chat.solr_rag -- solr_rag model minimum example
 
 ============
 EmbeddingRAG
 ============
 
-EmbeddingRAG is a rag model for mitcfu_rag.
+EmbeddingRAG is a rag model for faktalink.
 It takes chat messages as an input and returns a response.
 
 example of usage:
@@ -42,14 +42,13 @@ logger = logging.getLogger(__name__)
 
 class StreamingRAG(RAG):
     def __init__(
-        self, embedding_model, embeddings_path, jed_document_path, validator_model=None
+        self, validator_model=None
     ):  # for now, since we are using the smaller model, these arguments are not used: embedding_model, faiss_index, article_index.
         """
         Components used in the RAG model.
         """
         self.parser = None
-        self.retriever = EmbeddingRetriever(embedding_model, embeddings_path, jed_document_path)
-        # Mistrale5Retriever(embedding_model, faiss_index, article_index)                                 
+        self.retriever = EmbeddingRetriever()  # Mistrale5Retriever(embedding_model, faiss_index, article_index)
         self.reranker = None
         self.generator = EmbeddingGenerator()
         self.validator = MsValidator() if validator_model else None
