@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
-:mod:`fakta_chat.embedding_retriever - embedding_retriever
+:mod:`mitcfu_rag.embedding_retriever - embedding_retriever
 
 ============
 EmbeddingRetriever
@@ -46,12 +46,12 @@ from os.path import isfile, join
 
 logger = logging.getLogger(__name__)
 
-EMBEDDINGS_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index"
-JED_DOCUMENT_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds"
-MODEL_PATH =  "/data/mitCFU-models/multilingual-e5-large"
+#EMBEDDINGS_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index"
+#JED_DOCUMENT_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds"
+#MODEL_PATH =  "/data/mitCFU-models/multilingual-e5-large"
 
 class EmbeddingRetriever(Retriever):
-    def __init__(self, model_path=MODEL_PATH, embeddings_path=EMBEDDINGS_PATH, jed_document_path=JED_DOCUMENT_PATH):
+    def __init__(self, model_path, embeddings_path, jed_document_path):
         os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = AutoModel.from_pretrained(
@@ -85,6 +85,7 @@ class EmbeddingRetriever(Retriever):
                         article_link="MitCFU-ID:" + str(id),
                         score = 0.0,
                         text=text[0],
+                        chunk="Not chunked",
                     )
 
         return all_articles
@@ -110,7 +111,27 @@ class EmbeddingRetriever(Retriever):
         hits = await self.searcher.search(embedded_query, limit)
         ids, scores = zip(*hits)
         logger.info(ids)
-        retrieved_articles = [self.all_articles[id] for id in ids if id in self.all_articles]
+
+        retrieved_articles = []
+        for id, score in zip(ids, scores):
+            if "_chunk" in id:
+                mitcfu_id, chunk_number = id.rsplit("_chunk", maxsplit=1)
+            else:
+                mitcfu_id = id
+                chunk_number = None
+            
+            if mitcfu_id in self.all_articles:
+                mitcfu_ref = self.all_articles[mitcfu_id]
+                new_ref = Reference(
+                    id=id,
+                    article_headline=mitcfu_ref.article_headline,
+                    article_link=mitcfu_ref.article_link,
+                    score=score,
+                    text=mitcfu_ref.text,
+                    chunk=f"chunk{chunk_number}" if chunk_number else "Not chunked",
+                )
+                retrieved_articles.append(new_ref)
+        #retrieved_articles = [self.all_articles[id] for id in ids if id in self.all_articles]
         return list(scores), retrieved_articles
 
 
