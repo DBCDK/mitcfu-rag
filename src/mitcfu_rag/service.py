@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-:mod:`fakta_chat.streaming_endpoint` -- endpoint for streaming RAG
+:mod:`mitcfu_rag.streaming_endpoint` -- endpoint for streaming RAG
 
 ==================
 Streaming Endpoint
