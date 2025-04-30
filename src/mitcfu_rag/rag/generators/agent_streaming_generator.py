@@ -55,15 +55,10 @@ Dit svar:
     async def generate(self, references: list[Reference], input: list[dict], prompt_template: str = None):
         logger.info(f"parsed_references: {references}")
         self.prompt_template = prompt_template["prompt"]
-        print("INPUT\n\n", input)
         self.agent_type = input["agent"]
         # remove sources from output if generated
         messages = input["input"]
         cleaned_messages = []
-        logger.debug("RAW MESSAGES")
-        logger.debug(messages)
-        logger.debug("END RAW MESSAGES")
-        i = 0
         for i, message in enumerate(messages):
             # skip initial welcome message
             if i == 0:
@@ -77,10 +72,6 @@ Dit svar:
                 cleaned_messages.append(message)
             else:
                 cleaned_messages.append(message)
-
-        logger.debug("CLEANED MESSAGES")
-        logger.debug(cleaned_messages)
-        logger.debug("END CLEANED MESSAGES")
 
         max_new_tokens = 1200 if not self.agent_type == "ROUTER" else 10
         async for chunk in self.llm_generate(
@@ -125,6 +116,7 @@ Dit svar:
                         result += f"{msg['content']}"
                         result += "[INST]" if msg["role"] == "assistant" else "[/INST]"
                 result += "\n[INST] Brugerens spørgsmål:" + msgs[-1]['content'] + "[/INST]Dit svar:"
+        logger.info(f"RAG input:\n\n{result}\n\n")
         return result
 
     def decode(self, input, stream=False):
@@ -138,7 +130,8 @@ Dit svar:
         for ref in references:
             yield json.dumps({"token": {"text": "\n"}})
             yield json.dumps({"token": {"text": "\n"}})
-            tokens = [f"[{ref.article_headline}]({ref.article_link})"]
+            #tokens = [f"[{ref.article_headline}]({ref.article_link})"]
+            tokens = [f"{ref.id}"]
             for token in tokens:
                 yield json.dumps({"token": {"text": token}})
 
@@ -174,29 +167,31 @@ Dit svar:
             "parameters": input["parameters"]
         }
         request_body_str = json.dumps(request_body)
-        async with self.session.post(self.chat_bib_url, headers=fetch_options["headers"],
-                                data=request_body_str) as response:
-            async for chunk in response.content.iter_chunked(1024):
-                if chunk:
-                    # yield chunk
-                    decoded_value = self.decode(chunk, stream=True)
-                    try:
-                        obj = json.loads(decoded_value.replace("data:", ""))
-                        if not obj.get("token", {}).get("text", {}) == "</s>":
-                            yield chunk
-                    except json.JSONDecodeError:
-                        pass
-                    except Exception as e:
-                        logger.info(f"Error during streaming: {e}")
+        if not self.agent_type == "RAG": #RAG disabled until we know what CFU wants with the documents
+            async with self.session.post(self.chat_bib_url, headers=fetch_options["headers"],
+                                    data=request_body_str) as response:
+                async for chunk in response.content.iter_chunked(1024):
+                    if chunk:
+                        # yield chunk
+                        decoded_value = self.decode(chunk, stream=True)
+                        try:
+                            obj = json.loads(decoded_value.replace("data:", ""))
+                            if not obj.get("token", {}).get("text", {}) == "</s>":
+                                yield chunk
+                        except json.JSONDecodeError:
+                            pass
+                        except Exception as e:
+                            logger.info(f"Error during streaming: {e}")
 
         # filter references so that no two references have the same article_link
         if parsed_references:
-            seen_links = set()
+            #seen_links = set()
             filtered_references = []
             for ref in parsed_references:
-                if ref.article_link not in seen_links:
-                    seen_links.add(ref.article_link)
-                    filtered_references.append(ref)
+                filtered_references.append(ref)
+                #if ref.article_link not in seen_links:
+                #    seen_links.add(ref.article_link)
+                #    filtered_references.append(ref)
 
             async for ref in self.async_reference_generator(filtered_references):
                 yield ref
