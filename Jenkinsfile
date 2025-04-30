@@ -49,7 +49,7 @@ pipeline {
 						nextBuild=sh(returnStdout: true, script: "curl -s ${JENKINS_URL}job/gitops-secrets/job/main/api/json | jq -r .nextBuildNumber")
 						sh """
 							nix run --refresh git+https://gitlab.dbc.dk/public-de-team/gitops-secrets-set-variables.git \
-								ai-staging:MITCFU_RAG_VERSION=${env.DOCKER_TAG}
+								ai-staging:MITCFU_RAG_1_0_VERSION=${env.DOCKER_TAG}
 						"""
 						waitForGitops("${nextBuild}")
 					}
@@ -75,7 +75,7 @@ pipeline {
 			steps {
 				script {
 					sh """
-						$KUBECTL -n ai-staging rollout status deployment/mitfcu-rag-${env.VERSION} --timeout=1200s
+						$KUBECTL -n ai-staging rollout status deployment/mitfcu-rag-1-0 --timeout=1200s
 					"""
 				}
 			}
@@ -91,7 +91,7 @@ pipeline {
 						nextBuild=sh(returnStdout: true, script: "curl -s ${JENKINS_URL}job/gitops-secrets/job/main/api/json | jq -r .nextBuildNumber")
 						sh """
 							nix run --refresh git+https://gitlab.dbc.dk/public-de-team/gitops-secrets-set-variables.git \
-								ai-prod:MITCFU_RAG_VERSION=${env.DOCKER_TAG}
+								ai-prod:MITCFU_RAG_1_0_VERSION=${env.DOCKER_TAG}
 						"""
 						waitForGitops("${nextBuild}")
 					}
@@ -117,7 +117,7 @@ pipeline {
 			steps {
 				script {
 					sh """
-						$KUBECTL -n ai-prod rollout status deployment/mitcfu-rag-${env.VERSION} --timeout=1200s
+						$KUBECTL -n ai-prod rollout status deployment/mitcfu-rag-1-0 --timeout=1200s
 					"""
 				}
 			}
