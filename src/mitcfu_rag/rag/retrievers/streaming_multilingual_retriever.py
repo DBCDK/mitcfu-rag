@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
-:mod:`fakta_chat.embedding_retriever - embedding_retriever
+:mod:`mitcfu_rag.embedding_retriever - embedding_retriever
 
 ============
 EmbeddingRetriever
@@ -86,6 +86,7 @@ class EmbeddingRetriever(Retriever):
                         article_link="MitCFU-ID:" + str(id),
                         score = 0.0,
                         text=text[0],
+                        chunk="Not chunked",
                     )
 
         return all_articles
@@ -110,8 +111,28 @@ class EmbeddingRetriever(Retriever):
         embedded_query = F.normalize(embeddings, p=2, dim=1).detach().cpu().numpy().astype(np.float32)
         hits = await self.searcher.search(embedded_query, limit)
         ids, scores = zip(*hits)
+        logger.info(ids)
+
+        retrieved_articles = []
+        for id, score in zip(ids, scores):
+            if "_chunk" in id:
+                mitcfu_id, chunk_number = id.rsplit("_chunk", maxsplit=1)
+            else:
+                mitcfu_id = id
+                chunk_number = None
+            
+            if mitcfu_id in self.all_articles:
+                mitcfu_ref = self.all_articles[mitcfu_id]
+                new_ref = Reference(
+                    id=id,
+                    article_headline=mitcfu_ref.article_headline,
+                    article_link=mitcfu_ref.article_link,
+                    score=score,
+                    text=mitcfu_ref.text,
+                    chunk=f"chunk{chunk_number}" if chunk_number else "Not chunked",
+                )
+                retrieved_articles.append(new_ref)
         #retrieved_articles = [self.all_articles[id] for id in ids if id in self.all_articles]
-        retrieved_articles = [Reference(id=_id, article_headline="", article_link="", score=0.0, text="") for _id in ids]
         return list(scores), retrieved_articles
 
 

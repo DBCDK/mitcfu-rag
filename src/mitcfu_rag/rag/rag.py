@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-:mod:`fakta_chat.rag -- interface for rag models
+:mod:`mitcfu_rag.rag -- interface for rag models
 
 All rag models must inherit from this class and implement the abstractmethods
 """
@@ -17,6 +17,7 @@ class Reference():
     article_link: str
     score: float
     text: str
+    chunk: str
     
     def __str__(self):
         return f"""
