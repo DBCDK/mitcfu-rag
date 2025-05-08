@@ -102,15 +102,6 @@ class StreamingHandler(BaseHandler):
         self.flush()
 
         result = await self.graph.ainvoke({"input": messages})
-        # get model to call
-        #route_result = await self.route_response(messages)
-        #print(route_result)
-        #if "RAG" in route_result:
-        #    result = await self.rag_response(messages)
-        #elif "SIMPLE" in route_result:
-        #    result = await self.simple_response(messages)
-        #else:
-        #    result = await self.simple_response(messages)
         async for chunk in result["output"]:
             self.write(chunk)
             await self.flush()
@@ -198,8 +189,8 @@ def cli():
                         help="path to embedding model")
     parser.add_argument('faiss_path', metavar='faiss-path',
                         help="path to faiss index", default=path_to_embeddings)
-    parser.add_argument('article_index_path', metavar='article-index-path',
-                        help="path to article index", default=path_to_JEDs)
+    parser.add_argument('--article_index_path', metavar='article-index-path',
+                        help="path to article index", default=None)
     parser.add_argument('--validator-model-path', dest='validator_model_path',
                         help="path to validator model", default=None)
     parser.add_argument('-a', '--ab-id', dest='ab_id',

@@ -46,12 +46,11 @@ from os.path import isfile, join
 
 logger = logging.getLogger(__name__)
 
-#EMBEDDINGS_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index"
-#JED_DOCUMENT_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds"
-#MODEL_PATH =  "/data/mitCFU-models/multilingual-e5-large"
+EMBEDDINGS_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index"
+MODEL_PATH =  "/data/mitCFU-models/multilingual-e5-large"
 
 class EmbeddingRetriever(Retriever):
-    def __init__(self, model_path, embeddings_path, jed_document_path):
+    def __init__(self, model_path=MODEL_PATH, embeddings_path=EMBEDDINGS_PATH, jed_document_path=None):
         os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = AutoModel.from_pretrained(
@@ -65,9 +64,11 @@ class EmbeddingRetriever(Retriever):
             embeddings_path + '/embeddings',
             embeddings_path + '/labels.npy'
         )
-        self.jed_document_path = jed_document_path
-        self.all_articles = self.initiate_articles()
-        self.validator = MsValidator()
+        if jed_document_path:
+            self.all_articles = self.initiate_articles()
+        else:
+            self.all_articles = {}
+        self.validator = None
         self.session = aiohttp.ClientSession()
 
     def initiate_articles(self):
