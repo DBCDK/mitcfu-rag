@@ -36,12 +36,12 @@ Accuracy: True
 
 
 # INSTRUCTIONS = """
-# # Task: 
-# You are given a Question, a model Prediction, and a list of Ground Truth answers, judge whether the model Prediction matches any answer from the list of Ground Truth answers. Follow the instructions step by step to make a judgement. 
+# # Task:
+# You are given a Question, a model Prediction, and a list of Ground Truth answers, judge whether the model Prediction matches any answer from the list of Ground Truth answers. Follow the instructions step by step to make a judgement.
 # 1. If the model prediction matches any provided answers from the Ground Truth Answer list, "Accuracy" should be "True"; otherwise, "Accuracy" should be "False".
 # 2. If the model prediction says that it couldn't answer the question or it doesn't have enough information, "Accuracy" should always be "False".
 # 3. If the Ground Truth is "invalid question", "Accuracy" is "True" only if the model prediction is exactly "invalid question".
-# # Output: 
+# # Output:
 # Respond with only a single JSON string with an "Accuracy" field which is "True" or "False".
 # """
 

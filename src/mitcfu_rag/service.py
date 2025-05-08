@@ -29,7 +29,12 @@ from langgraph.graph import StateGraph, END
 from typing import Annotated, TypedDict
 
 from mitcfu_rag.config import RAG, AGENTIC
-from mitcfu_rag.config import RAG_TEMPLATE, SIMPLE_TEMPLATE, ROUTER_TEMPLATE, FALLBACK_TEMPLATE
+from mitcfu_rag.config import (
+    RAG_TEMPLATE,
+    SIMPLE_TEMPLATE,
+    ROUTER_TEMPLATE,
+    FALLBACK_TEMPLATE,
+)
 
 INSTANCE_ID = create_instance_id(num_digits=8)
 STATS = {"query": Statistics(name="query")}
@@ -40,12 +45,12 @@ path_to_labels = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multiling
 path_to_JEDs = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds"
 
 
-
 class AgentState(TypedDict):
     input: str
     output: str
     agent: str
     prompt_template: str
+
 
 class StreamingHandler(BaseHandler):
     """
@@ -58,9 +63,11 @@ class StreamingHandler(BaseHandler):
         """
         self.info = info
         self.stat_collector = stat_collector
-        self.static_header_content = {'build': self.info['build_number'],
-                                      'git': self.info['git'],
-                                      'version': self.info['version']}
+        self.static_header_content = {
+            "build": self.info["build_number"],
+            "git": self.info["git"],
+            "version": self.info["version"],
+        }
         self.model = model
         self.route_template = ROUTER_TEMPLATE()
         self.simple_template = SIMPLE_TEMPLATE
@@ -82,8 +89,8 @@ class StreamingHandler(BaseHandler):
             {
                 "RAG": "rag_agent",
                 "SIMPLE": "simple_agent",
-                "FALLBACK": "fallback_agent"
-            }
+                "FALLBACK": "fallback_agent",
+            },
         )
 
         workflow.set_entry_point("route")
@@ -94,7 +101,7 @@ class StreamingHandler(BaseHandler):
         return workflow.compile()
 
     async def post(self):
-        self.set_header('Content-Type', 'text/plain; charset=utf-8')
+        self.set_header("Content-Type", "text/plain; charset=utf-8")
         body = json.loads(self.request.body.decode("utf8"))
         self.version = body.get("version", "v1")
         messages = body.get("messages", [])
@@ -115,7 +122,7 @@ class StreamingHandler(BaseHandler):
         elif "SIMPLE" in route_result:
             return {"agent": "SIMPLE"}
         else:
-            return {"agent": "FALLBACK"} #create fallback here
+            return {"agent": "FALLBACK"}  # create fallback here
 
     async def simple_response(self, messages):
         result = await self.stream_response(messages, self.simple_template)
@@ -131,7 +138,9 @@ class StreamingHandler(BaseHandler):
 
     async def stream_response(self, messages, template):
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, lambda: self.__generate(messages, self.model, template))
+        return await loop.run_in_executor(
+            None, lambda: self.__generate(messages, self.model, template)
+        )
 
     def __generate(self, messages, model, template):
         response_stream = model.stream_response(messages, template)
@@ -143,9 +152,9 @@ class StreamingHandler(BaseHandler):
                 if isinstance(input, str):
                     return input
                 else:
-                    return input.decode('utf-8')
+                    return input.decode("utf-8")
             except UnicodeDecodeError as e:
-                return input.decode('utf-8', errors='ignore')
+                return input.decode("utf-8", errors="ignore")
 
         # for item in stream.iter_content(chunk_size=None, decode_unicode=True):
         #     for i in item:
@@ -163,17 +172,36 @@ class MetricsApp(PrometheusMixIn, tw.Application):
 
 
 def make_app(model):
-    info = build_info.get_info('mitcfu_rag')
-    handlers = [(r"/", StreamingHandler, dict(model=model, info=info, stat_collector=STATS['query'])),
-                (r"/metrics", MetricsHandler),
-                ("/status", StatusHandler,
-                 dict(ab_id=1, info=info, instance_id=INSTANCE_ID, statistics=list(STATS.values())))]
+    info = build_info.get_info("mitcfu_rag")
+    handlers = [
+        (
+            r"/",
+            StreamingHandler,
+            dict(model=model, info=info, stat_collector=STATS["query"]),
+        ),
+        (r"/metrics", MetricsHandler),
+        (
+            "/status",
+            StatusHandler,
+            dict(
+                ab_id=1,
+                info=info,
+                instance_id=INSTANCE_ID,
+                statistics=list(STATS.values()),
+            ),
+        ),
+    ]
     return MetricsApp(handlers)
 
 
 async def main(args):
     logger.info("Loading model")
-    model = AGENTIC(args.embedding_model_path, args.faiss_path, args.article_index_path, args.validator_model_path)
+    model = AGENTIC(
+        args.embedding_model_path,
+        args.faiss_path,
+        args.article_index_path,
+        args.validator_model_path,
+    )
     logger.info(f"Starting endpoint at port {args.port}")
     app = make_app(model)
     app.listen(args.port)
@@ -181,24 +209,48 @@ async def main(args):
 
 
 def cli():
-    """ Commandline interface """
+    """Commandline interface"""
     import argparse
+
     port = 5000
-    parser = argparse.ArgumentParser(description='query related subject')
-    parser.add_argument('embedding_model_path', metavar='embedding-model-path',
-                        help="path to embedding model")
-    parser.add_argument('faiss_path', metavar='faiss-path',
-                        help="path to faiss index", default=path_to_embeddings)
-    parser.add_argument('--article_index_path', metavar='article-index-path',
-                        help="path to article index", default=None)
-    parser.add_argument('--validator-model-path', dest='validator_model_path',
-                        help="path to validator model", default=None)
-    parser.add_argument('-a', '--ab-id', dest='ab_id',
-                        help="ab id of service. default is 1", default=1)
-    parser.add_argument('-p', '--port', dest='port', type=int,
-                        help=f'port to expose service on. Default is {port}', default=port)
-    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
-                        help='verbose output')
+    parser = argparse.ArgumentParser(description="query related subject")
+    parser.add_argument(
+        "embedding_model_path",
+        metavar="embedding-model-path",
+        help="path to embedding model",
+    )
+    parser.add_argument(
+        "faiss_path",
+        metavar="faiss-path",
+        help="path to faiss index",
+        default=path_to_embeddings,
+    )
+    parser.add_argument(
+        "--article_index_path",
+        metavar="article-index-path",
+        help="path to article index",
+        default=None,
+    )
+    parser.add_argument(
+        "--validator-model-path",
+        dest="validator_model_path",
+        help="path to validator model",
+        default=None,
+    )
+    parser.add_argument(
+        "-a", "--ab-id", dest="ab_id", help="ab id of service. default is 1", default=1
+    )
+    parser.add_argument(
+        "-p",
+        "--port",
+        dest="port",
+        type=int,
+        help=f"port to expose service on. Default is {port}",
+        default=port,
+    )
+    parser.add_argument(
+        "-v", "--verbose", dest="verbose", action="store_true", help="verbose output"
+    )
 
     args = parser.parse_args()
     level = logging.INFO

@@ -42,11 +42,15 @@ class MsValidator(Validator):
     def __init__(self):
         self.device = "cpu"
         self.cross_sentence_model = AutoModelForSequenceClassification.from_pretrained(
-            "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2")
+            "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
+        )
         self.cross_sentence_tokenizer = AutoTokenizer.from_pretrained(
-            "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2")
+            "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
+        )
 
-    def validate(self, generated_response: str, references: list[Reference], query: str):
+    def validate(
+        self, generated_response: str, references: list[Reference], query: str
+    ):
         pass
 
     def validate_references(self, query, references, threshold=0.1):
@@ -56,17 +60,23 @@ class MsValidator(Validator):
             ref.score = scores.get(ref.text, 0.0)
 
         filtered_references = [ref for ref in references if ref.score > threshold]
-        sorted_filtered_references = sorted(filtered_references, key=lambda x: x.score, reverse=True)
+        sorted_filtered_references = sorted(
+            filtered_references, key=lambda x: x.score, reverse=True
+        )
 
         return sorted_filtered_references
 
-    #def filter_by_score(self, query, references, threshold=0.1):
-        #scores = self.cross_scores([ref.text for ref in references], query)
-        #return [ref for ref in references if scores[ref.text] > threshold]
+    # def filter_by_score(self, query, references, threshold=0.1):
+    # scores = self.cross_scores([ref.text for ref in references], query)
+    # return [ref for ref in references if scores[ref.text] > threshold]
 
     def cross_scores(self, sentences, query):
         features = self.cross_sentence_tokenizer(
-            [query]*len(sentences), sentences, padding=True, truncation=True, return_tensors="pt"
+            [query] * len(sentences),
+            sentences,
+            padding=True,
+            truncation=True,
+            return_tensors="pt",
         )
         self.cross_sentence_model.eval()
         with torch.no_grad():

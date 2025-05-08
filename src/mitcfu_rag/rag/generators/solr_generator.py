@@ -20,6 +20,7 @@ example of usage:
     response = d_generator(references, query)
     print(f'response: {response}')
 """
+
 import random
 import logging
 import json
@@ -30,8 +31,8 @@ from mitcfu_rag.rag.rag import Generator, SourcesWithScore, AnswerWithSource
 
 logger = logging.getLogger(__name__)
 
-class SolrGenerator(Generator):
 
+class SolrGenerator(Generator):
     def __init__(self):
         self.system_message = """
 Du er FaktaChat, en meget klog og kritisk chatbot der KUN bruger FaktaLink kilder til at besvare brugerens spørgsmål.
@@ -48,12 +49,20 @@ Kilder: En liste af kilder, som du har brugt til at finde svaret.
 
 Kilder: \nKILDE: """
 
-    def generate(self, references: list[(str, str)], messages: list[dict]) -> str:       
-        parsed_references = [f"{ref.text[:700]}\nlink: {ref.article_link}" for ref in references][:3]
-        #parsed_references = [f"{ref['sentences'][:700]}\nlink: {ref['article_link']}" for ref in references][:3]
+    def generate(self, references: list[(str, str)], messages: list[dict]) -> str:
+        parsed_references = [
+            f"{ref.text[:700]}\nlink: {ref.article_link}" for ref in references
+        ][:3]
+        # parsed_references = [f"{ref['sentences'][:700]}\nlink: {ref['article_link']}" for ref in references][:3]
         logger.info(f"parsed_references: {parsed_references}")
 
-        yield self.llm_generate({"messages": messages, "parameters": {"temperature": 0.1, "max_new_tokens": 600}}, parsed_references)
+        yield self.llm_generate(
+            {
+                "messages": messages,
+                "parameters": {"temperature": 0.1, "max_new_tokens": 600},
+            },
+            parsed_references,
+        )
 
     def llm_format(self, msgs, parsed_references):
         result = "<s>[INST] <<SYS>>\n"
@@ -62,25 +71,25 @@ Kilder: \nKILDE: """
 
         result += self.system_message + "\nKILDE: ".join(parsed_references)
         result += "\n<</SYS>>\n\n"
-        
+
         for msg in msgs:
             result += f"\n{msg['role']}: {msg['content']}"
             result += "</s><s>[INST]" if msg["role"] == "assistant" else "[/INST]"
-        
+
         return result
-    
+
     def decode(self, input, stream=False):
-        try :
-            return input.decode('utf-8')
+        try:
+            return input.decode("utf-8")
         except UnicodeDecodeError as e:
             logger.debug(f"UnicodeDecodeError: {e}")
-            return input.decode('utf-8', errors='ignore')
+            return input.decode("utf-8", errors="ignore")
 
     def llm_generate(self, input, parsed_references):
         fetch_options = {
             "headers": {
                 "Content-Type": "application/json",
-                "Cache-Control": "no-store"
+                "Cache-Control": "no-store",
             },
             "method": "POST",
             "redirect": "manual",
@@ -89,14 +98,19 @@ Kilder: \nKILDE: """
         fetch_url = "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk/generate_stream"
         request_body = {
             "inputs": self.llm_format(input["messages"], parsed_references),
-            "parameters": input["parameters"]
+            "parameters": input["parameters"],
         }
         request_body_str = json.dumps(request_body)
 
-        res = requests.post(fetch_url, headers=fetch_options["headers"], data=request_body_str, stream=True)
+        res = requests.post(
+            fetch_url,
+            headers=fetch_options["headers"],
+            data=request_body_str,
+            stream=True,
+        )
 
         generated_text = ""
-        
+
         for chunk in res.iter_content(chunk_size=1024):
             if chunk:
                 decoded_value = self.decode(chunk, stream=True)
@@ -108,4 +122,3 @@ Kilder: \nKILDE: """
                     pass
                 except Exception as e:
                     logger.info(f"Error during streaming: {e}")
-        

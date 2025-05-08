@@ -30,6 +30,7 @@ usage:
    In [3]: sem_split.split_text("hesten gik på marken. Den var sort. Kokken fik fri kl. 5")
    Out[3]: ['hesten gik på marken. Den var sort.', 'Kokken fik fri kl. 5']
 """
+
 from typing import Literal, get_args
 
 import numpy as np
@@ -38,17 +39,20 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from mitcfu_rag.tools.embedder import Embedder, HuggingfaceEmbedder
 
-__all__ = ['SemanticSplitter']
+__all__ = ["SemanticSplitter"]
 
 BreakpointThresholdType = Literal["cosine-distance", "percentile", "standard-deviation"]
 
 
 class SemanticSplitter:
-    """ Splits text based on semantic bounderies. """
-    def __init__(self,
-                 breakpoint_threshold: float|None = None,
-                 breakpoint_threshold_type: BreakpointThresholdType|None = 'percentile',
-                 embedder: Embedder|None = None) -> list[str]:
+    """Splits text based on semantic bounderies."""
+
+    def __init__(
+        self,
+        breakpoint_threshold: float | None = None,
+        breakpoint_threshold_type: BreakpointThresholdType | None = "percentile",
+        embedder: Embedder | None = None,
+    ) -> list[str]:
         """
         Initializes semantic textsplitter
 
@@ -60,11 +64,11 @@ class SemanticSplitter:
         :param embedder:
             Embedder instance to use on chunks
         """
-        (self.breakpoint_threshold,
-         self.breakpoint_threshold_type,
-         self.embedder) = self.__configure(breakpoint_threshold, breakpoint_threshold_type, embedder)
+        (self.breakpoint_threshold, self.breakpoint_threshold_type, self.embedder) = (
+            self.__configure(breakpoint_threshold, breakpoint_threshold_type, embedder)
+        )
 
-    def split_text(self, text: str)-> list[str]:
+    def split_text(self, text: str) -> list[str]:
         """
         Splits text
 
@@ -84,12 +88,19 @@ class SemanticSplitter:
         neighborhood_encodings = self.embedder.encode(neighborhoods)
         neighborhood_distances = []
         for i in range(len(sentences) - 1):
-            neighborhood_distances.append(1 - cosine_similarity(neighborhood_encodings[i].reshape(1, -1),
-                                                                neighborhood_encodings[i+1].reshape(1, -1)).squeeze())
+            neighborhood_distances.append(
+                1
+                - cosine_similarity(
+                    neighborhood_encodings[i].reshape(1, -1),
+                    neighborhood_encodings[i + 1].reshape(1, -1),
+                ).squeeze()
+            )
 
-        threshold = self.__get_threshold(neighborhood_distances,
-                                         self.breakpoint_threshold,
-                                         self.breakpoint_threshold_type)
+        threshold = self.__get_threshold(
+            neighborhood_distances,
+            self.breakpoint_threshold,
+            self.breakpoint_threshold_type,
+        )
         neighborhood_distances.append(0)
         chunks = [""]
         for sentence, distance in zip(sentences, neighborhood_distances):
@@ -101,7 +112,9 @@ class SemanticSplitter:
 
         return chunks
 
-    def __get_threshold(self, distances, breakpoint_threshold, breakpoint_threshold_type) -> float:
+    def __get_threshold(
+        self, distances, breakpoint_threshold, breakpoint_threshold_type
+    ) -> float:
         match breakpoint_threshold_type:
             case "cosine-distance":
                 return breakpoint_threshold
@@ -111,15 +124,19 @@ class SemanticSplitter:
                 return np.mean(distances) + breakpoint_threshold * np.std(distances)
 
     def __configure(self, breakpoint_threshold, breakpoint_threshold_type, embedder):
-        default_thresholds = {"cosine-distance": 0.12,
-                              "percentile": 70,
-                              "standard-deviation": 3}
+        default_thresholds = {
+            "cosine-distance": 0.12,
+            "percentile": 70,
+            "standard-deviation": 3,
+        }
         if not embedder:
             embedder = HuggingfaceEmbedder()
         if not breakpoint_threshold_type:
             breakpoint_threshold_type = "cosine-distance"
         if not breakpoint_threshold_type in get_args(BreakpointThresholdType):
-            raise KeyError(f"Unknown breakpoint_threshold_type: {breakpoint_threshold_type}")
+            raise KeyError(
+                f"Unknown breakpoint_threshold_type: {breakpoint_threshold_type}"
+            )
         if not breakpoint_threshold:
             breakpoint_threshold = default_thresholds[breakpoint_threshold_type]
 

@@ -38,7 +38,11 @@ DEFAULT_WEIGHTS = [1 / 3, 1 / 3, 1 / 3]
 
 
 class ReciprocalEnsembler(Ensembler):
-    def __init__(self, retrievers: list[Retriever] = DEFAULT_RETRIEVERS, weights: list[float] = DEFAULT_WEIGHTS):
+    def __init__(
+        self,
+        retrievers: list[Retriever] = DEFAULT_RETRIEVERS,
+        weights: list[float] = DEFAULT_WEIGHTS,
+    ):
         if sum(weights) != 1:
             raise ValueError("The sum of the weights must be 1")
         self.ensemble_retriever = self.set_up_langchain_ensemble_retriever(weights)
@@ -58,26 +62,41 @@ class ReciprocalEnsembler(Ensembler):
         doc_lists = []
         for retriever in self.retrievers:
             _, relevant_documents = retriever.retrieve(messages)
-            doc_lists.append(self.convert_references_to_langchain_docs(relevant_documents))
+            doc_lists.append(
+                self.convert_references_to_langchain_docs(relevant_documents)
+            )
         ensembled_docs = self.ensemble_retriever.weighted_reciprocal_rank(doc_lists)
         return self.convert_langchain_docs_to_references(ensembled_docs)
 
-    def ensemble_by_ranked_docs(self, ref_lists: list[list[Reference]], weights: list[float]) -> list[Reference]:
-        doc_lists = [self.convert_references_to_langchain_docs(list_refs) for list_refs in ref_lists]
+    def ensemble_by_ranked_docs(
+        self, ref_lists: list[list[Reference]], weights: list[float]
+    ) -> list[Reference]:
+        doc_lists = [
+            self.convert_references_to_langchain_docs(list_refs)
+            for list_refs in ref_lists
+        ]
         ensembled_docs = self.ensemble_retriever.weighted_reciprocal_rank(doc_lists)
         return None, self.convert_langchain_docs_to_references(ensembled_docs)
 
-    def convert_references_to_langchain_docs(self, refs: list[Reference]) -> list[Document]:
+    def convert_references_to_langchain_docs(
+        self, refs: list[Reference]
+    ) -> list[Document]:
         langchain_docs = []
         for ref in refs:
             langchain_doc = Document(
                 page_content=ref.text,
-                metadata={"id": ref.id, "article_headline": ref.article_headline, "article_link": ref.article_link},
+                metadata={
+                    "id": ref.id,
+                    "article_headline": ref.article_headline,
+                    "article_link": ref.article_link,
+                },
             )
             langchain_docs.append(langchain_doc)
         return langchain_docs
 
-    def convert_langchain_docs_to_references(self, docs: list[Document]) -> list[Reference]:
+    def convert_langchain_docs_to_references(
+        self, docs: list[Document]
+    ) -> list[Reference]:
         refs = []
         for doc in docs:
             ref = Reference(
@@ -102,7 +121,9 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--message", type=str)
-    parser.add_argument("--verbose", help="increase output verbosity", action="store_true")
+    parser.add_argument(
+        "--verbose", help="increase output verbosity", action="store_true"
+    )
     args = parser.parse_args()
     # if args.verbose:
     # logger.setLevel(logging.DEBUG)

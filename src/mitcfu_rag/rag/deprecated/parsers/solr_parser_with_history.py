@@ -18,13 +18,14 @@ example of usage:
     prprocessed_messaged = d_parser(messages)
     print(f'preprocessed messaged: {preprocessed_messages}')
 """
+
 import logging
 from fakta_chat.rag.rag import Parser
 
 logger = logging.getLogger(__name__)
 
-class SolrParser(Parser):
 
+class SolrParser(Parser):
     def __init__(self):
         pass
 

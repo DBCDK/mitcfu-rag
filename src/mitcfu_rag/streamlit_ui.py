@@ -73,9 +73,11 @@ st.image(relative_img_path, width=150)
 # memoryforchat=ConversationBufferMemory()
 # convo=ConversationChain(memory=memoryforchat,llm=chat,verbose=True)
 
-greeting = "Hej 👋 Jeg er MitCFU-RAG og jeg kan hjælpe dig med at finde information om materialer\
+greeting = (
+    "Hej 👋 Jeg er MitCFU-RAG og jeg kan hjælpe dig med at finde information om materialer\
               fra MitCFU. Men indtil videre er jeg vist stadig mest en kopi af FaktaChat. \
               \n\nHvad kan jeg hjælpe dig med?"
+)
 
 
 def decode(input):
@@ -161,9 +163,17 @@ if prompt := st.chat_input("Indsæt dit spørgmål her ..."):
                 if not ref.article_link in seen_references:
                     st.write_stream(gen_wrapper(ref.article_link.split("\n")))
                     stream_text += "\n\n" + ref.article_link
-                    ref_text += "\n\n" + ref.article_link + ' - Artikel: "' + ref.article_headline + '"\n\n'
+                    ref_text += (
+                        "\n\n"
+                        + ref.article_link
+                        + ' - Artikel: "'
+                        + ref.article_headline
+                        + '"\n\n'
+                    )
                 seen_references.add(ref.article_link)
-            st.session_state.messages[-1]["content"] = st.session_state.messages[-1]["content"] + stream_text
+            st.session_state.messages[-1]["content"] = (
+                st.session_state.messages[-1]["content"] + stream_text
+            )
             # st.session_state.messages.append({"role": "keeper of sources", "content": ref_text})
 
 # Streamed response emulator

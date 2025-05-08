@@ -59,32 +59,49 @@ class e5mistralEmbedder(Embedder):
 
         for doc in texts:
             # Tokenize the document
-            inputs = self.tokenizer(doc, return_tensors="pt", padding=True, truncation=True, max_length=self.max_length)
+            inputs = self.tokenizer(
+                doc,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_length,
+            )
 
             # Temporary debugging statement
             if inputs["input_ids"].shape[1] > self.max_length:
-                logger.warning(f"Token length is {inputs['input_ids'].shape[1]} > max_length")
+                logger.warning(
+                    f"Token length is {inputs['input_ids'].shape[1]} > max_length"
+                )
 
             # Generate the embeddings
             with torch.no_grad():
                 outputs = self.model(**inputs)
-                embeddings = self.last_token_pool(outputs.last_hidden_state, inputs["attention_mask"])
+                embeddings = self.last_token_pool(
+                    outputs.last_hidden_state, inputs["attention_mask"]
+                )
         return embeddings
 
     def encode_query(
-        self, query: str, task: str = "Given a search query, retrieve relevant passages that answer the query"
+        self,
+        query: str,
+        task: str = "Given a search query, retrieve relevant passages that answer the query",
     ):
         query = self.get_detailed_instruct(task, query)
         return self.encode([query])
 
-    def last_token_pool(self, last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
+    def last_token_pool(
+        self, last_hidden_states: Tensor, attention_mask: Tensor
+    ) -> Tensor:
         left_padding = attention_mask[:, -1].sum() == attention_mask.shape[0]
         if left_padding:
             return last_hidden_states[:, -1]
         else:
             sequence_lengths = attention_mask.sum(dim=1) - 1
             batch_size = last_hidden_states.shape[0]
-            return last_hidden_states[torch.arange(batch_size, device=last_hidden_states.device), sequence_lengths]
+            return last_hidden_states[
+                torch.arange(batch_size, device=last_hidden_states.device),
+                sequence_lengths,
+            ]
 
     def get_detailed_instruct(self, task_description: str, query: str) -> str:
         return f"Instruct: {task_description}\nQuery: {query}"
@@ -97,7 +114,11 @@ def index_paragraph_docs():
 
     # create path_to_index_file by looping through the files in the directory /data/mitcfu-rag/test1000-jeds and check if file is json
     path_to_folder = "/data/mitcfu-rag/10plus-abstract-77295-jeds"
-    onlyfiles = [f for f in os.listdir(path_to_folder) if os.path.isfile(os.path.join(path_to_folder, f))]
+    onlyfiles = [
+        f
+        for f in os.listdir(path_to_folder)
+        if os.path.isfile(os.path.join(path_to_folder, f))
+    ]
     # create a list of the content of the json files, with each file being a list of dictionaries
     json_files = []
     for file in tqdm(onlyfiles):
@@ -114,7 +135,9 @@ def index_paragraph_docs():
     with open(path_to_index_file, "r") as file:
         data = json.load(file)
 
-    e5_embedder = e5mistralEmbedder("/data/faktalink_models/intfloat/multilingual-e5-large/")
+    e5_embedder = e5mistralEmbedder(
+        "/data/faktalink_models/intfloat/multilingual-e5-large/"
+    )
     db = None
 
     # texts = []

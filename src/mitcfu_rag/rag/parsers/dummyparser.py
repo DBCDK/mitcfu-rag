@@ -18,6 +18,7 @@ example of usage:
     prprocessed_messaged = d_parser(messages)
     print(f'preprocessed messaged: {preprocessed_messages}')
 """
+
 import logging
 from mitcfu_rag.rag.rag import Parser
 

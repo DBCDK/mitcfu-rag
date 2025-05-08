@@ -11,26 +11,60 @@ from fakta_chat.evaluation_tools.evaluation import sample_evaluation_questions
 
 console = Console()
 
-def main(limit : int, question_type : str,):
+
+def main(
+    limit: int,
+    question_type: str,
+):
     # Get references
     participant_model = RAG()
     comparison_model = ComparisonRAG()
     evaluation_file = sample_evaluation_questions(int(limit), question_type)
-    
+
     for line in tqdm(evaluation_file, desc="Generating Predictions"):
-        query = line['query']
+        query = line["query"]
         refs_1, ans_1 = participant_model.evaluate(query)
         refs_2, ans_2 = comparison_model.evaluate(query)
-    
-        print('\n\n')
+
+        print("\n\n")
         print(f'QUERY: """{query}"""')
         print()
-        print('TOP REFERENCES WITH ANSWERS:\n')
+        print("TOP REFERENCES WITH ANSWERS:\n")
         df = pd.DataFrame()
-        df["MODEL: " + str(participant_model.__class__.__name__) + "\n\n" + f'GENERATOR: """{ans_1.strip()}"""' + "\n\n"] = \
-                ["\n\n".join(["id: " + ref.id, "title: " + ref.article_headline, "snippet: \"\"\"" + ref.text + "\"\"\""]) + "\n\n" for ref in refs_1]
-        df["MODEL: " + str(comparison_model.__class__.__name__) + "\n\n" + f'GENERATOR: """{ans_1.strip()}"""' + "\n\n"] = \
-                ["\n\n".join(["id: " + ref.id, "title: " + ref.article_headline, "snippet: \"\"\"" + ref.text + "\"\"\""]) + "\n\n" for ref in refs_2]
+        df[
+            "MODEL: "
+            + str(participant_model.__class__.__name__)
+            + "\n\n"
+            + f'GENERATOR: """{ans_1.strip()}"""'
+            + "\n\n"
+        ] = [
+            "\n\n".join(
+                [
+                    "id: " + ref.id,
+                    "title: " + ref.article_headline,
+                    'snippet: """' + ref.text + '"""',
+                ]
+            )
+            + "\n\n"
+            for ref in refs_1
+        ]
+        df[
+            "MODEL: "
+            + str(comparison_model.__class__.__name__)
+            + "\n\n"
+            + f'GENERATOR: """{ans_1.strip()}"""'
+            + "\n\n"
+        ] = [
+            "\n\n".join(
+                [
+                    "id: " + ref.id,
+                    "title: " + ref.article_headline,
+                    'snippet: """' + ref.text + '"""',
+                ]
+            )
+            + "\n\n"
+            for ref in refs_2
+        ]
 
         # Initiate a Table instance to be modified
         table = Table(show_header=True, header_style="bold magenta")
@@ -44,7 +78,8 @@ def main(limit : int, question_type : str,):
 
         console.print(table)
 
-#https://gist.github.com/neelabalan/33ab34cf65b43e305c3f12ec6db05938     
+
+# https://gist.github.com/neelabalan/33ab34cf65b43e305c3f12ec6db05938
 def df_to_table(
     pandas_dataframe: pd.DataFrame,
     rich_table: Table,
@@ -74,24 +109,25 @@ def df_to_table(
 
     return rich_table
 
+
 def cli():
-    """Command line arguments
-    """
+    """Command line arguments"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--n-questions', default=5,
-                        help='number of evaluation_questions')
-    parser.add_argument('-q', '--question-type', default='all',
-                        help='Type of question.')
-    
+    parser.add_argument(
+        "-n", "--n-questions", default=5, help="number of evaluation_questions"
+    )
+    parser.add_argument(
+        "-q", "--question-type", default="all", help="Type of question."
+    )
+
     return parser.parse_args()
 
 
 def run():
-    """Entrypoint for running these methods using the CLI
-    """
+    """Entrypoint for running these methods using the CLI"""
     args = cli()
     main(args.n_questions, args.question_type)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

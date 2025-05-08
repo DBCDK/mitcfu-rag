@@ -18,6 +18,7 @@ example of usage:
     response = d_generator(references, query)
     print(f'response: {response}')
 """
+
 import random
 import logging
 import json
@@ -29,8 +30,8 @@ roles_to_ignore = ["resetter", "summarizer"]
 
 logger = logging.getLogger(__name__)
 
-class EmbeddingGenerator(Generator):
 
+class EmbeddingGenerator(Generator):
     def __init__(self):
         self.system_message = "Du er FaktaChat, en kritisk chatbot der forholder sig til den viden du får fra brugerens kilder. Du svarer altid på dansk."
         self.prompt_template = """
@@ -54,20 +55,20 @@ Du kan tjekke Faktalinks oversigt over temaer (https://faktalink.dk/tema) eller 
 Dit svar:
 """
 
-    def generate(self, references: list[(str, str)], messages: list[dict]) -> str:       
-        #parsed_references = [f"{ref['sentences'][:700]}\nlink: {ref['article_link']}" for ref in references][:3]
-        #for ref in references:
+    def generate(self, references: list[(str, str)], messages: list[dict]) -> str:
+        # parsed_references = [f"{ref['sentences'][:700]}\nlink: {ref['article_link']}" for ref in references][:3]
+        # for ref in references:
         #    print("\nref: ", ref)
         logger.info(f"parsed_references: {references}")
-        
-        #remove sources from output if generated
+
+        # remove sources from output if generated
         cleaned_messages = []
         logger.debug("RAW MESSAGES")
         logger.debug(messages)
         logger.debug("END RAW MESSAGES")
         i = 0
         for i, message in enumerate(messages):
-            #skip initial welcome message
+            # skip initial welcome message
             if i == 0:
                 continue
             elif message["role"] == "assistant":
@@ -84,7 +85,13 @@ Dit svar:
         logger.debug(cleaned_messages)
         logger.debug("END CLEANED MESSAGES")
 
-        yield self.llm_generate({"messages": cleaned_messages, "parameters": {"temperature": 0.1, "max_new_tokens": 600}}, references)
+        yield self.llm_generate(
+            {
+                "messages": cleaned_messages,
+                "parameters": {"temperature": 0.1, "max_new_tokens": 600},
+            },
+            references,
+        )
 
     def llm_format(self, msgs, parsed_references):
         result = "[INST] <<SYS>>\n"
@@ -93,31 +100,38 @@ Dit svar:
 
         result += self.system_message
         result += "\n<</SYS>>[/INST]\n\n"
-        
-        
+
         if parsed_references:
             for msg in msgs[:-1]:
-                    result += f"{msg['content']}"
-                    result += "[INST]" if msg["role"] == "assistant" else "[/INST]"
-            result += self.prompt_template + "\n\n".join([ref.text for ref in parsed_references]) + "\n\n"
-            result += "\n[INST] Brugerens spørgsmål:" + msgs[-1]['content'] + "[/INST]Dit svar:"
+                result += f"{msg['content']}"
+                result += "[INST]" if msg["role"] == "assistant" else "[/INST]"
+            result += (
+                self.prompt_template
+                + "\n\n".join([ref.text for ref in parsed_references])
+                + "\n\n"
+            )
+            result += (
+                "\n[INST] Brugerens spørgsmål:"
+                + msgs[-1]["content"]
+                + "[/INST]Dit svar:"
+            )
         else:
             result += self.missing_reference_prompt
-        #print(result)
+        # print(result)
         return result
-    
+
     def decode(self, input, stream=False):
-        try :
-            return input.decode('utf-8')
+        try:
+            return input.decode("utf-8")
         except UnicodeDecodeError as e:
             logger.debug(f"UnicodeDecodeError: {e}")
-            return input.decode('utf-8', errors='ignore')
+            return input.decode("utf-8", errors="ignore")
 
     def llm_generate(self, input, parsed_references):
         fetch_options = {
             "headers": {
                 "Content-Type": "application/json",
-                "Cache-Control": "no-store"
+                "Cache-Control": "no-store",
             },
             "method": "POST",
             "redirect": "manual",
@@ -126,14 +140,19 @@ Dit svar:
         fetch_url = "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk/generate_stream"
         request_body = {
             "inputs": self.llm_format(input["messages"], parsed_references),
-            "parameters": input["parameters"]
+            "parameters": input["parameters"],
         }
         request_body_str = json.dumps(request_body)
 
-        res = requests.post(fetch_url, headers=fetch_options["headers"], data=request_body_str, stream=True)
+        res = requests.post(
+            fetch_url,
+            headers=fetch_options["headers"],
+            data=request_body_str,
+            stream=True,
+        )
 
         generated_text = ""
-        
+
         for chunk in res.iter_content(chunk_size=1024):
             if chunk:
                 decoded_value = self.decode(chunk, stream=True)
@@ -141,7 +160,7 @@ Dit svar:
                     obj = json.loads(decoded_value.replace("data: ", ""))
                     generated_text += obj.get("token", {}).get("text", {})
                     if obj.get("token", {}).get("text", {}) == "</s>":
-                        #print("dont print </s>")
+                        # print("dont print </s>")
                         yield ""
                     else:
                         yield obj.get("token", {}).get("text", {})
@@ -149,5 +168,3 @@ Dit svar:
                     pass
                 except Exception as e:
                     logger.info(f"Error during streaming: {e}")
-
-

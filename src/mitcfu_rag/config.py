@@ -1,5 +1,5 @@
-#from fakta_chat.rag.dummy_rag import DummyRAG
-#from fakta_chat.rag.solr_rag import SolrRAG
+# from fakta_chat.rag.dummy_rag import DummyRAG
+# from fakta_chat.rag.solr_rag import SolrRAG
 from mitcfu_rag.rag.streaming_rag import StreamingRAG
 from mitcfu_rag.rag.agent_streaming_rag import AgenticRAG
 
@@ -25,19 +25,20 @@ Du overholder følgende regler:
 - Dit output er kun dit svar, ikke kilderne på dit svar.
 
 Kilder:
-"""
+""",
 }
 
 SIMPLE_TEMPLATE = {
     "name": "SIMPLE",
     "description": "svarer KUN på simple ting som hej, tak, og forklaring på hvad faktachat er.",
-    "prompt":"""
+    "prompt": """
 Brugeren har stillet et spørgsmål der ikke handler om specifikke faktalink artikler, eller sagt hej, tak eller farvel.
 Du svarer høftligt og kortfattet brugeren med en afslappet tone.
 Hvis spørgsmålet ikke er noget i stil med "hej" eller "tak", så forklarer du brugeren at du er Faktachat
 og beder dem stille et spørgsmål som du kan hjælpe med at svare på.
 Chat-historik:
-"""}
+""",
+}
 
 FALLBACK_TEMPLATE = {
     "name": "FALLBACK",
@@ -45,25 +46,33 @@ FALLBACK_TEMPLATE = {
     "prompt": """
 Brugeren spørger om noget der ikke er relevant for Faktachat. Forklar brugeren at du ikke kan besvare deres spørgsmål,
 og bed dem om at spørge om noget andet.    
-"""
+""",
 }
+
 
 def ROUTER_TEMPLATE():
     ALL_TEMPLATES = [SIMPLE_TEMPLATE, FALLBACK_TEMPLATE, RAG_TEMPLATE]
     return {
         "name": "ROUTER",
         "descrption": "vælger hvilken agent der skal svare på den seneste besked.",
-        "prompt":"""
+        "prompt": """
     Brugeren har sendt en besked, og det er din opgave at bedømme hvilken agent der skal håndtere beskeden.
     Du skal kigge på den seneste besked og bedømme hvilken agent der skal besvare det.
-    """ + "\n".join([f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES]) + """
-    Dit svar skal være KUN, IKKE ANDET end """ + "eller ".join([f"[{TEMP['name']}]" for TEMP in ALL_TEMPLATES]) + """\n\n
-    """}
+    """
+        + "\n".join(
+            [f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES]
+        )
+        + """
+    Dit svar skal være KUN, IKKE ANDET end """
+        + "eller ".join([f"[{TEMP['name']}]" for TEMP in ALL_TEMPLATES])
+        + """\n\n
+    """,
+    }
 
 
 # for evaluation, the model that should be used for comparison
 # flag -c skal sættes til True
-#ComparisonRAG = SolrRAG
+# ComparisonRAG = SolrRAG
 
 
 # # for comparing several retrieval models

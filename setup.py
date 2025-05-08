@@ -50,7 +50,7 @@ setup(
             "evaluate = mitcfu_rag.evaluation_tools.evaluation:run",
             "evaluate-retrieval = mitcfu_rag.evaluation_tools.evaluate_retrieval:run",
             "compare-retrievers = mitcfu_rag.evaluation_tools.compare_retrievers:run",
-            "streaming-service-mitcfu = mitcfu_rag.service:cli"
+            "streaming-service-mitcfu = mitcfu_rag.service:cli",
         ]
     },
     maintainer="ai",

@@ -26,22 +26,306 @@ example of usage:
     print(f'relevant references: {refs}')
 """
 
-STOP_WORDS = ["ad","af","al","aldrig","alene","alle","allerede","alligevel","alt","altid","andet","andre","at","bag",
-"bare","begge","bile","blandt","blev","blive","bliver","blot","bruge","burde","bør","både","da","de","dem","den","denne","dens",
-"der","derefter","deres","derfor","derfra","deri","dermed","derpå","derved","det","dette","dig","din","dine","disse","dit","dog",
-"du","efter","egen","ej","eller","ellers","en","end","endnu","ene","eneste","enhver","ens","enten","er","et","far","fem","fik",
-"fire","flere","flest","fleste","for","foran","fordi","forrige","fra","få","får","før","først","gang","gennem","gerne","gik","giver",
-"gjorde","gjort","god","godt","gør","gøre","gørende","går","ham","han","handler","har","havde","have","hej","hel","hele","heller","helt","hen",
-"hende","hendes","henover","her","herefter","heri","hermed","herpå","hos","hun","hvad","hvem","hver","hvilke","hvilken","hvilkes","hvis",
-"hvor","hvordan","hvorefter","hvorfor","hvorfra","hvorhen","hvori","hvorimod","hvornår","hvorved","i","ifølge","igen","igennem","ikke",
-"imellem","imens","imod","in","ind","indtil","ingen","intet","ja","jeg","jer","jeres","jo","kan","kom","komme","kommer","kun","kunne",
-"lad","langs","le","lav","lave","lavet","lidt","lige","ligesom","lille","lo","længere","made","man","mand","mange","mangen","med","megen","meget",
-"mellem","men","mene","mener","mens","mere","mest","mig","min","mindre","mindst","mine","mit","mod","må","måde","måske","måtte","ned","nej",
-"nemlig","netop","ni","nogen","nogensinde","noget","nogle","nok","nu","når","nær","næste","næsten","of","og","også","okay","om","omkring","op",
-"oppe","os","ord","otte","over","overalt","par","på","sagde","samme","sammen","se","seks","selv","selvom","senere","ser","ses","side","sidder",
-"siden","sidste","sig","sige","sin","sine","sit","skal","skulle","som","stadig","stod","stor","store","står","synes","syntes","syv","så","sådan","således",
-"tag","tage","temmelig","the","thi","ti","tidligere","til","tilbage","ting","tit","to","tre","ud","uden","udover","under","undtagen","var","ved",
-"vej","vi","via","vil","ville","vor","vore","vores","vær","være","været","with","www","you","øvrigt","åre", "srkive", "opgave", "skrive", "fungerer"]
+STOP_WORDS = [
+    "ad",
+    "af",
+    "al",
+    "aldrig",
+    "alene",
+    "alle",
+    "allerede",
+    "alligevel",
+    "alt",
+    "altid",
+    "andet",
+    "andre",
+    "at",
+    "bag",
+    "bare",
+    "begge",
+    "bile",
+    "blandt",
+    "blev",
+    "blive",
+    "bliver",
+    "blot",
+    "bruge",
+    "burde",
+    "bør",
+    "både",
+    "da",
+    "de",
+    "dem",
+    "den",
+    "denne",
+    "dens",
+    "der",
+    "derefter",
+    "deres",
+    "derfor",
+    "derfra",
+    "deri",
+    "dermed",
+    "derpå",
+    "derved",
+    "det",
+    "dette",
+    "dig",
+    "din",
+    "dine",
+    "disse",
+    "dit",
+    "dog",
+    "du",
+    "efter",
+    "egen",
+    "ej",
+    "eller",
+    "ellers",
+    "en",
+    "end",
+    "endnu",
+    "ene",
+    "eneste",
+    "enhver",
+    "ens",
+    "enten",
+    "er",
+    "et",
+    "far",
+    "fem",
+    "fik",
+    "fire",
+    "flere",
+    "flest",
+    "fleste",
+    "for",
+    "foran",
+    "fordi",
+    "forrige",
+    "fra",
+    "få",
+    "får",
+    "før",
+    "først",
+    "gang",
+    "gennem",
+    "gerne",
+    "gik",
+    "giver",
+    "gjorde",
+    "gjort",
+    "god",
+    "godt",
+    "gør",
+    "gøre",
+    "gørende",
+    "går",
+    "ham",
+    "han",
+    "handler",
+    "har",
+    "havde",
+    "have",
+    "hej",
+    "hel",
+    "hele",
+    "heller",
+    "helt",
+    "hen",
+    "hende",
+    "hendes",
+    "henover",
+    "her",
+    "herefter",
+    "heri",
+    "hermed",
+    "herpå",
+    "hos",
+    "hun",
+    "hvad",
+    "hvem",
+    "hver",
+    "hvilke",
+    "hvilken",
+    "hvilkes",
+    "hvis",
+    "hvor",
+    "hvordan",
+    "hvorefter",
+    "hvorfor",
+    "hvorfra",
+    "hvorhen",
+    "hvori",
+    "hvorimod",
+    "hvornår",
+    "hvorved",
+    "i",
+    "ifølge",
+    "igen",
+    "igennem",
+    "ikke",
+    "imellem",
+    "imens",
+    "imod",
+    "in",
+    "ind",
+    "indtil",
+    "ingen",
+    "intet",
+    "ja",
+    "jeg",
+    "jer",
+    "jeres",
+    "jo",
+    "kan",
+    "kom",
+    "komme",
+    "kommer",
+    "kun",
+    "kunne",
+    "lad",
+    "langs",
+    "le",
+    "lav",
+    "lave",
+    "lavet",
+    "lidt",
+    "lige",
+    "ligesom",
+    "lille",
+    "lo",
+    "længere",
+    "made",
+    "man",
+    "mand",
+    "mange",
+    "mangen",
+    "med",
+    "megen",
+    "meget",
+    "mellem",
+    "men",
+    "mene",
+    "mener",
+    "mens",
+    "mere",
+    "mest",
+    "mig",
+    "min",
+    "mindre",
+    "mindst",
+    "mine",
+    "mit",
+    "mod",
+    "må",
+    "måde",
+    "måske",
+    "måtte",
+    "ned",
+    "nej",
+    "nemlig",
+    "netop",
+    "ni",
+    "nogen",
+    "nogensinde",
+    "noget",
+    "nogle",
+    "nok",
+    "nu",
+    "når",
+    "nær",
+    "næste",
+    "næsten",
+    "of",
+    "og",
+    "også",
+    "okay",
+    "om",
+    "omkring",
+    "op",
+    "oppe",
+    "os",
+    "ord",
+    "otte",
+    "over",
+    "overalt",
+    "par",
+    "på",
+    "sagde",
+    "samme",
+    "sammen",
+    "se",
+    "seks",
+    "selv",
+    "selvom",
+    "senere",
+    "ser",
+    "ses",
+    "side",
+    "sidder",
+    "siden",
+    "sidste",
+    "sig",
+    "sige",
+    "sin",
+    "sine",
+    "sit",
+    "skal",
+    "skulle",
+    "som",
+    "stadig",
+    "stod",
+    "stor",
+    "store",
+    "står",
+    "synes",
+    "syntes",
+    "syv",
+    "så",
+    "sådan",
+    "således",
+    "tag",
+    "tage",
+    "temmelig",
+    "the",
+    "thi",
+    "ti",
+    "tidligere",
+    "til",
+    "tilbage",
+    "ting",
+    "tit",
+    "to",
+    "tre",
+    "ud",
+    "uden",
+    "udover",
+    "under",
+    "undtagen",
+    "var",
+    "ved",
+    "vej",
+    "vi",
+    "via",
+    "vil",
+    "ville",
+    "vor",
+    "vore",
+    "vores",
+    "vær",
+    "være",
+    "været",
+    "with",
+    "www",
+    "you",
+    "øvrigt",
+    "åre",
+    "srkive",
+    "opgave",
+    "skrive",
+    "fungerer",
+]
 
 import logging
 from mitcfu_rag.rag.rag import Retriever, Reference
@@ -54,26 +338,30 @@ logger = logging.getLogger(__name__)
 class SolrRetriever(Retriever):
     def __init__(self):
         self.solr_url = "http://xpdev-p01:8800/solr/fakta-chat-solr/"
-        self.solr = dbc_pyutils.solr.Solr(self.solr_url) if len(self.solr_url) > 0 else None
+        self.solr = (
+            dbc_pyutils.solr.Solr(self.solr_url) if len(self.solr_url) > 0 else None
+        )
         self.keybert_model = KeyBERT("paraphrase-multilingual-MiniLM-L12-v2")
 
     def retrieve(self, messages: list[str], n: int = 5):
-        #print(messages)
+        # print(messages)
         query = messages[-1]["content"]
-        #print("message: ", query)
+        # print("message: ", query)
         keywords = self.extract_keywords(query)
-        #print("Keywords: ", keywords)
+        # print("Keywords: ", keywords)
         keyword_query = " ".join([k for k, v in keywords])
-        #print("k_query:", keyword_query)
+        # print("k_query:", keyword_query)
         formatted_query = self.format_keyword_query(keyword_query)
         solr_keyword_response = self.solr.query(formatted_query)
         formatted_question_query = self.format_question_query(query)
         solr_question_response = self.solr.query(formatted_question_query)
-        #print("querstion response: ", [doc["article_headline"] for doc in solr_question_response])
-        #print("keyword response: ", [doc["article_headline"] for doc in solr_keyword_response])
+        # print("querstion response: ", [doc["article_headline"] for doc in solr_question_response])
+        # print("keyword response: ", [doc["article_headline"] for doc in solr_keyword_response])
 
-        combined_solr_responses = self.combine_solr_responses(solr_keyword_response, solr_question_response)
-    
+        combined_solr_responses = self.combine_solr_responses(
+            solr_keyword_response, solr_question_response
+        )
+
         references = []
         seen_articles = set()
         for doc in combined_solr_responses:
@@ -82,22 +370,28 @@ class SolrRetriever(Retriever):
             seen_articles.add(doc["id"])
             if "sentences" in doc:
                 sentence = " ".join(doc["sentences"])
-                #references.append({"id": doc["id"], "sentences": sentence.strip(), "article_link": doc["article_link"].strip(),
+                # references.append({"id": doc["id"], "sentences": sentence.strip(), "article_link": doc["article_link"].strip(),
                 #                   "article_headline": doc["article_headline"].strip(), "subheadline": doc["subheadline"].strip()})
-                references.append(Reference(id=doc["id"],
-                                            article_headline=doc["article_headline"].strip(),
-                                            article_link=doc["article_link"],
-                                            text=sentence.strip()))
+                references.append(
+                    Reference(
+                        id=doc["id"],
+                        article_headline=doc["article_headline"].strip(),
+                        article_link=doc["article_link"],
+                        text=sentence.strip(),
+                    )
+                )
         return [i for i, _ in enumerate(solr_keyword_response)][:n], references[:n]
-    
+
     def extract_keywords(self, messages):
-        #print("\n\nKEYBERT DEBUG")
-        #print("QUERY: ", messages)
-        keywords = self.keybert_model.extract_keywords(messages, keyphrase_ngram_range=(1, 2), stop_words=STOP_WORDS)
-        #print("KEYWORDS: ", keywords)
-        #print("KEYBERT DEBUG END\n\n")
+        # print("\n\nKEYBERT DEBUG")
+        # print("QUERY: ", messages)
+        keywords = self.keybert_model.extract_keywords(
+            messages, keyphrase_ngram_range=(1, 2), stop_words=STOP_WORDS
+        )
+        # print("KEYWORDS: ", keywords)
+        # print("KEYBERT DEBUG END\n\n")
         return keywords
-    
+
     def format_question_query(self, input_string):
         return {
             "query": f'+all:("{input_string}" {input_string})',
@@ -107,10 +401,10 @@ class SolrRetriever(Retriever):
             "params": {
                 "defType": "edismax",
                 "f.all.qf": "article_headline subheadline^2 sentences",
-                "sort": "score desc"
-            }
+                "sort": "score desc",
+            },
         }
-    
+
     def format_keyword_query(self, input_string):
         return {
             "query": f'+all:("{input_string}" {input_string})',
@@ -120,16 +414,15 @@ class SolrRetriever(Retriever):
             "params": {
                 "defType": "edismax",
                 "f.all.qf": "article_headline^2 article_topics^2 sentences^2 gen_keywords gen_questions",
-                "sort": "score desc"
-            }
+                "sort": "score desc",
+            },
         }
-    
+
     def combine_solr_responses(self, keyword_response, question_response):
         """
         Takes two solr responses and merges them intertwined with no duplicates
         """
         question_response = [q for q in question_response]
-
 
         keyword_response = [q for q in keyword_response]
 
@@ -146,4 +439,3 @@ class SolrRetriever(Retriever):
                     seen_ids.add(question_response[i]["id"])
 
         return combined_response
-

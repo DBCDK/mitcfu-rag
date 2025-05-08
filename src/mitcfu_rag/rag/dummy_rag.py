@@ -20,6 +20,7 @@ example of usage:
     response = d_rag(messages)
     print(f'response: {response}')
 """
+
 from typing import Generator, Any
 import requests
 import json
@@ -51,34 +52,33 @@ class DummyRAG(RAG):
         similarities, references = self.retriever(processed_messages)
 
         if logger.isEnabledFor(logging.DEBUG):
-           for i, (similarity, reference) in enumerate(zip(similarities, references)):
-               logger.debug(f'{i+1}. similarity: {similarity:.2f} - {reference}\n')
-
+            for i, (similarity, reference) in enumerate(zip(similarities, references)):
+                logger.debug(f"{i + 1}. similarity: {similarity:.2f} - {reference}\n")
 
         response = self.generator(references, processed_messages)
-        return  response
+        return response
 
-    def stream_response(self, messages: list[dict[str, Any]]) -> Generator[str, None, None]:
+    def stream_response(
+        self, messages: list[dict[str, Any]]
+    ) -> Generator[str, None, None]:
         """
         yields response tokens from rag request.
         """
-        url = 'http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk'
-        data = {"model": "tgi",
-                "messages": messages,
-                "stream": True,
-                "max_tokens": 200}
+        url = "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk"
+        data = {"model": "tgi", "messages": messages, "stream": True, "max_tokens": 200}
 
-        response = requests.post(f'{url.rstrip()}/v1/chat/completions',
-                                 data=json.dumps(data),
-                                 stream=True,
-                                 headers={'Content-Type': 'application/json'})
+        response = requests.post(
+            f"{url.rstrip()}/v1/chat/completions",
+            data=json.dumps(data),
+            stream=True,
+            headers={"Content-Type": "application/json"},
+        )
 
         for chunk in response.iter_content(chunk_size=1024):
             if chunk:
-                data = str(chunk, encoding="utf-8").strip('data: ')
-                token = json.loads(data)['choices'][0]['delta']['content']
+                data = str(chunk, encoding="utf-8").strip("data: ")
+                token = json.loads(data)["choices"][0]["delta"]["content"]
                 yield token
-
 
     def evaluate(self, messages: list[str]):
         """
@@ -89,10 +89,9 @@ class DummyRAG(RAG):
         similarities, references = self.retriever(processed_messages)
 
         if logger.isEnabledFor(logging.DEBUG):
-           for i, (similarity, reference) in enumerate(zip(similarities, references)):
-               logger.debug(f'{i+1}. similarity: {similarity:.2f} - {reference}\n')
-
+            for i, (similarity, reference) in enumerate(zip(similarities, references)):
+                logger.debug(f"{i + 1}. similarity: {similarity:.2f} - {reference}\n")
 
         response = self.generator(references, processed_messages)
-        
+
         return references, response

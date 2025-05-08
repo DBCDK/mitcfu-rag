@@ -62,9 +62,11 @@ class EmbeddingRetriever(Retriever):
         self.all_articles = self.initiate_articles()
 
     def initiate_articles(self, article_folder):
-        #this should also be changed, but for now this script is not used. We should probably also make the model and validator customizable
-        article_folder = "/data/mitcfu-rag/test1000-jeds" 
-        onlyfiles = [f for f in listdir(article_folder) if isfile(join(article_folder, f))]
+        # this should also be changed, but for now this script is not used. We should probably also make the model and validator customizable
+        article_folder = "/data/mitcfu-rag/test1000-jeds"
+        onlyfiles = [
+            f for f in listdir(article_folder) if isfile(join(article_folder, f))
+        ]
         all_articles = []
 
         for file in onlyfiles:
@@ -83,7 +85,7 @@ class EmbeddingRetriever(Retriever):
                                 reference = Reference(
                                     id="",
                                     article_headline=headline.strip(),
-                                    #article_link=article["metadata"]["@graph"][0]["mainEntityOfPage"],
+                                    # article_link=article["metadata"]["@graph"][0]["mainEntityOfPage"],
                                     text=f"{headline.strip()}: {t.strip()}",
                                 )
                                 all_article_texts.append(reference)
@@ -98,11 +100,21 @@ class EmbeddingRetriever(Retriever):
 
     # https://huggingface.co/intfloat/multilingual-e5-large
     def get_docs(self, query: str, limit: int = 3):
-        batch_dict = self.tokenizer(query, max_length=512, padding=True, truncation=True, return_tensors="pt")
+        batch_dict = self.tokenizer(
+            query, max_length=512, padding=True, truncation=True, return_tensors="pt"
+        )
         batch_dict = {k: v.to(self.device) for k, v in batch_dict.items()}
         outputs = self.model(**batch_dict)
-        embeddings = average_pool(outputs.last_hidden_state, batch_dict["attention_mask"])
-        embbeded_query = F.normalize(embeddings, p=2, dim=1).detach().cpu().numpy().astype(np.float32)
+        embeddings = average_pool(
+            outputs.last_hidden_state, batch_dict["attention_mask"]
+        )
+        embbeded_query = (
+            F.normalize(embeddings, p=2, dim=1)
+            .detach()
+            .cpu()
+            .numpy()
+            .astype(np.float32)
+        )
         hits = self.searcher.search(embbeded_query, limit)
         indexes, scores = zip(*hits)
         # references = self.filter_by_score(query, [self.all_articles[int(i)] for i in indexes])
@@ -116,7 +128,11 @@ class EmbeddingRetriever(Retriever):
         # print("\n\nNum sentences: ", len(sentences))
         # print("\n\nSentences: ", sentences)
         features = self.cross_sentence_tokenizer(
-            [query for i in range(len(sentences))], sentences, padding=True, truncation=True, return_tensors="pt"
+            [query for i in range(len(sentences))],
+            sentences,
+            padding=True,
+            truncation=True,
+            return_tensors="pt",
         )
         self.cross_sentence_model.eval()
         with torch.no_grad():
@@ -127,11 +143,15 @@ class EmbeddingRetriever(Retriever):
         # print("Num top indices: ", len(top_indices))
 
         # Collect the top sentences and their respective cosine scores
-        top_sentences_with_scores = {sentences[i]: float(scores[i]) for i in top_indices}
+        top_sentences_with_scores = {
+            sentences[i]: float(scores[i]) for i in top_indices
+        }
 
         return top_sentences_with_scores
 
 
-def average_pool(last_hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+def average_pool(
+    last_hidden_states: torch.Tensor, attention_mask: torch.Tensor
+) -> torch.Tensor:
     last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
     return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]

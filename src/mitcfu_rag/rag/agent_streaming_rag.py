@@ -20,27 +20,36 @@ example of usage:
     response = d_rag(messages)
     print(f'response: {response}')
 """
+
 import logging
 import datetime
 import asyncio
 from typing import Generator, Any
 from mitcfu_rag.rag.rag import RAG, Reference
-#from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
-from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import EmbeddingRetriever
-#from mitcfu_rag.rag.retrievers.multilinguale5_large_retriever import EmbeddingRetriever
+
+# from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
+from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import (
+    EmbeddingRetriever,
+)
+
+# from mitcfu_rag.rag.retrievers.multilinguale5_large_retriever import EmbeddingRetriever
 from mitcfu_rag.rag.generators.agent_streaming_generator import AgentStreamingGenerator
 
 logger = logging.getLogger(__name__)
 
 
 class AgenticRAG(RAG):
-    def __init__(self, embedding_model, faiss_index, jed_document_path, validator_model=None):
+    def __init__(
+        self, embedding_model, faiss_index, jed_document_path, validator_model=None
+    ):
         """
         Components used in the RAG model.
         """
         self.parser = None
-        #self.retriever = EmbeddingRetriever()
-        self.retriever = EmbeddingRetriever(embedding_model, faiss_index, jed_document_path)
+        # self.retriever = EmbeddingRetriever()
+        self.retriever = EmbeddingRetriever(
+            embedding_model, faiss_index, jed_document_path
+        )
         self.reranker = None
         self.generator = AgentStreamingGenerator()
         if validator_model:
@@ -56,14 +65,18 @@ class AgenticRAG(RAG):
 
         if logger.isEnabledFor(logging.DEBUG):
             for i, (similarity, reference) in enumerate(zip(similarities, references)):
-                logger.debug(f'{i + 1}. similarity: {similarity:.2f} - {reference}\n')
+                logger.debug(f"{i + 1}. similarity: {similarity:.2f} - {reference}\n")
 
         generated_answer, generated_sources = self.generator(references, messages)
 
         if not generated_sources or not generated_answer:
             return "Jeg kan ikke finde svaret på dit spørgsmål. Kan du prøve at stille det på en anden måde?"
 
-        validation = self.validator(generated_answer + "\n" + " - ".join(generated_sources), references, messages)
+        validation = self.validator(
+            generated_answer + "\n" + " - ".join(generated_sources),
+            references,
+            messages,
+        )
 
         if validation:
             return generated_answer + "\n" + " - ".join(generated_sources)
@@ -86,14 +99,15 @@ class AgenticRAG(RAG):
 
         if logger.isEnabledFor(logging.DEBUG):
             for i, (similarity, reference) in enumerate(zip(similarities, references)):
-                logger.debug(f'{i + 1}. similarity: {similarity:.2f} - {reference}\n')
+                logger.debug(f"{i + 1}. similarity: {similarity:.2f} - {reference}\n")
 
         stream = self.generator(references, messages)
         response = "".join(gen_wrapper(stream))
         return references, response
 
-    async def stream_response(self, input: list[dict[str, Any]], prompt_template, *args, **kwargs) -> Generator[
-        str, None, None]:
+    async def stream_response(
+        self, input: list[dict[str, Any]], prompt_template, *args, **kwargs
+    ) -> Generator[str, None, None]:
         """
         yields response tokens from rag request.
         """

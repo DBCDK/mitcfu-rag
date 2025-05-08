@@ -32,8 +32,12 @@ from mitcfu_rag.rag.rag import RAG, Reference
 # from mitcfu_rag.rag.retrievers.solr_retriever import SolrRetriever
 # from mitcfu_rag.rag.retrievers.bm25_retriever import BM25Retriever
 # from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
-from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import EmbeddingRetriever
-from mitcfu_rag.rag.generators.streaming_with_history_generator import EmbeddingGenerator
+from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import (
+    EmbeddingRetriever,
+)
+from mitcfu_rag.rag.generators.streaming_with_history_generator import (
+    EmbeddingGenerator,
+)
 from mitcfu_rag.rag.validators.ms_marco_minilm_validator import MsValidator
 
 
@@ -48,8 +52,10 @@ class StreamingRAG(RAG):
         Components used in the RAG model.
         """
         self.parser = None
-        self.retriever = EmbeddingRetriever(embedding_model, embeddings_path, jed_document_path)
-        # Mistrale5Retriever(embedding_model, faiss_index, article_index)                                 
+        self.retriever = EmbeddingRetriever(
+            embedding_model, embeddings_path, jed_document_path
+        )
+        # Mistrale5Retriever(embedding_model, faiss_index, article_index)
         self.reranker = None
         self.generator = EmbeddingGenerator()
         self.validator = MsValidator() if validator_model else None
@@ -71,7 +77,11 @@ class StreamingRAG(RAG):
         if not generated_sources or not generated_answer:
             return "Jeg kan ikke finde svaret på dit spørgsmål. Kan du prøve at stille det på en anden måde?"
 
-        validation = self.validator(generated_answer + "\n" + " - ".join(generated_sources), references, messages)
+        validation = self.validator(
+            generated_answer + "\n" + " - ".join(generated_sources),
+            references,
+            messages,
+        )
 
         if validation:
             return generated_answer + "\n" + " - ".join(generated_sources)
@@ -113,13 +123,13 @@ class StreamingRAG(RAG):
 
         async for item in self.generator.generate(references, messages, version):
             yield item
-    
+
     async def stream_response_with_validator(
-            self, messages: list[dict[str, Any]], version=None, *args, **kwargs
+        self, messages: list[dict[str, Any]], version=None, *args, **kwargs
     ) -> Generator[str, None, None]:
-        '''
+        """
         Yields response tokens from rag request with validation from MsValidator.
-        '''
+        """
         results = await asyncio.gather(self.retriever.async_retrieve(messages, n=3))
         similarities, references = results[0]
         similarities = similarities[:3]
@@ -127,17 +137,25 @@ class StreamingRAG(RAG):
 
         # Validation step. First, we check if the class has the validator attribute.
         if self.validator:
-            user_query = messages[-1]["content"] #using the latest user query under the content key
-            valid_references = self.validator.validate_references(user_query, references)
-            if not valid_references: #If no valid references are found, we tell the user. 
+            user_query = messages[-1][
+                "content"
+            ]  # using the latest user query under the content key
+            valid_references = self.validator.validate_references(
+                user_query, references
+            )
+            if (
+                not valid_references
+            ):  # If no valid references are found, we tell the user.
                 fallback = {
-                    "token": {"text": "Jeg kan ikke finde svaret på dit spørgsmål. Kan du prøve at stille det på en anden måde?"}
+                    "token": {
+                        "text": "Jeg kan ikke finde svaret på dit spørgsmål. Kan du prøve at stille det på en anden måde?"
+                    }
                 }
                 yield f"data: {json.dumps(fallback)}\n\n"
                 return
             else:
                 references = valid_references
                 logger.debug(f"References after validation: {references}")
-        
+
         async for item in self.generator.generate(references, messages, version):
             yield item

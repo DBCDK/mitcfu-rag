@@ -28,14 +28,14 @@ Example of usage:
 
 
     In [2]: searcher.search(q, 4)
-    Out[2]: 
+    Out[2]:
     [('label_4', 0.7828297019004822),
      ('label_2', 0.6757404804229736),
      ('label_4', 0.6583917737007141),
      ('label_1', 0.5397369265556335)]
 
     In [3]: searcher.label_embeddings('label_4')
-    Out[3]: 
+    Out[3]:
     array([[0.1181907 , 0.23840763, 0.44230762, 0.50785077, 0.68966967],
            [0.46825364, 0.566213  , 0.18328191, 0.4048514 , 0.5124885 ]],
           dtype=float32)
@@ -44,6 +44,7 @@ Example of usage:
     Out[4]: array([0.40104464], dtype=float32)
 
 """
+
 from collections import defaultdict
 from pathlib import Path
 
@@ -52,10 +53,11 @@ import numpy as np
 import asyncio
 from sklearn.metrics.pairwise import cosine_similarity
 from concurrent.futures import ThreadPoolExecutor
-__all__ = ['KNNSearch']
+
+__all__ = ["KNNSearch"]
 
 
-File = str|Path
+File = str | Path
 
 
 class KNNSearch:
@@ -65,8 +67,9 @@ class KNNSearch:
     Search engine to find k nearest embeddings using cosine
     similarity.
     """
+
     def __init__(self, index, labels: np.array):
-        """ Build index with the build method """
+        """Build index with the build method"""
         self.index = index
         self.labels = labels
         self.label2index = defaultdict(set)
@@ -88,13 +91,21 @@ class KNNSearch:
             Labels corresponding to embeddings
         """
         if len(embeddings.shape) != 2:
-            raise ValueError(f'Embedding array must be 2D (found {len(embeddings.shape)}D)')
+            raise ValueError(
+                f"Embedding array must be 2D (found {len(embeddings.shape)}D)"
+            )
         if embeddings.shape[0] != labels.shape[0]:
-            raise ValueError(f"Incompatible lengths: embeddings={embeddings.shape[0]} vs labels={labels.shape[0]}")
+            raise ValueError(
+                f"Incompatible lengths: embeddings={embeddings.shape[0]} vs labels={labels.shape[0]}"
+            )
         if embeddings.dtype != np.float32:
-            raise TypeError(f"embeddings array must be of dtype float32 ({embeddings.dtype} found)")
+            raise TypeError(
+                f"embeddings array must be of dtype float32 ({embeddings.dtype} found)"
+            )
 
-        index = faiss.index_factory(embeddings.shape[1], "Flat", faiss.METRIC_INNER_PRODUCT)
+        index = faiss.index_factory(
+            embeddings.shape[1], "Flat", faiss.METRIC_INNER_PRODUCT
+        )
         embeddings_copy = embeddings.copy()
         faiss.normalize_L2(embeddings_copy)
         index.add(embeddings_copy)
@@ -107,10 +118,12 @@ class KNNSearch:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self.executor, self.__search, embedding, k)
 
-    async def search(self, embedding: np.array, k: int = 10, min_similarity: float = 0.1) -> list[tuple[str, float]]:
+    async def search(
+        self, embedding: np.array, k: int = 10, min_similarity: float = 0.1
+    ) -> list[tuple[str, float]]:
         """
         Searches for k nearest neighbours among indexed embeddings using cosine similarity.
-        
+
         returns list of labels and similarity
 
         :param embedding:
@@ -122,11 +135,14 @@ class KNNSearch:
         """
         embedding = self.__copy_and_normalize(embedding)
         similarities, indices = await self.async_search(embedding, k)
-        similarities = similarities[0,:]
-        indices = indices[0,:]
-            
-        result = [(str(self.labels[idx]), float(sim)) for sim, idx in zip(similarities, indices)
-                  if sim >= min_similarity]
+        similarities = similarities[0, :]
+        indices = indices[0, :]
+
+        result = [
+            (str(self.labels[idx]), float(sim))
+            for sim, idx in zip(similarities, indices)
+            if sim >= min_similarity
+        ]
         return result
 
     def label_embeddings(self, label: str) -> np.array:
@@ -136,9 +152,13 @@ class KNNSearch:
         :param label:
             Label to retrieve embeddings for
         """
-        return np.array([self.index.reconstruct(int(i)) for i in self.label2index[label]])
+        return np.array(
+            [self.index.reconstruct(int(i)) for i in self.label2index[label]]
+        )
 
-    def label_similarity(self, embedding: np.array, label: str, k: int = None) -> np.array:
+    def label_similarity(
+        self, embedding: np.array, label: str, k: int = None
+    ) -> np.array:
         """
         Find cosine similarity between supplied embedding and the
         embeddings associated with the supplied label. Returns the n
@@ -157,7 +177,7 @@ class KNNSearch:
         ordered_sims = np.flip(np.sort(sims))
         if k:
             ordered_sims = ordered_sims[:k]
-        return ordered_sims[0,:]
+        return ordered_sims[0, :]
 
     def save(self, index_path: File, labels_path: File):
         """
@@ -190,8 +210,12 @@ class KNNSearch:
         if len(embedding_copy.shape) == 1:
             embedding_copy = embedding_copy.reshape(1, -1)
         if embedding_copy.shape[1] != self.index.d:
-            raise ValueError(f"Incompatible shapes: {embedding_copy.shape[1]} vs {self.index.d}")
+            raise ValueError(
+                f"Incompatible shapes: {embedding_copy.shape[1]} vs {self.index.d}"
+            )
         if embedding.dtype != np.float32:
-            raise TypeError(f"embedding array must be of dtype float32 ({embedding.dtype} found)")
+            raise TypeError(
+                f"embedding array must be of dtype float32 ({embedding.dtype} found)"
+            )
         faiss.normalize_L2(embedding_copy)
         return embedding_copy

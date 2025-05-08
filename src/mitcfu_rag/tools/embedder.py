@@ -8,29 +8,32 @@ Embedder
 
 Abtract base class for embedders, and huggingface implementation
 """
+
 from abc import ABC, abstractmethod
 import numpy as np
 from sentence_transformers.SentenceTransformer import SentenceTransformer
 
 
-__all__ = ['Embedder', 'HuggingfaceEmbedder']
+__all__ = ["Embedder", "HuggingfaceEmbedder"]
 
 
 class Embedder(ABC):
     """
     Abstract base class embedder
     """
+
     name: str
 
     @abstractmethod
     def encode(self, texts: list[str]) -> np.array:
-        """ encode method """
+        """encode method"""
         pass
 
 
 class HuggingfaceEmbedder(Embedder):
-    """ Huggingface embedder. Using sentencetransformer """
-    def __init__(self, model_name: str = 'paraphrase-multilingual-mpnet-base-v2'):
+    """Huggingface embedder. Using sentencetransformer"""
+
+    def __init__(self, model_name: str = "paraphrase-multilingual-mpnet-base-v2"):
         """
         :param model_name:
             Name of sentence transformer model to use
@@ -39,5 +42,5 @@ class HuggingfaceEmbedder(Embedder):
         self.model = SentenceTransformer(model_name)
 
     def encode(self, texts: list[str]) -> np.array:
-        """ Encodes strings """
+        """Encodes strings"""
         return self.model.encode(texts)

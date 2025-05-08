@@ -18,6 +18,7 @@ example of usage:
     response = d_generator(references, query)
     print(f'response: {response}')
 """
+
 import random
 import logging
 from mitcfu_rag.rag.rag import Generator
@@ -26,19 +27,32 @@ logger = logging.getLogger(__name__)
 
 
 class DummyGenerator(Generator):
-
     def __init__(self):
         pass
 
     def generate(self, references: list[str], query: str) -> str:
-        fillers = ["", "Hmm...", "", "Lad mig se...", "Et øjeblik...", "Vent lige...", "Hmm, lad mig finde noget..."]
-        intros = ["Jeg kunne finde de følgende artikler på Faktalink med relevante tekst passager:", 
-                "Her er nogle artikler jeg fandt på Faktalink:", 
-                "Her er nogle artikler jeg fandt:", 
-                "Jeg tænker disse artikler kunne være relevante for dig:"]
-        
+        fillers = [
+            "",
+            "Hmm...",
+            "",
+            "Lad mig se...",
+            "Et øjeblik...",
+            "Vent lige...",
+            "Hmm, lad mig finde noget...",
+        ]
+        intros = [
+            "Jeg kunne finde de følgende artikler på Faktalink med relevante tekst passager:",
+            "Her er nogle artikler jeg fandt på Faktalink:",
+            "Her er nogle artikler jeg fandt:",
+            "Jeg tænker disse artikler kunne være relevante for dig:",
+        ]
+
         if not references:
-            response_str = random.choice(fillers) + " " + "Jeg kunne ikke finde nogle relevante artikler på Faktalink. Kan jeg hjælpe dig med noget andre eller kan du finde en andre måde at beskrive hvad du søger?"
+            response_str = (
+                random.choice(fillers)
+                + " "
+                + "Jeg kunne ikke finde nogle relevante artikler på Faktalink. Kan jeg hjælpe dig med noget andre eller kan du finde en andre måde at beskrive hvad du søger?"
+            )
         else:
             response_str = f"""
             {random.choice(fillers)} {random.choice(intros)} \n
@@ -47,5 +61,5 @@ class DummyGenerator(Generator):
                 response_str += f"""
                 - {reference}
                 """
-        
+
         return response_str
