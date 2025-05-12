@@ -164,8 +164,8 @@ Dit svar:
         for ref in references:
             yield json.dumps({"token": {"text": "\n"}})
             yield json.dumps({"token": {"text": "\n"}})
-            # tokens = [f"[{ref.article_headline}]({ref.article_link})"]
-            tokens = [f"{ref.id}"]
+            #tokens = [f"[{ref.article_headline}]({ref.article_link})"]
+            tokens = [f"[{ref.id}](https://mitcfu.dk/MaterialeInfo/?faust={ref.id})"]
             for token in tokens:
                 yield json.dumps({"token": {"text": token}})
 
@@ -223,13 +223,12 @@ Dit svar:
 
         # filter references so that no two references have the same article_link
         if parsed_references:
-            # seen_links = set()
+            seen_links = set()
             filtered_references = []
             for ref in parsed_references:
-                filtered_references.append(ref)
-                # if ref.article_link not in seen_links:
-                #    seen_links.add(ref.article_link)
-                #    filtered_references.append(ref)
+                if ref.article_link not in seen_links:
+                   seen_links.add(ref.article_link)
+                   filtered_references.append(ref)
 
             async for ref in self.async_reference_generator(filtered_references):
                 yield ref

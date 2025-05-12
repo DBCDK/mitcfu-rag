@@ -18,6 +18,7 @@ setup(
     # faiss skal tilføjes install_requires, når problemet med faiss er løst.
     install_requires=[
         "langchain",
+        "langchain-text-splitters",
         "langgraph",
         "langsmith",
         "streamlit",
@@ -45,7 +46,7 @@ setup(
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "create-faiss-index = mitcfu_rag.rag.retrievers.indexes.multilinguale5_instruct:main",
+            "create-faiss-index = mitcfu_rag.rag.retrievers.indexes.multilinguale5:main",
             "mitcfu-RAG-sh = mitcfu_rag.term_ui:cli",
             "evaluate = mitcfu_rag.evaluation_tools.evaluation:run",
             "evaluate-retrieval = mitcfu_rag.evaluation_tools.evaluate_retrieval:run",

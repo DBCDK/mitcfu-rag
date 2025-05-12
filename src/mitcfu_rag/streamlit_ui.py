@@ -12,6 +12,7 @@ import requests
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 relative_img_path = os.path.join(current_dir, "faktalink_icon.png")
+STREAMING_ENDPOINT = "http://ai-p301:5011"
 
 version = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
@@ -147,7 +148,7 @@ if prompt := st.chat_input("Indsæt dit spørgmål her ..."):
         with st.spinner(random.choice(fillers)):
             references = []
             response_stream = requests.post(
-                "http://ai-p301:5011",
+                STREAMING_ENDPOINT,
                 json={"messages": st.session_state.messages},
                 stream=True,
             )
