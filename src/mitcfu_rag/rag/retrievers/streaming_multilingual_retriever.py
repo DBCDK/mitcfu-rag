@@ -69,6 +69,7 @@ class EmbeddingRetriever(Retriever):
             embeddings_path + "/embeddings", embeddings_path + "/labels.npy"
         )
         if jed_document_path:
+            self.jed_document_path = jed_document_path
             self.all_articles = self.initiate_articles()
         else:
             self.all_articles = {}
@@ -87,7 +88,7 @@ class EmbeddingRetriever(Retriever):
                     all_articles[str(id)] = Reference(
                         id=str(id),
                         article_headline=content.get("titles").get("full"),
-                        article_link="MitCFU-ID:" + str(id),
+                        article_link="https://mitcfu.dk/MaterialeInfo/?faust=" + str(id),
                         score=0.0,
                         text=text[0],
                         chunk="Not chunked",
@@ -126,6 +127,10 @@ class EmbeddingRetriever(Retriever):
         hits = await self.searcher.search(embedded_query, limit)
         ids, scores = zip(*hits)
         logger.info(ids)
+        #retrieved_articles = [
+        #    Reference(id=_id, article_headline="", article_link="", score=0.0, text="")
+        #    for _id in ids
+        #]
 
         retrieved_articles = []
         for id, score in zip(ids, scores):
@@ -135,17 +140,24 @@ class EmbeddingRetriever(Retriever):
                 mitcfu_id = id
                 chunk_number = None
 
-            if mitcfu_id in self.all_articles:
-                mitcfu_ref = self.all_articles[mitcfu_id]
-                new_ref = Reference(
-                    id=id,
-                    article_headline=mitcfu_ref.article_headline,
-                    article_link=mitcfu_ref.article_link,
-                    score=score,
-                    text=mitcfu_ref.text,
-                    chunk=f"chunk{chunk_number}" if chunk_number else "Not chunked",
-                )
-                retrieved_articles.append(new_ref)
+            new_ref = Reference(
+                id=mitcfu_id, chunk=chunk_number, article_headline="", article_link=id, score=0.0, text=""
+            )
+            retrieved_articles.append(new_ref)
+            # TODO use the below code instead to actually get the article data
+            #if mitcfu_id in self.all_articles:
+                #print("processing chunk")
+                #mitcfu_ref = self.all_articles[mitcfu_id]
+                #print("ref", mitcfu_ref)
+                # new_ref = Reference(
+                #     id=id,
+                #     article_headline=mitcfu_ref.article_headline,
+                #     article_link=mitcfu_ref.article_link,
+                #     score=score,
+                #     text=mitcfu_ref.text,
+                #     chunk=f"chunk{chunk_number}" if chunk_number else "Not chunked",
+                # )
+                #retrieved_articles.append(new_ref)
         # retrieved_articles = [self.all_articles[id] for id in ids if id in self.all_articles]
         return list(scores), retrieved_articles
 

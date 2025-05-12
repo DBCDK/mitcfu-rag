@@ -116,9 +116,8 @@ class e5multilingualEmbedder(Embedder):
 
 def validate_abstract(document):
     id, doc = next(iter(document.items()))
-    abstract = doc.get("abstract")[0]
-    if abstract == []:
-        return False
+    abstract_list = doc.get("abstract")
+    abstract = " ".join(abstract_list)
     # before appending, check if the text is non-string type
     if not isinstance(abstract, str):
         logger.debug(
@@ -229,10 +228,10 @@ def index_paragraph_docs_GPU_batches(
     # approach from: https://python.langchain.com/v0.1/docs/modules/data_connection/document_transformers/recursive_text_splitter/
     # chunk size could prabably be higher, since RecursiveCharacterTextSplitter chunk_size argument is based on characters, not tokens
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=512,
+        chunk_size=2048,
         chunk_overlap=20,
         length_function=len,
-        is_seperator_regex=False,
+        is_separator_regex=False,
     )
 
     for doc in tqdm(data):
@@ -241,7 +240,8 @@ def index_paragraph_docs_GPU_batches(
             if not validate_abstract(doc):
                 continue
 
-            abstract = doc[str(id)].get("abstract")[0]
+            abstract_list = doc[str(id)].get("abstract")
+            abstract = " ".join(abstract_list)
             text = f"passage: {abstract}"
 
             chunks = text_splitter.split_text(text)
@@ -301,75 +301,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-"""
-Example usage:
-While standing in the directory with the script, run (the Python environment needs to have faiss installed):
-create-faiss-index --path_to_db /data/mitcfu-rag/e5_mistral_instruct_embeddings_faiss_index_abstractover10_08_04_2025 --path_to_folder /data/mitcfu-rag/10plus-abstract-77295-jeds --path_to_index_file /data/mitcfu-rag/test1000-jeds/index_extract_2023.json --batch_size 1000 --create_new_index_extract
-This will start the indexing of the documents in the folder "--path_to_folder" and save the FAISS index and labels in the path specified after "--path_to_db".
-"""
-
-
-# Old function definition (without batches and GPU):
-def index_paragraph_docs(path: str, path_to_folder: str):
-    # path = "/data/mitcfu-rag/e5_mistral_instruct_embeddings_faiss_index_abstractover10_08_04_2025"
-
-    logger.info(f"Loading documents from {path_to_folder}")
-
-    # create path_to_index_file by looping through the files in the directory /data/mitcfu-rag/test1000-jeds and check if file is json
-    # path_to_folder = "/data/mitcfu-rag/10plus-abstract-77295-jeds"
-    onlyfiles = [
-        f
-        for f in os.listdir(path_to_folder)
-        if os.path.isfile(os.path.join(path_to_folder, f))
-    ]
-    # create a list of the content of the json files, with each file being a list of dictionaries
-    json_files = []
-    for file in tqdm(onlyfiles):
-        with open(os.path.join(path_to_folder, file), "r") as f:
-            data = json.load(f)
-            json_files.append(data)
-    # save data to a single file
-    with open(path + "/index_extract_08_04_2025.json", "w") as f:
-        json.dump(json_files, f)
-
-    # load data from the file
-    path_to_index_file = path + "/index_extract_08_04_2025.json"
-    # path_to_index_file = '/data/faktalink/solr_index/index_extract_2023.json'
-    with open(path_to_index_file, "r") as file:
-        data = json.load(file)
-
-    e5_embedder = e5multilingualEmbedder(
-        "/data/faktalink_models/intfloat/multilingual-e5-large/"
-    )
-    db = None
-
-    # texts = []
-    embeddings = []
-    labels = []
-
-    logger.info("Embedding documents and indexing them into a FAISS db with KNNSearch.")
-    i = 0
-    for doc in tqdm(data):
-        for id in doc:
-            text = doc[str(id)].get("abstract")
-            print(f"Embedding abstract: {text}")
-
-            # If the abstract is empty, we skip to the next iteration
-            if text == []:
-                continue
-
-            labels.append(str(id))
-            # labels += [{"id": paragraph['id'],
-            #            "link": paragraph['article_link']}]
-            embedding = e5_embedder.embed_documents([text])
-            embeddings.append(embedding)
-        i += 1
-        if i % 10 == 0:
-            print(f"Save FAISS db locally to {path} with {i}")
-            logger.info(f"Save FAISS db locally to {path} with {i}")
-            db = KNNSearch.build(np.array(embeddings), np.array(labels))
-            db.save(index_path=path + "/embeddings", labels_path=path + "/labels")
-        db = KNNSearch.build(np.array(embeddings), np.array(labels))
-
-    logger.info(f"Save FAISS db locally to {path}")
-    db.save(index_path=path + "/embeddings", labels_path=path + "/labels")
