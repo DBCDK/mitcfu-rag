@@ -95,7 +95,7 @@ pipeline {
 				dir("deploy") {
 					sh 'set-new-version mitcfu-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/mitcfu-rag-secrets $DOCKER_TAG -b staging'
 				}
-				build job: "ai/mitcfu-rag/mitcfu-rag-deploy deployment/staging", wait: true
+				build job: "ai/mitcfu-rag/mitcfu-rag-deployment/staging", wait: true
 			}
 		}
 
@@ -156,7 +156,7 @@ pipeline {
 				dir("deploy") {
 					sh 'set-new-version mitcfu-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/mitcfu-rag-secrets $DOCKER_TAG -b prod'
 				}
-				build job: "ai/mitcfu-rag/mitcfu-rag-deploy deployment/prod", wait: true
+				build job: "ai/mitcfu-rag/mitcfu-rag-deployment/prod", wait: true
 			}
 		}
 	}
