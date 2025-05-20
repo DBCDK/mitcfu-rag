@@ -48,7 +48,7 @@ class AgenticRAG(RAG):
         self.parser = None
         # self.retriever = EmbeddingRetriever()
         self.retriever = EmbeddingRetriever(
-            model_path=embedding_model, embeddings_path=faiss_index, jed_document_path=jed_document_path
+            model_path=embedding_model, embeddings_path=faiss_index, jed_document_path=jed_document_path, cross_model_path=validator_model
         )
         self.reranker = None
         self.generator = AgentStreamingGenerator()
