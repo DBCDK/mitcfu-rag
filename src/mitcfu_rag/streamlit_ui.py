@@ -99,8 +99,10 @@ def gen_wrapper(stream):
     for item in stream.iter_content(chunk_size=None, decode_unicode=True):
         decoded_item = decode(item)
         obj = json.loads(decoded_item.replace("data:", ""))
-        if not obj.get("token", {}).get("text", {}) == "</s>":
-            yield obj.get("token", {}).get("text", {})
+        for choice in obj.get("choices", []):
+            if token := choice.get("delta", {}).get("content", ""):
+                if not token == "<end_of_turn>":
+                    yield token
 
 
 # Initialize chat

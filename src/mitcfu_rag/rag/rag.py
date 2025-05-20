@@ -15,11 +15,19 @@ from typing import List, Annotated
 @dataclass
 class Reference:
     id: str
+    chunk: str
     article_headline: str
     article_link: str
     score: float
     text: str
-    chunk: str
+    # values that can be filtered by
+    keywords: list[str]
+    creators: list[str]
+    audience: list[str]
+    materialtypes: list[str]
+    languages: list[str]
+    series: list[str]
+    publicationdate: str
 
     def __str__(self):
         return f"""
@@ -88,6 +96,7 @@ class Parser(ABC):
 
 
 class Retriever(ABC):
+
     def __call__(self, messages: list[str], *args, **kwargs):
         return self.retrieve(messages)
 
@@ -141,6 +150,7 @@ class Ensembler(ABC):
 
 
 class Generator(ABC):
+    
     def __call__(self, references: list[Reference], query: str, *args, **kwargs) -> str:
         return self.generate(references, query)
 

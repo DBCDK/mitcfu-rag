@@ -48,13 +48,49 @@ class AgenticRAG(RAG):
         self.parser = None
         # self.retriever = EmbeddingRetriever()
         self.retriever = EmbeddingRetriever(
-            embedding_model, faiss_index, jed_document_path
+            model_path=embedding_model, embeddings_path=faiss_index, jed_document_path=jed_document_path
         )
         self.reranker = None
         self.generator = AgentStreamingGenerator()
         if validator_model:
             self.validator = None
         self.summarizer = None
+        self.latest_references = []
+
+
+    async def stream_response(
+        self, input: list[dict[str, Any]], prompt_template, limit=5, *args, **kwargs
+    ) -> Generator[str, None, None]:
+        """
+        yields response tokens from rag request.
+        """
+        if input.get("agent", "") in {"RAG", "FOLLOW_UP"}:
+            #input["FOLLOW_UP"] = False
+            if input.get("reformulated_queries"):
+                results = await asyncio.gather(
+                    self.retriever.async_rerank_retrieve(input, n=limit)
+                )
+            else:
+                results = await asyncio.gather(self.retriever.async_retrieve(input))
+            similarities, references = results[0]
+            #similarities = similarities[:limit]
+            references = references[:limit]
+        #elif input.get("agent", "") == "FOLLOW_UP":
+        #    input["FOLLOW_UP"] = True
+        #    if input.get("reformulated_queries"):
+        #        results = await asyncio.gather(
+        #            self.retriever.async_rerank_retrieve(input, n=limit)
+        #        )
+        #    else:
+        #        results = await asyncio.gather(self.retriever.async_retrieve(input))
+        #    similarities, references = results[0]
+        #    similarities = similarities[:limit]
+        #    references = references[:limit]
+        else:
+            references = None
+
+        async for item in self.generator.generate(references, input, prompt_template):
+            yield item
 
     def get_response(self, messages: list[str], *args, **kwargs) -> str:
         """
@@ -105,20 +141,3 @@ class AgenticRAG(RAG):
         response = "".join(gen_wrapper(stream))
         return references, response
 
-    async def stream_response(
-        self, input: list[dict[str, Any]], prompt_template, *args, **kwargs
-    ) -> Generator[str, None, None]:
-        """
-        yields response tokens from rag request.
-        """
-
-        if input.get("agent", "") == "RAG":
-            results = await asyncio.gather(self.retriever.async_retrieve(input, n=3))
-            similarities, references = results[0]
-            similarities = similarities[:3]
-            references = references[:3]
-        else:
-            references = None
-
-        async for item in self.generator.generate(references, input, prompt_template):
-            yield item

@@ -19,19 +19,10 @@ example of usage:
     print(f'relevant references: {refs}')
 """
 
-from aiohttp import request
-from dbc_pyutils import setup_logging
 import logging
-import asyncio
 import os
-from collections import defaultdict
 from mitcfu_rag.rag.rag import Retriever, Reference
-from mitcfu_rag.rag.validators.ms_marco_minilm_validator import MsValidator
 from mitcfu_rag.tools import KNNSearch
-import requests
-from mitcfu_rag.tools.embedder import HuggingfaceEmbedder
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 
 # from infinity_emb import AsyncEngineArray, EngineArgs, AsyncEmbeddingEngine
 
@@ -41,14 +32,13 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import aiohttp
-from os import listdir
 import json
-from os.path import isfile, join
 
 logger = logging.getLogger(__name__)
 
 EMBEDDINGS_PATH = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index"
 MODEL_PATH = "/data/mitCFU-models/multilingual-e5-large"
+CROSS_MODEL_PATH = "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
 
 
 class EmbeddingRetriever(Retriever):
@@ -56,23 +46,34 @@ class EmbeddingRetriever(Retriever):
         self,
         model_path=MODEL_PATH,
         embeddings_path=EMBEDDINGS_PATH,
+        cross_model_path=CROSS_MODEL_PATH,
         jed_document_path=None,
     ):
         os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # embedding model for faiss index
         self.model = AutoModel.from_pretrained(model_path, device_map=self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_path, device_map=self.device
         )
         self.model.to(self.device)
+
+        # corss-model for rerank
+        self.cross_model = AutoModelForSequenceClassification.from_pretrained(cross_model_path, device_map=self.device)
+        self.cross_tokenizer = AutoTokenizer.from_pretrained(
+            cross_model_path, device_map=self.device
+        )
+        self.cross_model.to(self.device)
         self.searcher = KNNSearch.load(
             embeddings_path + "/embeddings", embeddings_path + "/labels.npy"
         )
         if jed_document_path:
             self.jed_document_path = jed_document_path
             self.all_articles = self.initiate_articles()
+            self.all_materialtypes = self.identify_all_materialtypes()
         else:
             self.all_articles = {}
+            self.all_materialtypes = set()
         self.validator = None
         self.session = aiohttp.ClientSession()
 
@@ -81,29 +82,75 @@ class EmbeddingRetriever(Retriever):
             all_documents = json.load(f)
         all_articles = {}
 
-        for doc in all_documents:
-            for id, content in doc.items():
-                text = content.get("abstract")
+        for document in all_documents:
+            for doc_id, doc in document.items():
+                text = doc.get("abstract")
                 if text:
-                    all_articles[str(id)] = Reference(
-                        id=str(id),
-                        article_headline=content.get("titles").get("full"),
-                        article_link="https://mitcfu.dk/MaterialeInfo/?faust=" + str(id),
-                        score=0.0,
-                        text=text[0],
-                        chunk="Not chunked",
-                    )
+                    all_articles[str(doc_id)] = self.format_doc(doc_id, doc)
 
         return all_articles
+
+    def identify_all_materialtypes(self):
+        # initiate materialtype filters
+        all_materialtypes = set()
+        for articleid, article in self.all_articles.items():
+            all_materialtypes.update(set(article.materialtypes))
+        return all_materialtypes
+
+    def format_doc(self, doc_id, doc):
+        # work info
+        text = " ".join(doc.get("abstract"))
+        subjects = [
+            sub.get("display") for sub in doc.get("subjects", {}).get("all", {}).get("subjects", [])
+        ]
+        material_types_general = [
+            mat.get("general").get("display")
+            for mat in doc.get("materialTypes", [])
+        ]
+        material_types_specific = [
+            mat.get("general").get("specific")
+            for mat in doc.get("materialTypes", [])
+        ]
+        genre_and_form = doc.get("genreAndForm", [])
+        languages = [lan.get("display") for lan in doc.get("mainLanguages", [])]
+        creators_person = [
+            lan.get("display") for lan in doc.get("creators", {}).get("persons", [])
+        ]
+        series_titles = [serie.get("title") for serie in doc.get("series", [])]
+        # manifestation info
+        manifestation = doc.get("manifestations", {}).get("all")[0]
+        creators_publisher = manifestation.get("publisher", [])
+        audience_subject = manifestation.get("audience", {}).get("generalAudience", [])
+        return Reference(
+            id=str(doc_id),
+            article_headline=doc.get("titles").get("full")[0],
+            article_link="https://mitcfu.dk/MaterialeInfo/?faust=" + str(doc_id),
+            score=0.0,
+            text=text,
+            chunk="Not chunked",
+            keywords=subjects,
+            creators=creators_person + creators_publisher,
+            audience=audience_subject,
+            materialtypes=material_types_general+ material_types_specific,
+            publicationdate=doc.get("firstPublicationDate", None),
+            languages=languages,
+            series=series_titles
+        )
 
     async def async_retrieve(self, messages: list[str], n: int = 5):
         # loop = asyncio.get_running_loop()
         return await self.retrieve(messages, n)
 
+    async def async_rerank_retrieve(self, messages: list[str], n: int = 5):
+        # loop = asyncio.get_running_loop()
+        return await self.rerank_retrieve(messages, n)
+
     async def retrieve(self, input: list[str], n: int = 3):
         # query = f"query: {' '.join([message['content'] for message in messages if message['role'] == 'user'])}"
         messages = input["input"]
         query = f"query: {messages[-1]['content']}"
+        if not query[-1] == "?":
+            query += "?"
         return await self.get_docs(query, n)
 
     # https://huggingface.co/intfloat/multilingual-e5-large
@@ -124,45 +171,102 @@ class EmbeddingRetriever(Retriever):
             .numpy()
             .astype(np.float32)
         )
-        hits = await self.searcher.search(embedded_query, limit)
+        return await self.search(embedded_query, limit)
+
+
+    async def search(self, embedded_query, limit, filters=None):
+        hits = await self.searcher.search(embedded_query, limit * 100)
         ids, scores = zip(*hits)
-        logger.info(ids)
-        #retrieved_articles = [
-        #    Reference(id=_id, article_headline="", article_link="", score=0.0, text="")
-        #    for _id in ids
-        #]
+        #print(ids)
+        retrieved_articles = [
+            self.all_articles[id.rsplit("_chunk", maxsplit=1)[0]]
+            for id in ids
+        ]
+        #print(retrieved_articles)
+        if filters:
+            filtered_articles = [
+                article for article in retrieved_articles if filtered(article, filters)
+            ]
+            return scores, filtered_articles[:limit]
+        else:
+            return scores, retrieved_articles[:limit]
 
-        retrieved_articles = []
-        for id, score in zip(ids, scores):
-            if "_chunk" in id:
-                mitcfu_id, chunk_number = id.rsplit("_chunk", maxsplit=1)
-            else:
-                mitcfu_id = id
-                chunk_number = None
-
-            new_ref = Reference(
-                id=mitcfu_id, chunk=chunk_number, article_headline="", article_link=id, score=0.0, text=""
+    async def rerank_retrieve(
+        self,
+        input: dict,
+        limit: int = 50,
+    ):
+        queries = input["reformulated_queries"]
+        all_results = {}
+        articleid2article = {}
+        for query in queries:
+            query = f"query: {query}"
+            if not query[-1] == "?":
+                query += "?"
+            _, articles = await self.get_docs(query, limit=limit)
+            for art in articles:
+                articleid2article[art.id] = art
+            search_results = await self.cross_select_top_sentences(
+                articles, query, limit=int(40 / len(queries))
             )
-            retrieved_articles.append(new_ref)
-            # TODO use the below code instead to actually get the article data
-            #if mitcfu_id in self.all_articles:
-                #print("processing chunk")
-                #mitcfu_ref = self.all_articles[mitcfu_id]
-                #print("ref", mitcfu_ref)
-                # new_ref = Reference(
-                #     id=id,
-                #     article_headline=mitcfu_ref.article_headline,
-                #     article_link=mitcfu_ref.article_link,
-                #     score=score,
-                #     text=mitcfu_ref.text,
-                #     chunk=f"chunk{chunk_number}" if chunk_number else "Not chunked",
-                # )
-                #retrieved_articles.append(new_ref)
-        # retrieved_articles = [self.all_articles[id] for id in ids if id in self.all_articles]
-        return list(scores), retrieved_articles
+            all_results[query] = search_results
+
+        if len(queries) > 1:
+            reranked_result = await reciprocal_rank_fusion(all_results)
+            return [], [articleid2article[_id] for _id in reranked_result.keys()]
+        else:
+            return [], list(all_results[queries[0]].keys())
+
+    async def cross_select_top_sentences(self, articles, query, limit=50):
+        sentences = [art.text for art in articles]
+        features = self.cross_tokenizer(
+            [query]*len(sentences),
+            sentences,
+            padding=True,
+            truncation=True,
+            return_tensors="pt",
+        ).to(self.device)
+        self.model.eval()
+        with torch.no_grad():
+            scores = self.cross_model(**features).logits.flatten().cpu()
+
+        # Get indices of the top sentences sorted by cosine similarity
+        top_indices = np.argsort(-scores)[:limit]
+        # print("Num top indices: ", len(top_indices))
+
+        # Collect the top sentences and their respective cosine scores
+        top_article_ids_with_scores = {articles[i].id: scores[i] for i in top_indices}
+
+        return top_article_ids_with_scores
 
 
-# [self.all_articles[int(i)] for i in indexes]
+async def reciprocal_rank_fusion(search_results_dict, k=100):
+    fused_scores = {}
+
+    for query, doc_scores in search_results_dict.items():
+        for rank, (doc, score) in enumerate(
+            sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)
+        ):
+            if doc not in fused_scores:
+                fused_scores[doc] = 0
+            previous_score = fused_scores[doc]
+            fused_scores[doc] += 1 / (rank + k)
+            #print(f"Updating score for {doc} from {previous_score} to {fused_scores[doc]} based on rank {rank} in query '{query}'")
+
+    reranked_results = {
+        doc: score
+        for doc, score in sorted(
+            fused_scores.items(), key=lambda x: x[1], reverse=True
+        )
+    }
+    return reranked_results
+
+def filtered(article, filters):
+    passed_filters = 0
+    for filter_key, filter_values in filters:
+        if set([filter_values]).intersection(set([article.filter_key])):
+            passed_filters += 1
+    return passed_filters == len(filters.keys())
 
 
 def average_pool(

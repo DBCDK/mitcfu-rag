@@ -33,24 +33,27 @@ roles_to_ignore = ["resetter", "summarizer"]
 
 logger = logging.getLogger(__name__)
 
+START_TURN_USER = "<start_of_turn>user\n"
+START_TURN_MODEL = "<start_of_turn>model\n"
+END_TURN = "<end_of_turn>\n"
+
 
 class AgentStreamingGenerator(Generator):
     def __init__(self):
         self.streaming_delays = [0.01, 0.02, 0.03]
-        self.chat_bib_url = os.environ.get(
-            "CHAT_BIB_URL",
-            "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk/generate_stream",
-        )
-        self.system_message = "Du er FaktaChat, en kritisk chatbot der forholder sig til den viden du får fra brugerens kilder. Du svarer altid på dansk. Du skriver aldrig links til hjemmesider."
+        #self.chat_bib_url = os.environ.get(
+        #    "CHAT_BIB_URL",
+        #    "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk/generate_stream",
+        #)
+        self.mitcfu_tgi_url = os.environ.get("MITCFU_TGI_URL", "http://gemma-3-12b-it.mi-prod.svc.cloud.dbc.dk/v1/chat/completions")
+        self.system_message = "Du er MitCFU-Chat. Du hjælper med søgninger i MitCFU kataloget. Du svarer altid på dansk."
         self.prompt_template = None
         self.agent_type = None
         self.missing_reference_prompt = """
 Brugeren har stillet et spørgsmål du ikke kan finde nogen kilder om.
 Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at omformulere det.
 Afslut ALTID dit svar med følgende:
-Du kan tjekke Faktalinks oversigt over temaer (https://faktalink.dk/tema) eller oversigten over emner (https://faktalink.dk/emne) for inspiration.
-
-Dit svar:
+Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
 """
         self.session = aiohttp.ClientSession()
 
@@ -80,11 +83,11 @@ Dit svar:
             else:
                 cleaned_messages.append(message)
 
-        max_new_tokens = 1200 if not self.agent_type == "ROUTER" else 10
+        max_new_tokens = 1000 if not self.agent_type == "ROUTER" else 250
         async for chunk in self.llm_generate(
             {
                 "messages": cleaned_messages,
-                "parameters": {"temperature": 0.1, "max_new_tokens": max_new_tokens},
+                "model": "tgi", "stream": True, "max_tokens": max_new_tokens
             },
             references,
         ):
@@ -95,63 +98,51 @@ Dit svar:
         return self.llm_format(msgs, parsed_references)
 
     def llm_format(self, msgs, parsed_references):
-        result = "[INST] <<SYS>>\n"
-        result += self.system_message
-        result += "\n<</SYS>>[/INST]\n\n"
+        # Set start token and add system prompt
+        result = START_TURN_USER
+        result += f"{self.system_message}"
 
-        match self.agent_type:
-            case "RAG":
-                if parsed_references:
-                    for msg in msgs:
-                        if msg["role"] == "assistant" or msg["role"] == "user":
-                            result += f"{msg['content']}"
-                            result += (
-                                "[INST]" if msg["role"] == "assistant" else "[/INST]"
-                            )
-                    result += (
-                        self.prompt_template
-                        + "\n\n".join([ref.text for ref in parsed_references])
-                        + "\n\n"
-                    )
-                    result += (
-                        "\n[INST] Brugerens spørgsmål:"
-                        + msgs[-1]["content"]
-                        + "[/INST]Dit svar:"
-                    )
-                else:
-                    result += self.missing_reference_prompt
-            case "SIMPLE":
+        if self.agent_type in {"RAG", "FOLLOW_UP"}:
+            # Only generate something of there are references.
+            if parsed_references:
+                # Add prompt template, set through input
                 result += self.prompt_template
+                # Format references
+                result += "Dokumenter:" + (
+                    ". ".join(
+                        [
+                            f"{ref.article_headline}: {ref.text[:500]}"
+                            for ref in parsed_references
+                        ]
+                    )
+                    + ""
+                )
+                # End "system" instructions.
+                result += END_TURN
+                # Format chat history
                 for msg in msgs:
                     if msg["role"] == "assistant" or msg["role"] == "user":
-                        result += f"{msg['content']}"
-                        result += "[INST]" if msg["role"] == "assistant" else "[/INST]"
-                result += (
-                    "\n[INST] Brugerens spørgsmål:"
-                    + msgs[-1]["content"]
-                    + "[/INST]Dit svar:"
-                )
-            case "ROUTER":
-                result += self.prompt_template
-                # for msg in msgs:
-                result += (
-                    "\nBrugerens spørgsmål:"
-                    + msgs[-1]["content"]
-                    + "[/INST]\n\nDit svar:"
-                )
-            case "FALLACK":
-                result += self.prompt_template
-                for msg in msgs:
-                    if msg["role"] == "assistant" or msg["role"] == "user":
-                        result += f"{msg['content']}"
-                        result += "[INST]" if msg["role"] == "assistant" else "[/INST]"
-                result += (
-                    "\n[INST] Brugerens spørgsmål:"
-                    + msgs[-1]["content"]
-                    + "[/INST]Dit svar:"
-                )
-        logger.info(f"RAG input:\n\n{result}\n\n")
-        return result
+                        result += START_TURN_USER if msg["role"] == "user" else START_TURN_MODEL
+                        result += f"\n{msg['content']}"
+                        result += END_TURN
+            else:
+                # If no references, use missing reference prompt
+                result += self.missing_reference_prompt
+                result += END_TURN
+        else:
+            result += self.prompt_template
+            result += END_TURN
+            for msg in msgs:
+                if msg["role"] == "assistant" or msg["role"] == "user":
+                    result += (
+                        START_TURN_USER if msg["role"] == "user" else START_TURN_MODEL
+                    )
+                    result += f"\n{msg['content']}"
+                    result += END_TURN
+        # Finally, add model start token at end of prompt
+        result += START_TURN_MODEL
+        logger.info(f"Input for agent {self.agent_type}:{str(result)}")
+        return [{"role": "user", "content": result}]
 
     def decode(self, input, stream=False):
         try:
@@ -162,25 +153,25 @@ Dit svar:
 
     def reference_generator(self, references: list[Reference]):
         for ref in references:
-            yield json.dumps({"token": {"text": "\n"}})
-            yield json.dumps({"token": {"text": "\n"}})
-            #tokens = [f"[{ref.article_headline}]({ref.article_link})"]
-            tokens = [f"[{ref.id}](https://mitcfu.dk/MaterialeInfo/?faust={ref.id})"]
+            yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
+            yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
+            tokens = [f"[{ref.article_headline}]({ref.article_link})"]
+            #tokens = [f"[{ref.id}](https://mitcfu.dk/MaterialeInfo/?faust={ref.id})"]
             for token in tokens:
-                yield json.dumps({"token": {"text": token}})
+                yield json.dumps({"choices": [{"delta": {"content": token}}]})
 
     async def async_reference_generator(self, parsed_references: list):
-        yield json.dumps({"token": {"text": "\n"}})
+        yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
         await asyncio.sleep(0.01)
-        yield json.dumps({"token": {"text": "\n"}})
+        yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
         await asyncio.sleep(0.01)
-        yield json.dumps({"token": {"text": "Kilder"}})
+        yield json.dumps({"choices": [{"delta": {"content": "Kilder"}}]})
         await asyncio.sleep(0.01)
-        yield json.dumps({"token": {"text": ":"}})
+        yield json.dumps({"choices": [{"delta": {"content": ":"}}]})
         await asyncio.sleep(0.01)
-        yield json.dumps({"token": {"text": "\n"}})
+        yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
         await asyncio.sleep(0.01)
-        yield json.dumps({"token": {"text": "\n"}})
+        yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
         for ref in self.reference_generator(parsed_references):
             await asyncio.sleep(random.choice(self.streaming_delays))
             yield ref
@@ -198,28 +189,35 @@ Dit svar:
         inputs = await asyncio.gather(
             self.async_llm_format(input["messages"], parsed_references)
         )
-        request_body = {"inputs": inputs[0], "parameters": input["parameters"]}
+        request_body = {
+            "messages": inputs[0],
+            "model": input["model"],
+            "stream": input["stream"],
+            "max_tokens": input["max_tokens"]
+        }
         request_body_str = json.dumps(request_body)
-        if (
-            not self.agent_type == "RAG"
-        ):  # RAG disabled until we know what CFU wants with the documents
-            async with self.session.post(
-                self.chat_bib_url,
-                headers=fetch_options["headers"],
-                data=request_body_str,
-            ) as response:
-                async for chunk in response.content.iter_chunked(1024):
-                    if chunk:
-                        # yield chunk
-                        decoded_value = self.decode(chunk, stream=True)
-                        try:
-                            obj = json.loads(decoded_value.replace("data:", ""))
-                            if not obj.get("token", {}).get("text", {}) == "</s>":
-                                yield chunk
-                        except json.JSONDecodeError:
-                            pass
-                        except Exception as e:
-                            logger.info(f"Error during streaming: {e}")
+        # if (
+        #     not self.agent_type == "RAG"
+        # ):  # RAG disabled until we know what CFU wants with the documents
+        async with self.session.post(
+            self.mitcfu_tgi_url,
+            headers=fetch_options["headers"],
+            data=request_body_str,
+        ) as response:
+            async for chunk in response.content.iter_chunked(1024):
+                if chunk:
+                    # yield chunk
+                    decoded_value = self.decode(chunk, stream=True)
+                    try:
+                        obj = json.loads(decoded_value.replace("data:", ""))
+                        for choice in obj.get("choices", []):
+                            if token := choice.get("delta", {}).get("content", ""):
+                                if not token == "<end_of_turn>":
+                                    yield chunk
+                    except json.JSONDecodeError:
+                        pass
+                    except Exception as e:
+                        logger.info(f"Error during streaming: {e}")
 
         # filter references so that no two references have the same article_link
         if parsed_references:

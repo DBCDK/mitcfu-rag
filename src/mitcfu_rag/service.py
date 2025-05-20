@@ -34,6 +34,8 @@ from mitcfu_rag.config import (
     SIMPLE_TEMPLATE,
     ROUTER_TEMPLATE,
     FALLBACK_TEMPLATE,
+    FOLLOW_UP_TEMPLATE,
+    REFORMULATE_TEMPLATE
 )
 
 INSTANCE_ID = create_instance_id(num_digits=8)
@@ -73,6 +75,8 @@ class StreamingHandler(BaseHandler):
         self.simple_template = SIMPLE_TEMPLATE
         self.rag_template = RAG_TEMPLATE
         self.fallback_template = FALLBACK_TEMPLATE
+        self.follow_up_template = FOLLOW_UP_TEMPLATE
+        self.reformulate_template = REFORMULATE_TEMPLATE
         self.graph = self.create_graph()
 
     def create_graph(self):
@@ -82,6 +86,7 @@ class StreamingHandler(BaseHandler):
         workflow.add_node("rag_agent", self.rag_response)
         workflow.add_node("simple_agent", self.simple_response)
         workflow.add_node("fallback_agent", self.fallback_response)
+        workflow.add_node("follow_up_agent", self.follow_up_response)
 
         workflow.add_conditional_edges(
             "route",
@@ -90,6 +95,7 @@ class StreamingHandler(BaseHandler):
                 "RAG": "rag_agent",
                 "SIMPLE": "simple_agent",
                 "FALLBACK": "fallback_agent",
+                "FOLLOW_UP": "follow_up_agent",
             },
         )
 
@@ -97,6 +103,8 @@ class StreamingHandler(BaseHandler):
         workflow.add_edge("rag_agent", END)
         workflow.add_edge("simple_agent", END)
         workflow.add_edge("fallback_agent", END)
+        workflow.add_edge("follow_up_agent", END)
+        #workflow.add_edge("summarizer_agent", END)
 
         return workflow.compile()
 
@@ -116,11 +124,16 @@ class StreamingHandler(BaseHandler):
     async def route_response(self, messages):
         messages["agent"] = "ROUTER"
         route_result_stream = await self.stream_response(messages, self.route_template)
-        route_result = "".join([r async for r in self.gen_wrapper(route_result_stream)])
-        if "RAG" in route_result:
+        raw_response = [r async for r in self.gen_wrapper(route_result_stream)]
+        route_result = "".join(raw_response)
+        print(route_result)
+        logger.info(f"Router result:\n{route_result}\n")
+        if set("RAG").issubset(set(route_result)):
             return {"agent": "RAG"}
-        elif "SIMPLE" in route_result:
+        elif set("SIMPLE").issubset(set(route_result)):
             return {"agent": "SIMPLE"}
+        elif set("FOLLOW_UP").issubset(set(route_result)):
+            return {"agent": "FOLLOW_UP"}
         else:
             return {"agent": "FALLBACK"}  # create fallback here
 
@@ -129,11 +142,43 @@ class StreamingHandler(BaseHandler):
         return {"output": result}
 
     async def rag_response(self, messages):
+        messages["agent"] = "REFORMULATOR"
+        reformulated_response = await self.stream_response(messages, self.reformulate_template)
+        raw_response = [r async for r in self.gen_wrapper(reformulated_response)]
+        reformulate_output = "".join(raw_response).replace('json', '').replace("```", "")
+        logger.info(f"Reformulated response:{reformulate_output}")
+        try:
+            json_response = json.loads(reformulate_output)
+            messages["reformulated_queries"] = json_response.get("søgninger", [])
+        except:
+            logger.info("Unable to ")
+            messages["reformulated_queries"] = []
+        messages["agent"] = "RAG"
         result = await self.stream_response(messages, self.rag_template)
         return {"output": result}
 
     async def fallback_response(self, messages):
         result = await self.stream_response(messages, self.fallback_template)
+        return {"output": result}
+
+    async def follow_up_response(self, messages):
+        messages["agent"] = "REFORMULATOR"
+        reformulated_response = await self.stream_response(
+            messages, self.reformulate_template
+        )
+        raw_response = [r async for r in self.gen_wrapper(reformulated_response)]
+        reformulate_output = (
+            "".join(raw_response).replace("json", "").replace("```", "")
+        )
+        logger.info(f"Reformulated response:{reformulate_output}")
+        try:
+            json_response = json.loads(reformulate_output)
+            messages["reformulated_queries"] = json_response.get("søgninger", [])
+        except:
+            logger.info("Unable to ")
+            messages["reformulated_queries"] = []
+        messages["agent"] = "FOLLOW_UP"
+        result = await self.stream_response(messages, self.follow_up_template)
         return {"output": result}
 
     async def stream_response(self, messages, template):
@@ -163,8 +208,10 @@ class StreamingHandler(BaseHandler):
         async for item in stream:
             decoded_item = decode(item)
             obj = json.loads(decoded_item.replace("data:", ""))
-            if not obj.get("token", {}).get("text", {}) == "</s>":
-                yield obj.get("token", {}).get("text", {})
+            for choice in obj.get("choices", []):
+                if token := choice.get("delta", {}).get("content", ""):
+                    if not token == "<end_of_turn>":
+                        yield token
 
 
 class MetricsApp(PrometheusMixIn, tw.Application):
