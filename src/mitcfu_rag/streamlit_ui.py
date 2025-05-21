@@ -12,7 +12,7 @@ import requests
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 relative_img_path = os.path.join(current_dir, "faktalink_icon.png")
-STREAMING_ENDPOINT = "http://ai-p301:5013"
+STREAMING_ENDPOINT = "http://ai-p301:5011"
 
 version = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
@@ -86,7 +86,7 @@ def decode(input):
         if isinstance(input, str):
             return input
         else:
-            return input.decode("utf-8")
+            return input.decode("utf-8").strip()
     except UnicodeDecodeError as e:
         return input.decode("utf-8", errors="ignore")
 
@@ -97,6 +97,7 @@ def gen_wrapper(stream):
     #         yield i
 
     for item in stream.iter_content(chunk_size=None, decode_unicode=True):
+        print(item)
         decoded_item = decode(item)
         obj = json.loads(decoded_item.replace("data:", ""))
         for choice in obj.get("choices", []):

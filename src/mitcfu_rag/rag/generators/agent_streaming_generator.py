@@ -71,9 +71,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         cleaned_messages = []
         for i, message in enumerate(messages):
             # skip initial welcome message
-            if i == 0:
-                continue
-            elif message["role"] == "assistant":
+            if message["role"] == "assistant":
                 logger.debug("SPLIT MESSAGES")
                 for m in message["content"].split("Kilder:"):
                     logger.debug(m)
@@ -83,7 +81,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             else:
                 cleaned_messages.append(message)
 
-        max_new_tokens = 1000 if not self.agent_type == "ROUTER" else 250
+        max_new_tokens = 1000 if self.agent_type not in {"ROUTER", "REFORMULATOR"} else 250
         async for chunk in self.llm_generate(
             {
                 "messages": cleaned_messages,
@@ -151,7 +149,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             logger.debug(f"UnicodeDecodeError: {e}")
             return input.decode("utf-8", errors="ignore")
 
-    def reference_generator(self, references: list[Reference]):
+    async def reference_generator(self, references: list[Reference]):
         for ref in references:
             yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
             yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
@@ -165,16 +163,17 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         await asyncio.sleep(0.01)
         yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
         await asyncio.sleep(0.01)
-        yield json.dumps({"choices": [{"delta": {"content": "Kilder"}}]})
+        yield json.dumps({"choices": [{"delta": {"content": "**Kilder**"}}]})
         await asyncio.sleep(0.01)
         yield json.dumps({"choices": [{"delta": {"content": ":"}}]})
         await asyncio.sleep(0.01)
         yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
         await asyncio.sleep(0.01)
         yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
-        for ref in self.reference_generator(parsed_references):
+        async for ref in self.reference_generator(parsed_references):
             await asyncio.sleep(random.choice(self.streaming_delays))
             yield ref
+        yield json.dumps({"choices": [{"delta": {"content": END_TURN}}]})
 
     async def llm_generate(self, input, parsed_references):
         fetch_options = {
@@ -212,7 +211,9 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                         obj = json.loads(decoded_value.replace("data:", ""))
                         for choice in obj.get("choices", []):
                             if token := choice.get("delta", {}).get("content", ""):
-                                if not token == "<end_of_turn>":
+                                if token == END_TURN and parsed_references:
+                                    yield ""
+                                else:
                                     yield chunk
                     except json.JSONDecodeError:
                         pass
@@ -229,4 +230,5 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                    filtered_references.append(ref)
 
             async for ref in self.async_reference_generator(filtered_references):
-                yield ref
+                yield f"data:{ref}\n"
+                #yield b'\n'
