@@ -81,7 +81,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             else:
                 cleaned_messages.append(message)
 
-        max_new_tokens = 1000 if self.agent_type not in {"ROUTER", "REFORMULATOR"} else 250
+        max_new_tokens = 1000 if not self.agent_type == "ROUTER" else 250
         async for chunk in self.llm_generate(
             {
                 "messages": cleaned_messages,
@@ -100,6 +100,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         result = START_TURN_USER
         result += f"{self.system_message}"
 
+        # format input for agents that need documents as context
         if self.agent_type in {"RAG", "FOLLOW_UP"}:
             # Only generate something of there are references.
             if parsed_references:
@@ -127,14 +128,21 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                 # If no references, use missing reference prompt
                 result += self.missing_reference_prompt
                 result += END_TURN
+        # format agents that need the chathistory as context
+        elif self.agent_type in {"REFORMULATOR", "ROUTER"}:
+            result += self.prompt_template
+            result += "Chat-historik:\n\n"
+            for msg in msgs:
+                if msg["role"] == "assistant" or msg["role"] == "user":
+                    result += "Bruger: " if msg["role"] == "user" else "Model: "
+                    result += f"\n{msg['content']}"
+            result += END_TURN
         else:
             result += self.prompt_template
             result += END_TURN
             for msg in msgs:
                 if msg["role"] == "assistant" or msg["role"] == "user":
-                    result += (
-                        START_TURN_USER if msg["role"] == "user" else START_TURN_MODEL
-                    )
+                    result += START_TURN_USER if msg["role"] == "user" else START_TURN_MODEL
                     result += f"\n{msg['content']}"
                     result += END_TURN
         # Finally, add model start token at end of prompt
