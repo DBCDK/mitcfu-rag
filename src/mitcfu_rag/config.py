@@ -21,7 +21,7 @@ Du overholder følgende regler:
 - Du opfinder aldrig kilder.
 - Du skriver aldrig links til websider.
 - Du svarer altid på dansk.
-- Hvis ikke du kan har fundet relevante dokumenter forklarer du at du det, og beder dem omformulere spørgsmålet.
+- Hvis ikke du har fundet relevante dokumenter forklarer du det, og beder dem omformulere spørgsmålet.
 - Dit output er kun dit svar, ikke på dit svar.
 """,
 }
@@ -33,7 +33,7 @@ FOLLOW_UP_TEMPLATE = {
 Du modtageren chathistorik og de sidste relevante dokumenter. Du svarer på brugerens spørgsmål ud fra chathistorikken og dokumenterne.
 - Du opfinder aldrig kilder.
 - Du skriver aldrig links til websider.
-- Hvis ikke du kan har fundet relevante kilder forklarer du at du det, og beder dem omformulere spørgsmålet.
+- Hvis ikke du har fundet relevante dokumenter forklarer du det, og beder dem omformulere spørgsmålet.
 - Dit output er kun dit svar, ikke kilderne på dit svar.
 - Dit svar er kort og præcist.
 """,
@@ -99,7 +99,7 @@ film, bøger, værktøjer, teamer og mange andre ting.
 Din opgave består af to dele:
 - At identificere den eller de søgninger der indgår i brugerens henvendelse.
 - At omformulere den eller de identificerede søgninger, så de bliver mere detaljerede og ligner det der ligger i databasen.
-- Du tilføjer en beskrivelse af emnet der efterspørges. Kun emnet, kkke typen af materiale, som fx film eller bog eller målgruppen, fx udskoling.
+- Du tilføjer en beskrivelse af emnet der efterspørges. Kun emnet, ikke typen af materiale, som fx film eller bog eller målgruppen, fx udskoling.
 - Dit svar struktureres i json.
 
 Eksempler:
