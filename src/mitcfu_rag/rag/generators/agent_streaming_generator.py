@@ -73,10 +73,10 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             # skip initial welcome message
             if message["role"] == "assistant":
                 logger.debug("SPLIT MESSAGES")
-                for m in message["content"].split("Kilder:"):
+                for m in message["content"].split("**Kilder**:"):
                     logger.debug(m)
                 logger.debug("END SPLIT MESSAGES")
-                message["content"] = message["content"].split("Kilder:")[0]
+                message["content"] = message["content"].split("**Kilder**:")[0]
                 cleaned_messages.append(message)
             else:
                 cleaned_messages.append(message)
