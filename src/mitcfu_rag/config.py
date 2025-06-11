@@ -95,9 +95,7 @@ def ROUTER_TEMPLATE():
 
 Du starter med at tænke højt over chathistorikken, så du kan forklare dig selv hvad brugerens intention er med den seneste besked.
     Agent beskrivelser: """
-        + ". ".join(
-            [f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES]
-        )
+        + ". ".join([f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES])
         + """
         Agent typer: """
         + ", ".join([f"[{TEMP['name']}]" for TEMP in ALL_TEMPLATES])
@@ -111,6 +109,7 @@ Dit svar formateres som json sådan her:
 }
     """,
     }
+
 
 # TOOL PROMPTS
 # TODO brug query splitting og query decomposition til bedre RAG
@@ -153,7 +152,7 @@ Output:
     "Minecraft er et kreativt computerspil, hvor spillere bygger og udforsker virtuelle verdener lavet af blokke"
   ]
 }
-"""
+""",
 }
 
 

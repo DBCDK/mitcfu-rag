@@ -236,7 +236,6 @@ def index_paragraph_docs_GPU_batches(
 
     for doc in tqdm(data):
         for id in doc:
-            # OBS: The abstract could be a list of strings, here we only use the first string. DETTE SKAL FIKSES:
             if not validate_abstract(doc):
                 continue
 
