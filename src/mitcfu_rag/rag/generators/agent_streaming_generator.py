@@ -22,33 +22,50 @@ example of usage:
 import random
 import logging
 import json
-import datetime
 import os
 import asyncio
 import aiohttp
-import requests
-from mitcfu_rag.rag.rag import Generator, SourcesWithScore, AnswerWithSource, Reference
+from mitcfu_rag.rag.rag import Generator, Reference
+from mitcfu_rag.tools.llm_formatting import (
+    load_tokenizers,
+    select_model_function,
+    tgi_input_format,
+    tgi_output_format,
+)
+from mitcfu_rag.config import (
+    GEMMA_3_12B,
+    MIXTRAL_8X7B,
+    DEFAULT_MODEL,
+    START_TURN_USER,
+    END_TURN_USER,
+    START_TURN_MODEL,
+)
 
 roles_to_ignore = ["resetter", "summarizer"]
 
 logger = logging.getLogger(__name__)
 
-START_TURN_USER = "<start_of_turn>user\n"
-START_TURN_MODEL = "<start_of_turn>model\n"
-END_TURN = "<end_of_turn>\n"
+# These cannot always be easily derived from the tokenizer, so add more manually if trying out a new model
 
 
 class AgentStreamingGenerator(Generator):
-    def __init__(self):
+    def __init__(self, use_ceph=False):
         self.streaming_delays = [0.01, 0.02, 0.03]
-        #self.chat_bib_url = os.environ.get(
-        #    "CHAT_BIB_URL",
-        #    "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk/generate_stream",
-        #)
-        self.mitcfu_tgi_url = os.environ.get("MITCFU_TGI_URL", "http://gemma-3-12b-it.mi-prod.svc.cloud.dbc.dk/v1/chat/completions")
+        self.tgi_endpoints = {
+            GEMMA_3_12B: os.environ.get(
+                "MITCFU_TGI_URL",
+                "http://gemma-3-12b-it.mi-prod.svc.cloud.dbc.dk/v1/chat/completions",
+            ),
+            MIXTRAL_8X7B: os.environ.get(
+                "CHAT_BIB_URL",
+                "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk/generate_stream",
+            ),
+        }
+        self.tokenizers = load_tokenizers(
+            list(self.tgi_endpoints.keys()), use_ceph=use_ceph
+        )
+        self.model_output_function = None
         self.system_message = "Du er MitCFU-Chat. Du hjælper med søgninger i MitCFU kataloget. Du svarer altid på dansk."
-        self.prompt_template = None
-        self.agent_type = None
         self.missing_reference_prompt = """
 Brugeren har stillet et spørgsmål du ikke kan finde nogen kilder om.
 Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at omformulere det.
@@ -64,48 +81,77 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         prompt_template: str = None,
     ):
         logger.info(f"parsed_references: {references}")
-        self.prompt_template = prompt_template["prompt"]
-        self.agent_type = input["agent"]
+        self.model_output_function = select_model_function(prompt_template["model"])
         # remove sources from output if generated
+        logger.info(
+            f"Replying as {prompt_template['name']} with model {prompt_template['model']}"
+        )
         messages = input["input"]
         cleaned_messages = []
         for i, message in enumerate(messages):
             # skip initial welcome message
             if message["role"] == "assistant":
-                logger.debug("SPLIT MESSAGES")
-                for m in message["content"].split("**Kilder**:"):
-                    logger.debug(m)
-                logger.debug("END SPLIT MESSAGES")
-                message["content"] = message["content"].split("**Kilder**:")[0]
+                message["content"] = message["content"].lower().split("**kilder**:")[0]
                 cleaned_messages.append(message)
             else:
                 cleaned_messages.append(message)
 
-        max_new_tokens = 1000 if not self.agent_type == "ROUTER" else 250
+        max_new_tokens = (
+            1000 if prompt_template["name"] not in {"ROUTER", "REFORMULATOR"} else 200
+        )
         async for chunk in self.llm_generate(
             {
                 "messages": cleaned_messages,
-                "model": "tgi", "stream": True, "max_tokens": max_new_tokens
+                "model": "tgi",
+                "stream": True,
+                "model_name": prompt_template["model"],
+                "prompt_template": prompt_template["prompt"],
+                "agent_type": prompt_template["name"],
+                "max_tokens": max_new_tokens,
             },
             references,
         ):
             yield chunk
 
-    async def async_llm_format(self, msgs, parsed_references):
+    async def async_llm_format(
+        self, msgs, model_name, prompt_template, agent_type, parsed_references
+    ):
         await asyncio.sleep(0)
-        return self.llm_format(msgs, parsed_references)
+        return self.llm_format(
+            msgs, model_name, prompt_template, agent_type, parsed_references
+        )
 
-    def llm_format(self, msgs, parsed_references):
+    def __format_messages(
+        self,
+        messages: list[str],
+        model_name: str,
+        use_bos: bool = False,
+        ignore_role: str = None,
+    ):
+        if ignore_role:
+            messages = [msg for msg in messages if not msg["role"] == ignore_role]
+        formatted_chat_history = self.tokenizers[model_name].apply_chat_template(
+            messages, tokenize=False
+        )
+        if not use_bos:
+            formatted_chat_history = formatted_chat_history[
+                len(self.tokenizers[model_name].bos_token) :
+            ]
+        return formatted_chat_history
+
+    def llm_format(
+        self, msgs, model_name, prompt_template, agent_type, parsed_references
+    ):
         # Set start token and add system prompt
-        result = START_TURN_USER
+        result = self.tokenizers[model_name].bos_token + START_TURN_USER[model_name]
         result += f"{self.system_message}"
 
         # format input for agents that need documents as context
-        if self.agent_type in {"RAG", "FOLLOW_UP"}:
+        if agent_type in {"RAG", "FOLLOW_UP"}:
             # Only generate something of there are references.
             if parsed_references:
                 # Add prompt template, set through input
-                result += self.prompt_template
+                result += prompt_template
                 # Format references
                 result += "Dokumenter:" + (
                     ". ".join(
@@ -117,37 +163,30 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                     + ""
                 )
                 # End "system" instructions.
-                result += END_TURN
+                result += END_TURN_USER[model_name]
                 # Format chat history
-                for msg in msgs:
-                    if msg["role"] == "assistant" or msg["role"] == "user":
-                        result += START_TURN_USER if msg["role"] == "user" else START_TURN_MODEL
-                        result += f"\n{msg['content']}"
-                        result += END_TURN
+                result += self.__format_messages(msgs, model_name, use_bos=False)
             else:
                 # If no references, use missing reference prompt
                 result += self.missing_reference_prompt
-                result += END_TURN
+                result += END_TURN_USER[model_name]
         # format agents that need the chathistory as context
-        elif self.agent_type in {"REFORMULATOR", "ROUTER"}:
-            result += self.prompt_template
+        elif agent_type in {"REFORMULATOR", "ROUTER"}:
+            result += prompt_template
+            # chat history is used as context here. do not format it as instructions.
             result += "Chat-historik:\n\n"
             for msg in msgs:
                 if msg["role"] == "assistant" or msg["role"] == "user":
                     result += "Bruger: " if msg["role"] == "user" else "Model: "
                     result += f"\n{msg['content']}"
-            result += END_TURN
+            result += END_TURN_USER[model_name]
         else:
-            result += self.prompt_template
-            result += END_TURN
-            for msg in msgs:
-                if msg["role"] == "assistant" or msg["role"] == "user":
-                    result += START_TURN_USER if msg["role"] == "user" else START_TURN_MODEL
-                    result += f"\n{msg['content']}"
-                    result += END_TURN
+            result += prompt_template
+            result += END_TURN_USER[model_name]
+            result += self.__format_messages(msgs, model_name, use_bos=False)
         # Finally, add model start token at end of prompt
-        result += START_TURN_MODEL
-        logger.info(f"Input for agent {self.agent_type}:{str(result)}")
+        result += START_TURN_MODEL[model_name]
+        logger.info(f"Input for agent {agent_type}:{str(result)}")
         return [{"role": "user", "content": result}]
 
     def decode(self, input, stream=False):
@@ -159,29 +198,30 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
 
     async def reference_generator(self, references: list[Reference]):
         for ref in references:
-            yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
-            yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
+            yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
+            yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
             tokens = [f"[{ref.article_headline}]({ref.article_link})"]
-            #tokens = [f"[{ref.id}](https://mitcfu.dk/MaterialeInfo/?faust={ref.id})"]
             for token in tokens:
-                yield json.dumps({"choices": [{"delta": {"content": token}}]})
+                yield json.dumps(tgi_output_format(DEFAULT_MODEL, token))
 
     async def async_reference_generator(self, parsed_references: list):
-        yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
+        yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
         await asyncio.sleep(0.01)
-        yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
+        yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
         await asyncio.sleep(0.01)
-        yield json.dumps({"choices": [{"delta": {"content": "**Kilder**"}}]})
+        yield json.dumps(tgi_output_format(DEFAULT_MODEL, "**Kilder**"))
         await asyncio.sleep(0.01)
-        yield json.dumps({"choices": [{"delta": {"content": ":"}}]})
+        yield json.dumps(tgi_output_format(DEFAULT_MODEL, ":"))
         await asyncio.sleep(0.01)
-        yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
+        yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
         await asyncio.sleep(0.01)
-        yield json.dumps({"choices": [{"delta": {"content": "\n"}}]})
+        yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
         async for ref in self.reference_generator(parsed_references):
             await asyncio.sleep(random.choice(self.streaming_delays))
             yield ref
-        yield json.dumps({"choices": [{"delta": {"content": END_TURN}}]})
+        yield json.dumps(
+            tgi_output_format(DEFAULT_MODEL, self.tokenizers[DEFAULT_MODEL].eos_token)
+        )
 
     async def llm_generate(self, input, parsed_references):
         fetch_options = {
@@ -194,20 +234,29 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         }
 
         inputs = await asyncio.gather(
-            self.async_llm_format(input["messages"], parsed_references)
+            self.async_llm_format(
+                input["messages"],
+                input["model_name"],
+                input["prompt_template"],
+                input["agent_type"],
+                parsed_references,
+            )
         )
+        # This request body contains infomartion for both versions of tgi.
+        # tgi_input_format extracts the content needed depending on the model used.
         request_body = {
             "messages": inputs[0],
             "model": input["model"],
             "stream": input["stream"],
-            "max_tokens": input["max_tokens"]
+            "max_tokens": input["max_tokens"],
+            "temperature": 0.1,
+            "parameters": {"temperature": 0.1, "max_new_tokens": input["max_tokens"]},
         }
-        request_body_str = json.dumps(request_body)
-        # if (
-        #     not self.agent_type == "RAG"
-        # ):  # RAG disabled until we know what CFU wants with the documents
+        request_body_str = json.dumps(
+            tgi_input_format(input["model_name"], request_body)
+        )
         async with self.session.post(
-            self.mitcfu_tgi_url,
+            self.tgi_endpoints[input["model_name"]],
             headers=fetch_options["headers"],
             data=request_body_str,
         ) as response:
@@ -217,12 +266,19 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                     decoded_value = self.decode(chunk, stream=True)
                     try:
                         obj = json.loads(decoded_value.replace("data:", ""))
-                        for choice in obj.get("choices", []):
-                            if token := choice.get("delta", {}).get("content", ""):
-                                if token == END_TURN and parsed_references:
-                                    yield ""
-                                else:
-                                    yield chunk
+                        token = self.model_output_function(obj)
+                        if (
+                            token == self.tokenizers[input["model_name"]].eos_token
+                            and parsed_references
+                        ):
+                            continue
+                        else:
+                            if input["model_name"] == DEFAULT_MODEL:
+                                yield chunk
+                            else:
+                                yield json.dumps(
+                                    tgi_output_format(DEFAULT_MODEL, token)
+                                )
                     except json.JSONDecodeError:
                         pass
                     except Exception as e:
@@ -234,9 +290,8 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             filtered_references = []
             for ref in parsed_references:
                 if ref.article_link not in seen_links:
-                   seen_links.add(ref.article_link)
-                   filtered_references.append(ref)
+                    seen_links.add(ref.article_link)
+                    filtered_references.append(ref)
 
             async for ref in self.async_reference_generator(filtered_references):
                 yield f"data:{ref}\n"
-                #yield b'\n'

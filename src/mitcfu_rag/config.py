@@ -1,17 +1,36 @@
 # from fakta_chat.rag.dummy_rag import DummyRAG
 # from fakta_chat.rag.solr_rag import SolrRAG
-from mitcfu_rag.rag.streaming_rag import StreamingRAG
-from mitcfu_rag.rag.agent_streaming_rag import AgenticRAG
 
 # the model that should be used in evaluation, chatUI
 # MODELS TO USE
-RAG = StreamingRAG
-AGENTIC = AgenticRAG
 
+GEMMA_3_12B = "gemma-3-12b-it"
+MIXTRAL_8X7B = "chat-bib-tgi-1-0"
+
+MODEL_MAP = {
+    MIXTRAL_8X7B: "mistralai/Mixtral-8x7B-Instruct-v0.1",
+    "skolegpt-tgi-1-0": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+    GEMMA_3_12B: "google/gemma-3-12b-it",
+}
+
+START_TURN_USER = {GEMMA_3_12B: "<start_of_turn>user\n",
+                  MIXTRAL_8X7B: "[INST]"}
+START_TURN_MODEL = {GEMMA_3_12B: "<start_of_turn>model\n",
+                  MIXTRAL_8X7B: ""}
+END_TURN_USER = {GEMMA_3_12B: "<end_of_turn>\n",
+                 MIXTRAL_8X7B: "[/INST]"}
+END_TURN_MODEL = {GEMMA_3_12B: "<end_of_turn>\n",
+                 MIXTRAL_8X7B: ""}
+
+# DEFAULT_MODEL also determines the output format of the service.
+# if there is a difference in the output format of fx the tgi endpoint the model is served through,
+# a wrapper needs to be added to llm_formatting.py to mimic this style.
+DEFAULT_MODEL = GEMMA_3_12B
 
 # AGENT PROMPT TEMPLATES
 RAG_TEMPLATE = {
     "name": "RAG",
+    "model": DEFAULT_MODEL,
     "description": "Brugeren starter en ny forespørgsel, retter opmærksomheden mod et nyt emne inden for samme kategori, eller er ikke tilfreds med de dokumenter de fik sidst. Spørgsmålet kræver ny informationssøgning i MitCFU kataloget.",
     "prompt": """
 Du modtager et spørgsmål og nogle dokumenter. Du forklarer brugeren hvorfor dokumenterne er relevante til deres spørgsmål.
@@ -28,6 +47,7 @@ Du overholder følgende regler:
 
 FOLLOW_UP_TEMPLATE = {
     "name": "FOLLOW_UP",
+    "model": DEFAULT_MODEL,
     "description": "Brugeren spørger om noget der tydeligt bygger videre på den forrige besked, uden ønske om supplerende eller alternative dokumenter. Spørgsmålet er kort, og uden nyt emne. Svaret kan ofte findes i den tidligere kontekst eller i det tidligere svar. ",
     "prompt": """
 Du modtageren chathistorik og de sidste relevante dokumenter. Du svarer på brugerens spørgsmål ud fra chathistorikken og dokumenterne.
@@ -41,6 +61,7 @@ Du modtageren chathistorik og de sidste relevante dokumenter. Du svarer på brug
 
 SIMPLE_TEMPLATE = {
     "name": "SIMPLE",
+    "model": DEFAULT_MODEL,
     "description": "svarer på simple ting som hej, tak, og forklaring på hvad MitCFU er.",
     "prompt": """
 Brugeren har stillet et spørgsmål der ikke handler om specifikke MitCFU kilder, eller sagt hej, tak eller farvel.
@@ -50,6 +71,7 @@ Du svarer høftligt og kortfattet brugeren med en afslappet tone.
 
 FALLBACK_TEMPLATE = {
     "name": "FALLBACK",
+    "model": DEFAULT_MODEL,
     "description": "hvis spørgsmålet falder uden for alle andre agenter hjælper denne her brugeren på rette spor igen",
     "prompt": """
 Brugeren spørger om noget der ikke er relevant for MitCFU. Forklar brugeren at du ikke kan besvare deres spørgsmål,
@@ -62,6 +84,7 @@ def ROUTER_TEMPLATE():
     ALL_TEMPLATES = [SIMPLE_TEMPLATE, FALLBACK_TEMPLATE, RAG_TEMPLATE, FOLLOW_UP_TEMPLATE]
     return {
         "name": "ROUTER",
+        "model": DEFAULT_MODEL,
         "descrption": "vælger hvilken agent der skal svare på den seneste besked.",
         "prompt": """
     Brugeren har sendt en besked, og det er din opgave at bedømme hvilken agent der skal håndtere beskeden.
@@ -79,7 +102,8 @@ Du starter med at tænke højt over chathistorikken, så du kan forklare dig sel
         Agent typer: """
         + ", ".join([f"[{TEMP['name']}]" for TEMP in ALL_TEMPLATES])
         + """\n\n
-    """ + """
+    """
+        + """
 Dit svar formateres som json sådan her: 
 {
 "tanker": "dine tanker her",
@@ -92,6 +116,7 @@ Dit svar formateres som json sådan her:
 # TODO brug query splitting og query decomposition til bedre RAG
 REFORMULATE_TEMPLATE = {
     "name": "REFORMULATOR",
+    "model": DEFAULT_MODEL,
     "description": "Omformulerer om indeler brugerens spørgsmål inden der laves RAG på den.",
     "prompt": """
 Du modtager en brugers henvendelse, som der skal foretages RAG på. Der søges i en vektordatabase med lærevejledninger, beskrivelser af

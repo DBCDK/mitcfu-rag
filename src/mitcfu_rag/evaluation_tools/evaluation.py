@@ -3,11 +3,16 @@ import pandas as pd
 import os
 from datetime import datetime
 import argparse
+import requests
 import random
 import pprint
+import re
 import logging
 from openai import APIConnectionError, OpenAI, RateLimitError
-from fakta_chat.evaluation_tools.prompt_template import (
+from mitcfu_rag.rag.langgraph_graphs import AgenticGraph
+from mitcfu_rag.config import DEFAULT_MODEL
+from mitcfu_rag.tools.llm_formatting import gen_wrapper
+from mitcfu_rag.evaluation_tools.prompt_template import (
     IN_CONTEXT_EXAMPLES,
     INSTRUCTIONS,
 )
@@ -19,7 +24,7 @@ logger = logging.getLogger(__name__)
 def sample_evaluation_questions(
     limit: int = 30, question_type: str = "all"
 ) -> list[dict]:
-    df = pd.read_csv("src/fakta_chat/evaluation_tools/testset/query_answer.csv")
+    df = pd.read_csv("src/mitcfu_rag/evaluation_tools/testset/query_answer.csv")
     if question_type == "all":
         df_finale = df
 
@@ -112,8 +117,26 @@ def generate_predictions(participant_model, evaluation_file):
         query = [line["query"]]
         list_links = [line["link_to_answer_1"], line["link_to_answer_2"]]
 
-        reference, prediction = participant_model.evaluate(query)
 
+        response_stream = requests.post(
+            participant_model,
+            json={"messages": [{"role": "user", "content": query}],
+                  "type": "evaluate_rag"},
+            stream=True,
+        )
+        raw_response = [
+            r for r in gen_wrapper(response_stream, DEFAULT_MODEL)
+        ]
+        response = "".join(raw_response)
+
+        if "**Kilder**" in response:
+            prediction, raw_reference = response.split("**Kilder**", 1)
+            print(prediction)
+            references = re.findall(r'\[.*?\]\((.*?)\)', raw_reference)
+            print(references)
+        else:
+            prediction = ""
+            references = []
         predictions.append(
             {
                 "query": query,
@@ -121,7 +144,7 @@ def generate_predictions(participant_model, evaluation_file):
                 "prediction": str(prediction).strip().lower(),
                 "question_type": str(line["question_type"]).strip().lower(),
                 "links": [x for x in list_links if str(x) != "nan"],
-                "references": reference,
+                "references": references,
             }
         )
 
@@ -303,15 +326,13 @@ def evaluate_references():
     pass
 
 
-def main(limit: int, question_type: str, compare_model: bool, save_log: bool):
-    from fakta_chat.config import RAG, ComparisonRAG
+def main(model:str, limit: int, question_type: str, compare_model: bool, save_log: bool):
 
     EVALUATION_MODEL_NAME = os.getenv("EVALUATION_MODEL_NAME", "gpt-4o")
 
     # Generate predictions
-    participant_model = RAG()
     evaluation_file = sample_evaluation_questions(int(limit), question_type)
-    predictions = generate_predictions(participant_model, evaluation_file)
+    predictions = generate_predictions(model, evaluation_file)
     list_x = random.sample(range(0, len(predictions)), 2)
 
     # Evaluate Predictions
@@ -325,8 +346,7 @@ def main(limit: int, question_type: str, compare_model: bool, save_log: bool):
     df_results.rename(columns={0: "model"}, inplace=True)
 
     if compare_model:
-        comparison_model = ComparisonRAG()
-        predictions_compare = generate_predictions(comparison_model, evaluation_file)
+        predictions_compare = generate_predictions(compare_model, evaluation_file)
 
         (
             evaluation_results_compare,
@@ -368,6 +388,7 @@ def main(limit: int, question_type: str, compare_model: bool, save_log: bool):
 def cli():
     """Command line arguments"""
     parser = argparse.ArgumentParser()
+    parser.add_argument("model", help="URL to the model to evaluate")
     parser.add_argument(
         "-n", "--n-questions", default=30, help="number of evaluation_questions"
     )
@@ -377,9 +398,7 @@ def cli():
     parser.add_argument(
         "-c",
         "--compare-model",
-        default=False,
-        action="store_true",
-        help="set to True to compare two models",
+        help="Path to another model to compare output with",
     )
     parser.add_argument(
         "-s",
@@ -395,7 +414,7 @@ def cli():
 def run():
     """Entrypoint for running these methods using the CLI"""
     args = cli()
-    main(args.n_questions, args.question_type, args.compare_model, args.save_log)
+    main(args.model, args.n_questions, args.question_type, args.compare_model, args.save_log)
 
 
 if __name__ == "__main__":
