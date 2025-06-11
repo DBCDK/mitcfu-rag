@@ -76,7 +76,7 @@ class KNNSearch:
         for i, label in enumerate(self.labels):
             self.label2index[label].add(i)
         self.label2index = dict(self.label2index)
-        self.executor = ThreadPoolExecutor()
+        self.executor = ThreadPoolExecutor(max_workers=5)
 
     @classmethod
     def build(cls, embeddings: np.array, labels: np.array):

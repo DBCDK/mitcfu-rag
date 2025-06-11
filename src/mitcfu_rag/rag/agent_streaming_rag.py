@@ -40,18 +40,17 @@ logger = logging.getLogger(__name__)
 
 class AgenticRAG(RAG):
     def __init__(
-        self, embedding_model, faiss_index, jed_document_path, validator_model=None
+        self, embedding_model, faiss_index, jed_document_path, validator_model=None, use_ceph=False
     ):
         """
         Components used in the RAG model.
         """
         self.parser = None
-        # self.retriever = EmbeddingRetriever()
         self.retriever = EmbeddingRetriever(
             model_path=embedding_model, embeddings_path=faiss_index, jed_document_path=jed_document_path, cross_model_path=validator_model
         )
         self.reranker = None
-        self.generator = AgentStreamingGenerator()
+        self.generator = AgentStreamingGenerator(use_ceph=use_ceph)
         if validator_model:
             self.validator = None
         self.summarizer = None
@@ -64,7 +63,7 @@ class AgenticRAG(RAG):
         """
         yields response tokens from rag request.
         """
-        if input.get("agent", "") in {"RAG", "FOLLOW_UP"}:
+        if prompt_template.get("name", "") in {"RAG", "FOLLOW_UP"}:
             #input["FOLLOW_UP"] = False
             if input.get("reformulated_queries"):
                 results = await asyncio.gather(
@@ -73,7 +72,6 @@ class AgenticRAG(RAG):
             else:
                 results = await asyncio.gather(self.retriever.async_retrieve(input))
             similarities, references = results[0]
-            #similarities = similarities[:limit]
             references = references[:limit]
         #elif input.get("agent", "") == "FOLLOW_UP":
         #    input["FOLLOW_UP"] = True

@@ -49,16 +49,15 @@ class EmbeddingRetriever(Retriever):
         cross_model_path=CROSS_MODEL_PATH,
         jed_document_path=None,
     ):
-        os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # We should not use GPU for such small models, since they will take up the whole k8s GPU regardless of their size
+        self.device = "cpu"
         # embedding model for faiss index
         self.model = AutoModel.from_pretrained(model_path, device_map=self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_path, device_map=self.device
         )
         self.model.to(self.device)
-
-        # corss-model for rerank
+        # cross-model for rerank
         self.cross_model = AutoModelForSequenceClassification.from_pretrained(cross_model_path, device_map=self.device)
         self.cross_tokenizer = AutoTokenizer.from_pretrained(
             cross_model_path, device_map=self.device
@@ -75,7 +74,6 @@ class EmbeddingRetriever(Retriever):
             self.all_articles = {}
             self.all_materialtypes = set()
         self.validator = None
-        self.session = aiohttp.ClientSession()
 
     def initiate_articles(self):
         with open(self.jed_document_path) as f:
@@ -138,15 +136,12 @@ class EmbeddingRetriever(Retriever):
         )
 
     async def async_retrieve(self, messages: list[str], n: int = 5):
-        # loop = asyncio.get_running_loop()
         return await self.retrieve(messages, n)
 
     async def async_rerank_retrieve(self, messages: list[str], n: int = 5):
-        # loop = asyncio.get_running_loop()
         return await self.rerank_retrieve(messages, n)
 
     async def retrieve(self, input: list[str], n: int = 3):
-        # query = f"query: {' '.join([message['content'] for message in messages if message['role'] == 'user'])}"
         messages = input["input"]
         query = f"query: {messages[-1]['content']}"
         if not query[-1] == "?":
@@ -177,12 +172,10 @@ class EmbeddingRetriever(Retriever):
     async def search(self, embedded_query, limit, filters=None):
         hits = await self.searcher.search(embedded_query, limit * 100)
         ids, scores = zip(*hits)
-        #print(ids)
         retrieved_articles = [
             self.all_articles[id.rsplit("_chunk", maxsplit=1)[0]]
             for id in ids
         ]
-        #print(retrieved_articles)
         if filters:
             filtered_articles = [
                 article for article in retrieved_articles if filtered(article, filters)
@@ -249,9 +242,7 @@ async def reciprocal_rank_fusion(search_results_dict, k=100):
         ):
             if doc not in fused_scores:
                 fused_scores[doc] = 0
-            previous_score = fused_scores[doc]
             fused_scores[doc] += 1 / (rank + k)
-            #print(f"Updating score for {doc} from {previous_score} to {fused_scores[doc]} based on rank {rank} in query '{query}'")
 
     reranked_results = {
         doc: score

@@ -8,9 +8,8 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
-from fakta_chat.rag.rag import Reference
-from fakta_chat.config import Compare_Retrievers
-from fakta_chat.evaluation_tools.evaluation import sample_evaluation_questions
+from mitcfu_rag.rag.rag import Reference
+from mitcfu_rag.evaluation_tools.evaluation import sample_evaluation_questions
 
 logger = logging.getLogger(__name__)
 

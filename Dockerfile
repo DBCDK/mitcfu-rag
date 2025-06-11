@@ -27,6 +27,6 @@ RUN wget -nv --no-check-certificate ${MODEL_PATH} -O ms-marco-MiniLM-L-6-v2.tgz 
     pip install --user .
 
 # /data/mitcfu-rag-1-0 is a symlink to the model on the k8s volume mount
-CMD ["streaming-service-mitcfu", "/data/mitcfu-rag-1-0", "mitcfu_faiss_index", "--article_index_path", "mitcfu_jed_documents.json", "--validator-model-path", "ms-marco-MiniLM-L-6-v2", "--port", "5000"]
+CMD ["streaming-service-mitcfu", "/data/mitcfu-rag-1-0", "mitcfu_faiss_index", "--article_index_path", "mitcfu_jed_documents.json", "--validator-model-path", "ms-marco-MiniLM-L-6-v2", "--port", "5000", "--use-ceph"]
 
 EXPOSE 5000
