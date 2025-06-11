@@ -2,7 +2,7 @@
 import unittest
 import numpy as np
 
-from fakta_chat.tools import KNNSearch
+from mitcfu_rag.tools.knn_searcher import KNNSearch
 
 
 class TestKNNSearcher(unittest.TestCase):
@@ -71,9 +71,7 @@ class TestKNNSearcher(unittest.TestCase):
     def test_label_embedding(self):
         searcher = self.__get_searcher()
         actual = searcher.label_embeddings("lbl_2")
-        expected = np.array(
-            [[0.1181907, 0.23840763, 0.44230762, 0.50785077, 0.68966967]]
-        )
+        expected = np.array([[0.1181907, 0.23840763, 0.44230762, 0.50785077, 0.68966967]])
         np.testing.assert_almost_equal(actual, expected)
 
     def test_label_similarity(self):

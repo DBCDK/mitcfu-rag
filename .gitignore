@@ -29,6 +29,8 @@ develop/
 
 #Jupyter notebook for testing
 mitcfu-sandbox-file.ipynb
+custom-rag-sandbox.ipynb
+.conda_config
 
 #Example files
 Examples/

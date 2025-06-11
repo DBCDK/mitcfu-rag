@@ -164,9 +164,7 @@ def cli():
         help=f"port to expose service on. Default is {port}",
         default=port,
     )
-    parser.add_argument(
-        "-v", "--verbose", dest="verbose", action="store_true", help="verbose output"
-    )
+    parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="verbose output")
 
     args = parser.parse_args()
     level = logging.INFO

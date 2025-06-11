@@ -19,6 +19,8 @@ setup(
     install_requires=[
         "langchain",
         "langchain-text-splitters",
+        "langchain_community",
+        "langchain_unstructured",
         "langgraph",
         "langsmith",
         "streamlit",

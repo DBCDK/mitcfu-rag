@@ -1,0 +1,562 @@
+{
+    "TV0000129447": {
+        "workId": "work-of:870970-basis:41168315",
+        "exportTime": "2023-12-19T10:05:43.836891Z",
+        "subjects": {
+            "all": {
+                "subjects": [
+                    {
+                        "display": "sproglig bevidsthed",
+                        "type": "TOPIC",
+                        "local": false
+                    },
+                    {
+                        "display": "sociale medier",
+                        "type": "TOPIC",
+                        "local": false
+                    },
+                    {
+                        "display": "h\u00f8jreekstremisme",
+                        "type": "TOPIC",
+                        "local": false
+                    },
+                    {
+                        "display": "h\u00f8jrefl\u00f8jen",
+                        "type": "TOPIC",
+                        "local": false
+                    },
+                    {
+                        "display": "QAnon",
+                        "type": "TOPIC",
+                        "local": false
+                    },
+                    {
+                        "display": "konspiration",
+                        "type": "TOPIC",
+                        "local": false
+                    },
+                    {
+                        "display": "konspirationsteorier",
+                        "type": "TOPIC",
+                        "local": false
+                    },
+                    {
+                        "display": "USA",
+                        "type": "TOPIC",
+                        "local": false
+                    }
+                ],
+                "timePeriods": [],
+                "corporations": [],
+                "persons": [],
+                "moods": [],
+                "narrativeTechniques": [],
+                "settings": [],
+                "childrenTopics": []
+            },
+            "dbcVerified": {
+                "subjects": [],
+                "timePeriods": [],
+                "corporations": [],
+                "persons": [],
+                "moods": [],
+                "narrativeTechniques": [],
+                "settings": [],
+                "childrenTopics": []
+            }
+        },
+        "materialTypes": [
+            {
+                "general": {
+                    "code": "FILMS",
+                    "display": "film"
+                },
+                "specific": {
+                    "code": "FILM",
+                    "display": "film"
+                }
+            }
+        ],
+        "genreAndForm": [
+            "dokumentar",
+            "dokumentarfilm"
+        ],
+        "firstPublicationDate": "2022-01-01",
+        "latestPublicationDate": "2022-01-01",
+        "titles": {
+            "main": [
+                "Konspirationskulten QAnon"
+            ],
+            "full": [
+                "Konspirationskulten QAnon"
+            ],
+            "original": [],
+            "parallel": [],
+            "translated": [],
+            "sort": "konspirationskulten qanon",
+            "titlePlusLanguage": "Konspirationskulten QAnon (engelsk)"
+        },
+        "abstract": [
+            "Engelsk dokumentar fra 2021. 31. oktober 2017 postede Q Clearence Patriot sit f\u00f8rste indl\u00e6g p\u00e5 4chan og den 8. december 2020 sit sidste indl\u00e6g. I denne periode lykkedes det Q at skabe en enorm f\u00f8lgerskare blandt almindelige amerikanere, og bev\u00e6gelsen QAnon voksede frem, og fik en skr\u00e6mmende indflydelse p\u00e5 alle niveauer af det politiske liv.",
+            "I dokumentaren unders\u00f8ger den engelske journalist Benjamin Zand hvilke mennesker, der repr\u00e6senterer og st\u00f8tter QAnon. Vi m\u00f8der b\u00e5de indflydelsesrige mennesker som den 3-stjernede general og sikkerhedsr\u00e5dgiver for Trump Michael Flynn, kongresmedlem Marjorie Taylor Greene, indflydelsesrigt republikansk partimedlem Roger Stone og ganske \"almindelige\" mennesker som Dave Roberts og Amanda Quimper. Zand interviewer dem, diskuterer med dem og m\u00e5 konstatere, at der overhovedet ikke er nogen spr\u00e6kker i deres faste overbevisning."
+        ],
+        "mainLanguages": [
+            {
+                "display": "engelsk",
+                "iso639Set1": "en",
+                "iso639Set2": "eng"
+            }
+        ],
+        "creators": {
+            "persons": [
+                {
+                    "display": "Zand",
+                    "nameSort": "zand",
+                    "roles": [
+                        {
+                            "functionCode": "drt",
+                            "function": {
+                                "singular": "instrukt\u00f8r",
+                                "plural": "instrukt\u00f8rer"
+                            }
+                        }
+                    ],
+                    "type": "PERSON",
+                    "firstName": "Benjamin",
+                    "lastName": "Zand"
+                }
+            ],
+            "corporations": []
+        },
+        "workTypes": [
+            "MOVIE"
+        ],
+        "fictionNonfiction": {
+            "code": "FICTION",
+            "display": "fiktion"
+        },
+        "series": [],
+        "dk5MainEntry": {
+            "code": "32.2863",
+            "display": "32.2863 Politiske systemer i enkelte lande. USA",
+            "dk5Heading": "Politiske systemer i enkelte lande. USA"
+        },
+        "manifestations": {
+            "bestRepresentations": [
+                "870970-basis:41886897"
+            ],
+            "first": "",
+            "latest": "",
+            "mostRelevant": [],
+            "order": [
+                "870970-basis:41886897"
+            ],
+            "all": [
+                {
+                    "pid": "870970-basis:41886897",
+                    "localId": "41886897",
+                    "objectId": "870970-basis:41886897",
+                    "unitId": "unit:1276665",
+                    "workId": "work-of:870970-basis:41168315",
+                    "marcId": "870970:41886897",
+                    "agencyId": "870970",
+                    "titles": {
+                        "main": [
+                            "Konspirationskulten QAnon"
+                        ],
+                        "full": [
+                            "Konspirationskulten QAnon"
+                        ],
+                        "original": [],
+                        "parallel": [],
+                        "alternative": [],
+                        "translated": [],
+                        "sort": "konspirationskulten qanon",
+                        "titlePlusLanguage": "Konspirationskulten QAnon (engelsk)"
+                    },
+                    "abstract": [
+                        "Engelsk dokumentar fra 2021. 31. oktober 2017 postede Q Clearence Patriot sit f\u00f8rste indl\u00e6g p\u00e5 4chan og den 8. december 2020 sit sidste indl\u00e6g. I denne periode lykkedes det Q at skabe en enorm f\u00f8lgerskare blandt almindelige amerikanere, og bev\u00e6gelsen QAnon voksede frem, og fik en skr\u00e6mmende indflydelse p\u00e5 alle niveauer af det politiske liv.",
+                        "I dokumentaren unders\u00f8ger den engelske journalist Benjamin Zand hvilke mennesker, der repr\u00e6senterer og st\u00f8tter QAnon. Vi m\u00f8der b\u00e5de indflydelsesrige mennesker som den 3-stjernede general og sikkerhedsr\u00e5dgiver for Trump Michael Flynn, kongresmedlem Marjorie Taylor Greene, indflydelsesrigt republikansk partimedlem Roger Stone og ganske \"almindelige\" mennesker som Dave Roberts og Amanda Quimper. Zand interviewer dem, diskuterer med dem og m\u00e5 konstatere, at der overhovedet ikke er nogen spr\u00e6kker i deres faste overbevisning."
+                    ],
+                    "accessTypes": [
+                        {
+                            "display": "fysisk",
+                            "code": "PHYSICAL"
+                        }
+                    ],
+                    "catalogueCodes": {
+                        "nationalBibliography": [],
+                        "otherCatalogues": []
+                    },
+                    "classifications": [
+                        {
+                            "code": "32.2863",
+                            "display": "32.2863 Politiske systemer i enkelte lande. USA",
+                            "system": "DK5",
+                            "entryType": "MAIN_ENTRY",
+                            "dk5Heading": "Politiske systemer i enkelte lande. USA"
+                        }
+                    ],
+                    "cataloguingLevel": "3",
+                    "collectionIdentifiers": [
+                        "870970-basis",
+                        "870970-danbib",
+                        "870970-bibdk",
+                        "717300-egne",
+                        "800000-accessholdings",
+                        "717300-komplet",
+                        "717300-aktive",
+                        "870970-accessholdings",
+                        "717300-katalog"
+                    ],
+                    "contributorsFromDescription": [],
+                    "creatorsFromDescription": [],
+                    "edition": {
+                        "summary": "2022",
+                        "edition": "",
+                        "publicationYear": {
+                            "display": "2022",
+                            "year": 2022
+                        },
+                        "publicationDateForRanking": "2022-01-01"
+                    },
+                    "identifiers": [],
+                    "languages": {
+                        "main": [
+                            {
+                                "display": "engelsk",
+                                "iso639Set1": "en",
+                                "iso639Set2": "eng"
+                            }
+                        ],
+                        "original": [],
+                        "parallel": [],
+                        "spoken": [],
+                        "subtitles": [
+                            {
+                                "display": "dansk",
+                                "iso639Set1": "da",
+                                "iso639Set2": "dan"
+                            }
+                        ],
+                        "abstract": [],
+                        "notes": [],
+                        "forVisuallyImpaired": [],
+                        "forHearingImpaired": []
+                    },
+                    "physicalDescription": {
+                        "summaryFull": "TV-optagelse",
+                        "materialUnits": [
+                            {
+                                "numberAndType": "TV-optagelse",
+                                "summary": "TV-optagelse"
+                            }
+                        ]
+                    },
+                    "materialTypes": [
+                        {
+                            "general": {
+                                "code": "FILMS",
+                                "display": "film"
+                            },
+                            "specific": {
+                                "code": "FILM",
+                                "display": "film"
+                            }
+                        }
+                    ],
+                    "notes": [
+                        {
+                            "type": "RESTRICTIONS_ON_USE",
+                            "display": [
+                                "Copy-dan, AVU-medier, basis"
+                            ]
+                        },
+                        {
+                            "display": [
+                                "Produktion: Zandland for Channel 4 Television, 2021politiske forhold"
+                            ],
+                            "type": "ORIGINAL_VERSION"
+                        }
+                    ],
+                    "publisher": [
+                        "DR2"
+                    ],
+                    "recordCreationDate": "",
+                    "relatedPublications": [
+                        {
+                            "heading": "Samfundsfag: Ungdomsuddannelser, Voksenuddannelser",
+                            "title": [
+                                "MITCFU-PAEDVEJL-MSWORD"
+                            ]
+                        },
+                        {
+                            "heading": "Samfundsfag: Ungdomsuddannelser, Voksenuddannelser",
+                            "title": [
+                                "MITCFU-PAEDVEJL-PDF"
+                            ]
+                        },
+                        {
+                            "heading": "Det amerikanske opr\u00f8r",
+                            "title": [
+                                "MITCFU-LINK00"
+                            ]
+                        },
+                        {
+                            "heading": "America: Faith on the Frontline",
+                            "title": [
+                                "MITCFU-LINK01"
+                            ]
+                        }
+                    ],
+                    "review": {
+                        "reviewByLibrarians": []
+                    },
+                    "shelfmark": {
+                        "shelfmark": "32.2863",
+                        "postfix": "Konspirationskulten"
+                    },
+                    "workTypes": [
+                        "MOVIE"
+                    ],
+                    "fictionNonfiction": {
+                        "code": "FICTION",
+                        "display": "fiktion"
+                    },
+                    "contributors": {
+                        "persons": [
+                            {
+                                "display": "Frandsen",
+                                "nameSort": "frandsen",
+                                "roles": [
+                                    {
+                                        "functionCode": "cfupkm",
+                                        "function": {
+                                            "singular": "",
+                                            "plural": ""
+                                        }
+                                    }
+                                ],
+                                "type": "PERSON",
+                                "firstName": "Christian Aalborg",
+                                "lastName": "Frandsen"
+                            },
+                            {
+                                "display": "Frandsen",
+                                "nameSort": "frandsen",
+                                "roles": [
+                                    {
+                                        "functionCode": "cfupv",
+                                        "function": {
+                                            "singular": "",
+                                            "plural": ""
+                                        }
+                                    }
+                                ],
+                                "type": "PERSON",
+                                "firstName": "Christian Aalborg",
+                                "lastName": "Frandsen"
+                            },
+                            {
+                                "display": "Reynolds",
+                                "nameSort": "reynolds",
+                                "roles": [
+                                    {
+                                        "functionCode": "pro",
+                                        "function": {
+                                            "singular": "producer",
+                                            "plural": "producere"
+                                        }
+                                    }
+                                ],
+                                "type": "PERSON",
+                                "firstName": "Josh",
+                                "lastName": "Reynolds"
+                            },
+                            {
+                                "display": "Reynolds",
+                                "nameSort": "reynolds",
+                                "roles": [
+                                    {
+                                        "functionCode": "cng",
+                                        "function": {
+                                            "singular": "filmfotograf",
+                                            "plural": "filmfotografer"
+                                        }
+                                    }
+                                ],
+                                "type": "PERSON",
+                                "firstName": "Josh",
+                                "lastName": "Reynolds"
+                            },
+                            {
+                                "display": "Zand",
+                                "nameSort": "zand",
+                                "roles": [
+                                    {
+                                        "functionCode": "cng",
+                                        "function": {
+                                            "singular": "filmfotograf",
+                                            "plural": "filmfotografer"
+                                        }
+                                    }
+                                ],
+                                "type": "PERSON",
+                                "firstName": "Benjamin",
+                                "lastName": "Zand"
+                            },
+                            {
+                                "display": "Frandsen",
+                                "nameSort": "frandsen",
+                                "roles": [
+                                    {
+                                        "functionCode": "cfupn",
+                                        "function": {
+                                            "singular": "",
+                                            "plural": ""
+                                        }
+                                    }
+                                ],
+                                "type": "PERSON",
+                                "firstName": "Christian Aalborg",
+                                "lastName": "Frandsen"
+                            },
+                            {
+                                "display": "Frandsen",
+                                "nameSort": "frandsen",
+                                "roles": [
+                                    {
+                                        "functionCode": "cfupn",
+                                        "function": {
+                                            "singular": "",
+                                            "plural": ""
+                                        }
+                                    }
+                                ],
+                                "type": "PERSON",
+                                "firstName": "Christian Aalborg",
+                                "lastName": "Frandsen"
+                            }
+                        ],
+                        "corporations": []
+                    },
+                    "creators": {
+                        "persons": [
+                            {
+                                "display": "Zand",
+                                "nameSort": "zand",
+                                "roles": [
+                                    {
+                                        "functionCode": "drt",
+                                        "function": {
+                                            "singular": "instrukt\u00f8r",
+                                            "plural": "instrukt\u00f8rer"
+                                        }
+                                    }
+                                ],
+                                "type": "PERSON",
+                                "firstName": "Benjamin",
+                                "lastName": "Zand"
+                            }
+                        ],
+                        "corporations": []
+                    },
+                    "gamePlatform": [],
+                    "series": [],
+                    "source": [
+                        "Bibliotekskatalog"
+                    ],
+                    "subjects": {
+                        "all": {
+                            "subjects": [
+                                {
+                                    "display": "sproglig bevidsthed",
+                                    "type": "TOPIC",
+                                    "local": false
+                                },
+                                {
+                                    "display": "sociale medier",
+                                    "type": "TOPIC",
+                                    "local": false
+                                },
+                                {
+                                    "display": "h\u00f8jreekstremisme",
+                                    "type": "TOPIC",
+                                    "local": false
+                                },
+                                {
+                                    "display": "h\u00f8jrefl\u00f8jen",
+                                    "type": "TOPIC",
+                                    "local": false
+                                },
+                                {
+                                    "display": "QAnon",
+                                    "type": "TOPIC",
+                                    "local": false
+                                },
+                                {
+                                    "display": "konspiration",
+                                    "type": "TOPIC",
+                                    "local": false
+                                },
+                                {
+                                    "display": "konspirationsteorier",
+                                    "type": "TOPIC",
+                                    "local": false
+                                },
+                                {
+                                    "display": "USA",
+                                    "type": "TOPIC",
+                                    "local": false
+                                }
+                            ],
+                            "moods": [],
+                            "childrenTopics": [],
+                            "narrativeTechniques": [],
+                            "settings": [],
+                            "persons": [],
+                            "corporations": [],
+                            "timePeriods": []
+                        },
+                        "dbcVerified": {
+                            "subjects": [],
+                            "moods": [],
+                            "childrenTopics": [],
+                            "narrativeTechniques": [],
+                            "settings": [],
+                            "persons": [],
+                            "corporations": [],
+                            "timePeriods": []
+                        }
+                    },
+                    "audience": {
+                        "childrenOrAdults": [
+                            {
+                                "code": "FOR_ADULTS",
+                                "display": "til voksne"
+                            }
+                        ],
+                        "generalAudience": [
+                            "for engelskundervisning",
+                            "for danskundervisning",
+                            "for samfundsfagsundervisning"
+                        ],
+                        "schoolUse": [],
+                        "primaryTarget": []
+                    },
+                    "genreAndForm": [
+                        "dokumentar",
+                        "dokumentarfilm"
+                    ],
+                    "access": {
+                        "accessUrls": [],
+                        "ereol": [],
+                        "interLibraryLoanIsPossible": true,
+                        "dbcWebArchive": false
+                    }
+                }
+            ]
+        },
+        "marcId": "870970:41886897"
+    }
+}
