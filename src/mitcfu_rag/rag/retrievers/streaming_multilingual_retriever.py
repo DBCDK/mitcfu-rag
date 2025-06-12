@@ -145,8 +145,6 @@ class EmbeddingRetriever(Retriever):
     async def retrieve(self, input: list[str], n: int = 3):
         messages = input["input"]
         query = f"Instruct: {self.task}\nQuery: {messages[-1]['content']}"
-        if not query[-1] == "?":
-            query += "?"
         return await self.get_docs(query, n)
 
     # https://huggingface.co/intfloat/multilingual-e5-large
@@ -195,8 +193,6 @@ class EmbeddingRetriever(Retriever):
         articleid2article = {}
         for query in queries:
             query = f"Instruct: {self.task}\nQuery: {query}"
-            if not query[-1] == "?":
-                query += "?"
             _, articles = await self.get_docs(query, limit=limit)
             for art in articles:
                 articleid2article[art.id] = art
