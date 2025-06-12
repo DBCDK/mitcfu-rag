@@ -45,7 +45,7 @@ __all__ = ["e5multilingualEmbedder"]
 
 class e5multilingualEmbedder(Embedder):
     def __init__(self, path_to_embedding_model: str):
-        self.name = "multilingual-e5-large"
+        self.name = "multilingual-e5-large-instruct"
         self.max_length = 512
         # os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -111,7 +111,7 @@ class e5multilingualEmbedder(Embedder):
             ]
 
     def get_detailed_instruct(self, query: str) -> str:
-        return f"query: {query}"
+        return f"{query}"
 
 
 def validate_abstract(document):
@@ -204,7 +204,7 @@ def index_paragraph_docs_GPU_batches(
     with open(path_to_index_file, "r") as file:
         data = json.load(file)
 
-    e5_embedder = e5multilingualEmbedder("/data/mitCFU-models/multilingual-e5-large/")
+    e5_embedder = e5multilingualEmbedder("/data/huggingface/intfloat/multilingual-e5-large-instruct/")
     logger.info(f"Using device: {e5_embedder.device}")
     db = None
 
@@ -242,7 +242,7 @@ def index_paragraph_docs_GPU_batches(
 
             abstract_list = doc[str(id)].get("abstract")
             abstract = " ".join(abstract_list)
-            text = f"passage: {abstract}"
+            text = f"{abstract}"
 
             chunks = text_splitter.split_text(text)
             for i, chunk in enumerate(chunks):

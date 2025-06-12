@@ -4,8 +4,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends wget && \
     conda install -y -c conda-forge faiss
 
 ARG MODEL_PATH=${ARTIFACTORY_URL}/${AI_PRODUCTION}/mitcfu-rag/ms-marco-MiniLM-L-6-v2.tgz
-ARG FAISS_PATH=${ARTIFACTORY_URL}/${AI_PRODUCTION}/mitcfu-rag/mitcfu_faiss_index_with_pedagogical_notes.tgz
-ARG INDEX_PATH=${ARTIFACTORY_URL}/${AI_PRODUCTION}/mitcfu-rag/mitcfu_faiss_index_file_with_pedagogical_notes.json
+ARG FAISS_PATH=${ARTIFACTORY_URL}/${AI_PRODUCTION}/mitcfu-rag/mitcfu_faiss_index_instruct.tgz
+ARG INDEX_PATH=${ARTIFACTORY_URL}/${AI_PRODUCTION}/mitcfu-rag/mitcfu_faiss_index_file_instruct.json
 
 RUN useradd -m python
 USER python
@@ -27,6 +27,7 @@ RUN wget -nv --no-check-certificate ${MODEL_PATH} -O ms-marco-MiniLM-L-6-v2.tgz 
     pip install --user .
 
 # /data/mitcfu-rag-1-0 is a symlink to the model on the k8s volume mount
-CMD ["streaming-service-mitcfu", "/data/mitcfu-rag-1-0", "mitcfu_faiss_index", "--article_index_path", "mitcfu_jed_documents.json", "--validator-model-path", "ms-marco-MiniLM-L-6-v2", "--port", "5000", "--use-ceph"]
+# temporarily use non-symlinked version while switching embedding models
+CMD ["streaming-service-mitcfu", "/data/multilingual-e5-large-instruct", "mitcfu_faiss_index", "--article_index_path", "mitcfu_jed_documents.json", "--validator-model-path", "ms-marco-MiniLM-L-6-v2", "--port", "5000", "--use-ceph"]
 
 EXPOSE 5000
