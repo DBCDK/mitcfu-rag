@@ -57,12 +57,14 @@ class EmbeddingRetriever(Retriever):
             model_path, device_map=self.device
         )
         self.model.to(self.device)
+        self.model.eval()
         # cross-model for rerank
         self.cross_model = AutoModelForSequenceClassification.from_pretrained(cross_model_path, device_map=self.device)
         self.cross_tokenizer = AutoTokenizer.from_pretrained(
             cross_model_path, device_map=self.device
         )
         self.cross_model.to(self.device)
+        self.cross_model.eval()
         self.searcher = KNNSearch.load(
             embeddings_path + "/embeddings", embeddings_path + "/labels.npy"
         )
@@ -154,7 +156,8 @@ class EmbeddingRetriever(Retriever):
             query, max_length=512, padding=True, truncation=True, return_tensors="pt"
         )
         batch_dict = {k: v.to(model_device) for k, v in batch_dict.items()}
-        outputs = self.model(**batch_dict)
+        with torch.no_grad():
+            outputs = self.model(**batch_dict)
         embeddings = average_pool(
             outputs.last_hidden_state, batch_dict["attention_mask"]
         )
@@ -216,7 +219,6 @@ class EmbeddingRetriever(Retriever):
             truncation=True,
             return_tensors="pt",
         ).to(self.device)
-        self.model.eval()
         with torch.no_grad():
             scores = self.cross_model(**features).logits.flatten().cpu()
 
