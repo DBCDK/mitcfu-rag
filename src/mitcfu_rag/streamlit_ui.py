@@ -14,7 +14,7 @@ from mitcfu_rag.tools.llm_formatting import gen_wrapper, GEMMA_3_12B, MIXTRAL_8X
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 relative_img_path = os.path.join(current_dir, "faktalink_icon.png")
-STREAMING_ENDPOINT = "http://ai-p301:5011"
+STREAMING_ENDPOINT = "http://ai-p301:5009"
 
 version = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 

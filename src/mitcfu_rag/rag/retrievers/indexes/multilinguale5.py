@@ -55,6 +55,7 @@ class e5multilingualEmbedder(Embedder):
         self.model = AutoModel.from_pretrained(
             path_to_embedding_model, device_map=self.device
         )
+        self.model.eval()
 
     def __call__(self, texts: list[str]) -> np.array:
         return self.embed_documents(texts)
@@ -68,32 +69,33 @@ class e5multilingualEmbedder(Embedder):
     # TODO: return is always a list of one tensor with shape (1, max_length) - how to deal chat history
     def encode(self, texts: list[str]) -> list[Tensor]:
         # I have changed the for loop here to a batch approach, which should help if we want to use GPU
-        inputs = self.tokenizer(
-            texts,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=self.max_length,
-        )
-
-        # Checking if GPU is available and switching
-        def average_pool(
-            last_hidden_states: torch.Tensor, attention_mask: torch.Tensor
-        ) -> torch.Tensor:
-            last_hidden = last_hidden_states.masked_fill(
-                ~attention_mask[..., None].bool(), 0.0
+        with torch.no_grad():
+            inputs = self.tokenizer(
+                texts,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_length,
             )
-            return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
-        embeddings = []
-        # Tokenize the document
-        # batch_dict = self.tokenizer(texts, self.max_length, padding=True, truncation=True, return_tensors="pt")
-        batch_dict = {k: v.to(self.device) for k, v in inputs.items()}
-        outputs = self.model(**batch_dict)
-        embeddings = average_pool(
-            outputs.last_hidden_state, batch_dict["attention_mask"]
-        )
-        embeddeded_passage = F.normalize(embeddings, p=2, dim=1).detach().cpu()
+            # Checking if GPU is available and switching
+            def average_pool(
+                last_hidden_states: torch.Tensor, attention_mask: torch.Tensor
+            ) -> torch.Tensor:
+                last_hidden = last_hidden_states.masked_fill(
+                    ~attention_mask[..., None].bool(), 0.0
+                )
+                return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
+
+            embeddings = []
+            # Tokenize the document
+            # batch_dict = self.tokenizer(texts, self.max_length, padding=True, truncation=True, return_tensors="pt")
+            batch_dict = {k: v.to(self.device) for k, v in inputs.items()}
+            outputs = self.model(**batch_dict)
+            embeddings = average_pool(
+                outputs.last_hidden_state, batch_dict["attention_mask"]
+            )
+            embeddeded_passage = F.normalize(embeddings, p=2, dim=1).detach().cpu()
         return embeddeded_passage
 
     def last_token_pool(

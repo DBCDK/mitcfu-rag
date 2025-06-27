@@ -1,4 +1,4 @@
-FROM docker-dbc.artifacts.dbccloud.dk/dbc-python3:latest
+FROM docker-dbc.artifacts.dbccloud.dk/dbc-python3:3.12
 
 RUN apt-get update && apt-get install -y --no-install-recommends wget && \
     conda install -y -c conda-forge faiss

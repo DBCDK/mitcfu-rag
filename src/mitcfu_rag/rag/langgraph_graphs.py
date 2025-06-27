@@ -86,7 +86,8 @@ class AgenticGraph():
         route_result_stream = await self.stream_response(messages, self.route_template)
         raw_response = [r async for r in async_gen_wrapper(route_result_stream, DEFAULT_MODEL)]
         route_result = "".join(raw_response)
-        logger.info(f"Router result:\n{route_result}\n")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Router result:\n{route_result}\n")
         try:
             json_response = json.loads(route_result)
             agent = json_response.get("agent", None)
@@ -128,7 +129,8 @@ class AgenticGraph():
         reformulate_output = (
             "".join(raw_response).replace("json", "").replace("```", "")
         )
-        logger.info(f"Reformulated response:{reformulate_output}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Reformulated response:{reformulate_output}")
         try:
             json_response = json.loads(reformulate_output)
             reformulated_queries = json_response.get("søgninger", [])

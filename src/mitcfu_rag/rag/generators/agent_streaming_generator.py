@@ -80,7 +80,8 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         input: list[dict],
         prompt_template: str = None,
     ):
-        logger.info(f"parsed_references: {references}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"parsed_references: {references}")
         self.model_output_function = select_model_function(prompt_template["model"])
         # remove sources from output if generated
         logger.info(
@@ -186,7 +187,8 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             result += self.__format_messages(msgs, model_name, use_bos=False)
         # Finally, add model start token at end of prompt
         result += START_TURN_MODEL[model_name]
-        logger.info(f"Input for agent {agent_type}:{str(result)}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Input for agent {agent_type}:{str(result)}")
         return [{"role": "user", "content": result}]
 
     def decode(self, input, stream=False):
