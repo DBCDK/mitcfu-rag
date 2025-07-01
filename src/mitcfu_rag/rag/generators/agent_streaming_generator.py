@@ -31,6 +31,7 @@ from mitcfu_rag.tools.llm_formatting import (
     select_model_function,
     tgi_input_format,
     tgi_output_format,
+    clean_sources_from_messages
 )
 from mitcfu_rag.config import (
     GEMMA_3_12B,
@@ -88,14 +89,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             f"Replying as {prompt_template['name']} with model {prompt_template['model']}"
         )
         messages = input["input"]
-        cleaned_messages = []
-        for i, message in enumerate(messages):
-            # skip initial welcome message
-            if message["role"] == "assistant":
-                message["content"] = message["content"].lower().split("**kilder**:")[0]
-                cleaned_messages.append(message)
-            else:
-                cleaned_messages.append(message)
+        cleaned_messages = clean_sources_from_messages(messages)
 
         max_new_tokens = (
             1000 if prompt_template["name"] not in {"ROUTER", "REFORMULATOR"} else 200
@@ -287,7 +281,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                         logger.info(f"Error during streaming: {e}")
 
         # filter references so that no two references have the same article_link
-        if parsed_references:
+        if parsed_references and input["agent_type"] in {"RAG", "FOLLOW_UP"}:
             seen_links = set()
             filtered_references = []
             for ref in parsed_references:

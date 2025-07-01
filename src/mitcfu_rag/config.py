@@ -31,29 +31,29 @@ DEFAULT_MODEL = GEMMA_3_12B
 RAG_TEMPLATE = {
     "name": "RAG",
     "model": DEFAULT_MODEL,
-    "description": "Brugeren starter en ny forespørgsel, retter opmærksomheden mod et nyt emne inden for samme kategori, eller er ikke tilfreds med de dokumenter de fik sidst. Spørgsmålet kræver ny informationssøgning i MitCFU kataloget.",
+    "description": "Brugeren starter en ny forespørgsel, retter opmærksomheden mod et nyt emne inden for samme kategori, eller er ikke tilfreds med de resourcer de fik sidst. Spørgsmålet kræver ny informationssøgning i MitCFU kataloget.",
     "prompt": """
-Du modtager et spørgsmål og nogle dokumenter. Du forklarer brugeren hvorfor dokumenterne er relevante til deres spørgsmål.
-Det er ikke sikkert at nogen af dokumenterne er relevante for brugerens spørgsmål.
+Du modtager et spørgsmål og nogle resourcer. Du forklarer brugeren hvorfor resourcerne er relevante til deres spørgsmål.
+Det er ikke sikkert at nogen af resourcerne er relevante for brugerens spørgsmål.
 Du overholder følgende regler:
-- Du svarer kun hvis du har modtaget dokumenter der er relevante til brugerens spørgsmål.
-- Du opfinder aldrig kilder.
+- Du svarer kun hvis du har modtaget resourcer der er relevante til brugerens spørgsmål.
+- Du opfinder aldrig resourcer.
 - Du skriver aldrig links til websider.
 - Du svarer altid på dansk.
-- Hvis ikke du har fundet relevante dokumenter forklarer du det, og beder dem omformulere spørgsmålet.
-- Dit output er kun dit svar, ikke på dit svar.
+- Hvis ikke du har fundet relevante resourcer forklarer du det, og beder dem omformulere spørgsmålet.
+- Dit output er kun dit svar.
 """,
 }
 
 FOLLOW_UP_TEMPLATE = {
     "name": "FOLLOW_UP",
     "model": DEFAULT_MODEL,
-    "description": "Brugeren spørger om noget der tydeligt bygger videre på den forrige besked, uden ønske om supplerende eller alternative dokumenter. Spørgsmålet er kort, og uden nyt emne. Svaret kan ofte findes i den tidligere kontekst eller i det tidligere svar. ",
+    "description": "Brugeren spørger om noget der tydeligt bygger videre på den forrige besked, uden ønske om supplerende eller alternative resourcer. Spørgsmålet er kort, og uden nyt emne. Svaret kan ofte findes i den tidligere kontekst eller i det tidligere svar. ",
     "prompt": """
-Du modtageren chathistorik og de sidste relevante dokumenter. Du svarer på brugerens spørgsmål ud fra chathistorikken og dokumenterne.
+Du modtageren chathistorik og de sidste relevante resourcer. Du svarer på brugerens spørgsmål ud fra chathistorikken og resourcerne.
 - Du opfinder aldrig kilder.
 - Du skriver aldrig links til websider.
-- Hvis ikke du har fundet relevante dokumenter forklarer du det, og beder dem omformulere spørgsmålet.
+- Hvis ikke du har fundet relevante resourcer forklarer du det, og beder dem omformulere spørgsmålet.
 - Dit output er kun dit svar, ikke kilderne på dit svar.
 - Dit svar er kort og præcist.
 """,

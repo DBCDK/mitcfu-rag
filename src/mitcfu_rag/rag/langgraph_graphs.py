@@ -14,7 +14,8 @@ import logging
 import asyncio
 import json
 from langgraph.graph import StateGraph, END
-from typing import Annotated, TypedDict
+from typing import TypedDict
+import re
 
 from mitcfu_rag.tools.llm_formatting import async_gen_wrapper
 from mitcfu_rag.config import (
@@ -24,9 +25,7 @@ from mitcfu_rag.config import (
     FALLBACK_TEMPLATE,
     FOLLOW_UP_TEMPLATE,
     REFORMULATE_TEMPLATE,
-    GEMMA_3_12B,
-    MIXTRAL_8X7B,
-    DEFAULT_MODEL
+    DEFAULT_MODEL,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,7 +37,8 @@ class AgentState(TypedDict):
     agent: str
     prompt_template: str
 
-class AgenticGraph():
+
+class AgenticGraph:
     def __init__(self, type, model):
         self.route_template = ROUTER_TEMPLATE()
         self.simple_template = SIMPLE_TEMPLATE
@@ -81,10 +81,11 @@ class AgenticGraph():
 
         return workflow.compile()
 
-
     async def route_response(self, messages):
         route_result_stream = await self.stream_response(messages, self.route_template)
-        raw_response = [r async for r in async_gen_wrapper(route_result_stream, DEFAULT_MODEL)]
+        raw_response = [
+            r async for r in async_gen_wrapper(route_result_stream, DEFAULT_MODEL)
+        ]
         route_result = "".join(raw_response)
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"Router result:\n{route_result}\n")
@@ -132,7 +133,7 @@ class AgenticGraph():
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"Reformulated response:{reformulate_output}")
         try:
-            json_response = json.loads(reformulate_output)
+            json_response = self._extract_json(reformulate_output)
             reformulated_queries = json_response.get("søgninger", [])
         except:
             logger.info("Unable to parse as json.")
@@ -153,3 +154,18 @@ class AgenticGraph():
     def __generate(self, messages, model, template):
         response_stream = model.stream_response(messages, template)
         return response_stream
+
+    @staticmethod
+    def _extract_json(text: str) -> dict:
+        """Extracts the first valid JSON array from a given string and returns it as a Python dictionary."""
+        try:
+            match = re.search(r"\{.*\}", text, re.DOTALL)
+            if match:
+                json_str = match.group(0)
+                return json.loads(json_str)
+        except json.JSONDecodeError:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.info(f"Malformed json in model_output:\n{text}")
+            else:
+                logger.info("Malformed json in model_output.")
+        return {}

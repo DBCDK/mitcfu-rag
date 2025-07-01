@@ -83,6 +83,18 @@ def tgi_output_format(model_name, content):
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
+
+def clean_sources_from_messages(messages: list[dict]):
+    cleaned_messages = []
+    for message in messages:
+        if message["role"] == "assistant":
+            message["content"] = message["content"].lower().split("**kilder**:")[0]
+            cleaned_messages.append(message)
+        else:
+            cleaned_messages.append(message)
+    return cleaned_messages
+
+
 def __gemma_tgi_output_format(content):
     return {"choices": [{"delta": {"content": content}}]}
 

@@ -168,5 +168,7 @@ def cli():
 
     args = parser.parse_args()
     level = logging.INFO
+    if args.verbose:
+        level = logging.DEBUG
     logger.setLevel(level)
     asyncio.run(main(args))

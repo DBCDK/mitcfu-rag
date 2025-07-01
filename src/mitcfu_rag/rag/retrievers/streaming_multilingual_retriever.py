@@ -23,6 +23,7 @@ import logging
 import os
 from mitcfu_rag.rag.rag import Retriever, Reference
 from mitcfu_rag.tools import KNNSearch
+from mitcfu_rag.tools.llm_formatting import clean_sources_from_messages
 
 # from infinity_emb import AsyncEngineArray, EngineArgs, AsyncEmbeddingEngine
 
@@ -138,15 +139,20 @@ class EmbeddingRetriever(Retriever):
             series=series_titles
         )
 
-    async def async_retrieve(self, messages: list[str], n: int = 5):
-        return await self.retrieve(messages, n)
+    async def async_retrieve(self, messages: list[str], n: int = 5, follow_up = True):
+        return await self.retrieve(messages, n, follow_up=follow_up)
 
-    async def async_rerank_retrieve(self, messages: list[str], n: int = 5):
-        return await self.rerank_retrieve(messages, n)
+    async def async_rerank_retrieve(self, messages: list[str], n: int = 5, follow_up = True):
+        return await self.rerank_retrieve(messages, n, follow_up=follow_up)
 
-    async def retrieve(self, input: list[str], n: int = 3):
-        messages = input["input"]
-        query = f"Instruct: {self.task}\nQuery: {messages[-1]['content']}"
+    async def retrieve(self, input: list[str], n: int = 3, follow_up: bool = False):
+        messages = clean_sources_from_messages(input["input"])
+        if follow_up:
+            query = f"Instruct: {self.task}\nQuery: {', '.join([message['content'] for message in messages])}"
+        else:
+            query = f"Instruct: {self.task}\nQuery: {messages[-1]['content']}"
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Retrieving resources for {query}")
         return await self.get_docs(query, n)
 
     # https://huggingface.co/intfloat/multilingual-e5-large
@@ -190,10 +196,13 @@ class EmbeddingRetriever(Retriever):
         self,
         input: dict,
         limit: int = 50,
+        follow_up = True
     ):
         queries = input["reformulated_queries"]
         all_results = {}
         articleid2article = {}
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Retrieving resources for {queries}")
         for query in queries:
             query = f"Instruct: {self.task}\nQuery: {query}"
             _, articles = await self.get_docs(query, limit=limit)

@@ -63,8 +63,7 @@ class AgenticRAG(RAG):
         """
         yields response tokens from rag request.
         """
-        if prompt_template.get("name", "") in {"RAG", "FOLLOW_UP"}:
-            #input["FOLLOW_UP"] = False
+        if input.get("agent", "") == "RAG":
             if input.get("reformulated_queries"):
                 results = await asyncio.gather(
                     self.retriever.async_rerank_retrieve(input, n=limit)
@@ -73,17 +72,17 @@ class AgenticRAG(RAG):
                 results = await asyncio.gather(self.retriever.async_retrieve(input))
             similarities, references = results[0]
             references = references[:limit]
-        #elif input.get("agent", "") == "FOLLOW_UP":
-        #    input["FOLLOW_UP"] = True
-        #    if input.get("reformulated_queries"):
-        #        results = await asyncio.gather(
-        #            self.retriever.async_rerank_retrieve(input, n=limit)
-        #        )
-        #    else:
-        #        results = await asyncio.gather(self.retriever.async_retrieve(input))
-        #    similarities, references = results[0]
-        #    similarities = similarities[:limit]
-        #    references = references[:limit]
+        elif input.get("agent", "") == "FOLLOW_UP":
+           input["FOLLOW_UP"] = True
+           if input.get("reformulated_queries"):
+               results = await asyncio.gather(
+                   self.retriever.async_rerank_retrieve(input, n=limit, follow_up = True)
+               )
+           else:
+               results = await asyncio.gather(self.retriever.async_retrieve(input, follow_up = True))
+           similarities, references = results[0]
+           similarities = similarities[:limit]
+           references = references[:limit]
         else:
             references = None
 
