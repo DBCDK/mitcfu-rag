@@ -13,14 +13,10 @@ MODEL_MAP = {
     GEMMA_3_12B: "google/gemma-3-12b-it",
 }
 
-START_TURN_USER = {GEMMA_3_12B: "<start_of_turn>user\n",
-                  MIXTRAL_8X7B: "[INST]"}
-START_TURN_MODEL = {GEMMA_3_12B: "<start_of_turn>model\n",
-                  MIXTRAL_8X7B: ""}
-END_TURN_USER = {GEMMA_3_12B: "<end_of_turn>\n",
-                 MIXTRAL_8X7B: "[/INST]"}
-END_TURN_MODEL = {GEMMA_3_12B: "<end_of_turn>\n",
-                 MIXTRAL_8X7B: ""}
+START_TURN_USER = {GEMMA_3_12B: "<start_of_turn>user\n", MIXTRAL_8X7B: "[INST]"}
+START_TURN_MODEL = {GEMMA_3_12B: "<start_of_turn>model\n", MIXTRAL_8X7B: ""}
+END_TURN_USER = {GEMMA_3_12B: "<end_of_turn>\n", MIXTRAL_8X7B: "[/INST]"}
+END_TURN_MODEL = {GEMMA_3_12B: "<end_of_turn>\n", MIXTRAL_8X7B: ""}
 
 # DEFAULT_MODEL also determines the output format of the service.
 # if there is a difference in the output format of fx the tgi endpoint the model is served through,
@@ -33,10 +29,10 @@ RAG_TEMPLATE = {
     "model": DEFAULT_MODEL,
     "description": "Brugeren starter en ny forespørgsel, retter opmærksomheden mod et nyt emne inden for samme kategori, eller er ikke tilfreds med de resourcer de fik sidst. Spørgsmålet kræver ny informationssøgning i MitCFU kataloget.",
     "prompt": """
-Du modtager et spørgsmål og nogle resourcer. Du forklarer brugeren hvorfor resourcerne er relevante til deres spørgsmål.
+Du modtager et spørgsmål og nogle resourcer. Du forklarer brugeren hvorfor resourcerne er relevante for deres spørgsmål.
 Det er ikke sikkert at nogen af resourcerne er relevante for brugerens spørgsmål.
 Du overholder følgende regler:
-- Du svarer kun hvis du har modtaget resourcer der er relevante til brugerens spørgsmål.
+- Du svarer kun hvis du har modtaget resourcer der er relevante for brugerens spørgsmål.
 - Du opfinder aldrig resourcer.
 - Du skriver aldrig links til websider.
 - Du svarer altid på dansk.
@@ -81,7 +77,12 @@ og bed dem om at spørge om noget andet.
 
 
 def ROUTER_TEMPLATE():
-    ALL_TEMPLATES = [SIMPLE_TEMPLATE, FALLBACK_TEMPLATE, RAG_TEMPLATE, FOLLOW_UP_TEMPLATE]
+    ALL_TEMPLATES = [
+        SIMPLE_TEMPLATE,
+        FALLBACK_TEMPLATE,
+        RAG_TEMPLATE,
+        FOLLOW_UP_TEMPLATE,
+    ]
     return {
         "name": "ROUTER",
         "model": DEFAULT_MODEL,
@@ -95,7 +96,9 @@ def ROUTER_TEMPLATE():
 
 Du starter med at tænke højt over chathistorikken, så du kan forklare dig selv hvad brugerens intention er med den seneste besked.
     Agent beskrivelser: """
-        + ". ".join([f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES])
+        + ". ".join(
+            [f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES]
+        )
         + """
         Agent typer: """
         + ", ".join([f"[{TEMP['name']}]" for TEMP in ALL_TEMPLATES])
@@ -116,7 +119,7 @@ Dit svar formateres som json sådan her:
 REFORMULATE_TEMPLATE = {
     "name": "REFORMULATOR",
     "model": DEFAULT_MODEL,
-    "description": "Omformulerer om indeler brugerens spørgsmål inden der laves RAG på den.",
+    "description": "Omformulerer og inddeler brugerens spørgsmål inden der laves RAG på den.",
     "prompt": """
 Du modtager en brugers henvendelse, som der skal foretages RAG på. Der søges i en vektordatabase med lærevejledninger, beskrivelser af
 film, bøger, værktøjer, teamer og mange andre ting.
@@ -135,7 +138,7 @@ Output:
 {
   "tanker": "Brugeren ønsker ressourcer (bøger og film) relateret til emnet klimaforandringer målrettet undervisning i udskolingen. Jeg deler spørgsmålet op i to søgninger: én for bøger og én for film, og præciserer konteksten med undervisning og målgruppe.",
   "søgninger": [
-    "Bøger om der handler om bæredygtighed, miløj og klimaforandringer til udskolingen",
+    "Bøger om der handler om bæredygtighed, miljø og klimaforandringer til udskolingen",
     "Klimaforandringer er menneskeskabte eller naturlige ændringer i jordens klima, der påvirker temperaturer, vejr og økosystemer"
   ]
 }

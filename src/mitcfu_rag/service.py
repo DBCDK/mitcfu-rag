@@ -12,13 +12,11 @@ Endpoint for streaming RAG
 
 import logging
 import asyncio
-import datetime
 import json
 import tornado.web as tw
 from dbc_pyutils import create_instance_id
 from dbc_pyutils import Statistics
 from dbc_pyutils import build_info
-from dbc_pyutils import JSONFormatter
 from dbc_pyutils import setup_logging
 from dbc_pyutils import StatusHandler
 from dbc_pyutils import PrometheusMixIn
@@ -26,7 +24,6 @@ from dbc_pyutils import MetricsHandler
 from dbc_pyutils import BaseHandler
 from mitcfu_rag.rag.langgraph_graphs import AgenticGraph
 from mitcfu_rag.rag.agent_streaming_rag import AgenticRAG
-from mitcfu_rag.config import DEFAULT_MODEL
 
 INSTANCE_ID = create_instance_id(num_digits=8)
 STATS = {"query": Statistics(name="query")}
@@ -36,12 +33,13 @@ path_to_embeddings = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multi
 path_to_labels = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multilingual-instruct-faiss-index/labels.npy"
 path_to_JEDs = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds"
 
+
 class StreamingHandler(BaseHandler):
     """
-    JudgeTheCoverHandler
+    StreamingHandler
     """
 
-    def initialize(self, model, graph_type:str, info, stat_collector):
+    def initialize(self, model, graph_type: str, info, stat_collector):
         """
         Initializes handler
         """
@@ -60,7 +58,6 @@ class StreamingHandler(BaseHandler):
         body = json.loads(self.request.body.decode("utf8"))
         self.version = body.get("version", "v1")
         messages = body.get("messages", [])
-        type = body.get("graph_type", "service")
 
         self.flush()
 
@@ -80,7 +77,12 @@ def make_app(model, graph_type):
         (
             r"/",
             StreamingHandler,
-            dict(model=model, graph_type=graph_type, info=info, stat_collector=STATS["query"]),
+            dict(
+                model=model,
+                graph_type=graph_type,
+                info=info,
+                stat_collector=STATS["query"],
+            ),
         ),
         (r"/metrics", MetricsHandler),
         (
@@ -164,7 +166,9 @@ def cli():
         help=f"port to expose service on. Default is {port}",
         default=port,
     )
-    parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="verbose output")
+    parser.add_argument(
+        "-v", "--verbose", dest="verbose", action="store_true", help="verbose output"
+    )
 
     args = parser.parse_args()
     level = logging.INFO

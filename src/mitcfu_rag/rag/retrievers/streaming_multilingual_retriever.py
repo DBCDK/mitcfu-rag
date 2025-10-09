@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
-:mod:`mitcfu_rag.embedding_retriever - embedding_retriever
+:mod:`mitcfu_rag.retrievers.embedding_retriever - embedding_retriever
 
 ============
 EmbeddingRetriever
@@ -12,15 +12,14 @@ EmbeddingRetriever retrieves relevant references based on the messages from the 
 There is no underlying database and EmbeddingRetriever returns an dummy document.
 
 example of usage:
-    from fakta_chat.embedding_retriever import EmbeddingRetriever
-    d_retriever = EmbeddingRetriever()
+    from mitcfu_rag.embedding_retriever import EmbeddingRetriever
+    e_retriever = EmbeddingRetriever()
     messages = messages = ["Hej", "Er der noget om biblioteker?"]
-    refs = d_retriever.retrieve(messages)
+    refs = e_retriever.retrieve(messages)
     print(f'relevant references: {refs}')
 """
 
 import logging
-import os
 from mitcfu_rag.rag.rag import Retriever, Reference
 from mitcfu_rag.tools import KNNSearch
 from mitcfu_rag.tools.llm_formatting import clean_sources_from_messages
@@ -32,7 +31,6 @@ from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassific
 import numpy as np
 import torch
 import torch.nn.functional as F
-import aiohttp
 import json
 
 logger = logging.getLogger(__name__)
@@ -60,7 +58,9 @@ class EmbeddingRetriever(Retriever):
         self.model.to(self.device)
         self.model.eval()
         # cross-model for rerank
-        self.cross_model = AutoModelForSequenceClassification.from_pretrained(cross_model_path, device_map=self.device)
+        self.cross_model = AutoModelForSequenceClassification.from_pretrained(
+            cross_model_path, device_map=self.device
+        )
         self.cross_tokenizer = AutoTokenizer.from_pretrained(
             cross_model_path, device_map=self.device
         )
@@ -77,7 +77,9 @@ class EmbeddingRetriever(Retriever):
             self.all_articles = {}
             self.all_materialtypes = set()
         self.validator = None
-        self.task = "Given a web search query, retrieve relevant passages that answer the query"
+        self.task = (
+            "Given a web search query, retrieve relevant passages that answer the query"
+        )
 
     def initiate_articles(self):
         with open(self.jed_document_path) as f:
@@ -103,15 +105,14 @@ class EmbeddingRetriever(Retriever):
         # work info
         text = " ".join(doc.get("abstract"))
         subjects = [
-            sub.get("display") for sub in doc.get("subjects", {}).get("all", {}).get("subjects", [])
+            sub.get("display")
+            for sub in doc.get("subjects", {}).get("all", {}).get("subjects", [])
         ]
         material_types_general = [
-            mat.get("general").get("display")
-            for mat in doc.get("materialTypes", [])
+            mat.get("general").get("display") for mat in doc.get("materialTypes", [])
         ]
         material_types_specific = [
-            mat.get("general").get("specific")
-            for mat in doc.get("materialTypes", [])
+            mat.get("general").get("specific") for mat in doc.get("materialTypes", [])
         ]
         genre_and_form = doc.get("genreAndForm", [])
         languages = [lan.get("display") for lan in doc.get("mainLanguages", [])]
@@ -133,16 +134,18 @@ class EmbeddingRetriever(Retriever):
             keywords=subjects,
             creators=creators_person + creators_publisher,
             audience=audience_subject,
-            materialtypes=material_types_general+ material_types_specific,
+            materialtypes=material_types_general + material_types_specific,
             publicationdate=doc.get("firstPublicationDate", None),
             languages=languages,
-            series=series_titles
+            series=series_titles,
         )
 
-    async def async_retrieve(self, messages: list[str], n: int = 5, follow_up = True):
+    async def async_retrieve(self, messages: list[str], n: int = 5, follow_up=True):
         return await self.retrieve(messages, n, follow_up=follow_up)
 
-    async def async_rerank_retrieve(self, messages: list[str], n: int = 5, follow_up = True):
+    async def async_rerank_retrieve(
+        self, messages: list[str], n: int = 5, follow_up=True
+    ):
         return await self.rerank_retrieve(messages, n, follow_up=follow_up)
 
     async def retrieve(self, input: list[str], n: int = 3, follow_up: bool = False):
@@ -176,13 +179,11 @@ class EmbeddingRetriever(Retriever):
         )
         return await self.search(embedded_query, limit)
 
-
     async def search(self, embedded_query, limit, filters=None):
         hits = await self.searcher.search(embedded_query, limit * 100)
         ids, scores = zip(*hits)
         retrieved_articles = [
-            self.all_articles[id.rsplit("_chunk", maxsplit=1)[0]]
-            for id in ids
+            self.all_articles[id.rsplit("_chunk", maxsplit=1)[0]] for id in ids
         ]
         if filters:
             filtered_articles = [
@@ -192,12 +193,7 @@ class EmbeddingRetriever(Retriever):
         else:
             return scores, retrieved_articles[:limit]
 
-    async def rerank_retrieve(
-        self,
-        input: dict,
-        limit: int = 50,
-        follow_up = True
-    ):
+    async def rerank_retrieve(self, input: dict, limit: int = 50, follow_up=True):
         queries = input["reformulated_queries"]
         all_results = {}
         articleid2article = {}
@@ -222,7 +218,7 @@ class EmbeddingRetriever(Retriever):
     async def cross_select_top_sentences(self, articles, query, limit=50):
         sentences = [art.text for art in articles]
         features = self.cross_tokenizer(
-            [query]*len(sentences),
+            [query] * len(sentences),
             sentences,
             padding=True,
             truncation=True,
@@ -254,11 +250,10 @@ async def reciprocal_rank_fusion(search_results_dict, k=100):
 
     reranked_results = {
         doc: score
-        for doc, score in sorted(
-            fused_scores.items(), key=lambda x: x[1], reverse=True
-        )
+        for doc, score in sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
     }
     return reranked_results
+
 
 def filtered(article, filters):
     passed_filters = 0

@@ -4,7 +4,7 @@
 :mod:`mitcfu_rag.rag.langgraph_graphs` -- utilities for handling langgraph
 
 ==================
-Langrgraph graphs
+Langgraph graphs
 ==================
 
 Utilities for handling langgraph

@@ -2,20 +2,20 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
-:mod:`fakta_chat.solr_generator - solr_generator
+:mod:`mitcfu_rag.rag.generators.agent_streaming_generator` -- agent_streaming_generator model
 
 ============
-EmbeddingGenerator
+AgentStreamingGenerator
 ============
 
-EmbeddingGenerator generates an answer based on a list of references and the query.
+AgentStreamingGenerator generates an answer based on a list of references and the query.
 
 example of usage:
 
-    d_generator = EmbeddingGenerator()
+    as_generator = AgentStreamingGenerator()
     query = "Er der noget om biblioteker?"
     references = ['På visse biblioteker kan du låne fiskestænger, så du kan fange din egen middag efter at have læst om det.']
-    response = d_generator(references, query)
+    response = as_generator(references, query)
     print(f'response: {response}')
 """
 
@@ -31,7 +31,7 @@ from mitcfu_rag.tools.llm_formatting import (
     select_model_function,
     tgi_input_format,
     tgi_output_format,
-    clean_sources_from_messages
+    clean_sources_from_messages,
 )
 from mitcfu_rag.config import (
     GEMMA_3_12B,
