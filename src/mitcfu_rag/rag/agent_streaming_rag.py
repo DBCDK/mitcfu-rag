@@ -2,30 +2,29 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
-:mod:`mitcfu_rag.solr_rag -- solr_rag model minimum example
+:mod:`mitcfu_rag.rag.agent_streaming_rag` -- agent_streaming_rag model
 
 ============
 AgenticRAG
 ============
 
-EmbeddingRAG is a rag model for mitcfu.
+AgenticRAG is a rag model for mitcfu.
 It takes chat messages as an input and returns a response.
 
 example of usage:
-    from mitcfu_rag.rag.solr_rag import EmbeddingRAG
+    from mitcfu_rag.rag.agent_streaming_rag import AgenticRAG
 
-    d_rag = EmbeddingRAG()
+    a_rag = AgenticRAG()
     messages = ["Hej", "Er der noget om miljø?"]
 
-    response = d_rag(messages)
+    response = a_rag(messages)
     print(f'response: {response}')
 """
 
 import logging
-import datetime
 import asyncio
 from typing import Generator, Any
-from mitcfu_rag.rag.rag import RAG, Reference
+from mitcfu_rag.rag.rag import RAG
 
 # from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
 from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import (
@@ -40,14 +39,22 @@ logger = logging.getLogger(__name__)
 
 class AgenticRAG(RAG):
     def __init__(
-        self, embedding_model, faiss_index, jed_document_path, validator_model=None, use_ceph=False
+        self,
+        embedding_model,
+        faiss_index,
+        jed_document_path,
+        validator_model=None,
+        use_ceph=False,
     ):
         """
         Components used in the RAG model.
         """
         self.parser = None
         self.retriever = EmbeddingRetriever(
-            model_path=embedding_model, embeddings_path=faiss_index, jed_document_path=jed_document_path, cross_model_path=validator_model
+            model_path=embedding_model,
+            embeddings_path=faiss_index,
+            jed_document_path=jed_document_path,
+            cross_model_path=validator_model,
         )
         self.reranker = None
         self.generator = AgentStreamingGenerator(use_ceph=use_ceph)
@@ -56,9 +63,8 @@ class AgenticRAG(RAG):
         self.summarizer = None
         self.latest_references = []
 
-
     async def stream_response(
-        self, input: list[dict[str, Any]], prompt_template, limit=5, *args, **kwargs
+        self, input: dict[str, Any], prompt_template, limit=5, *args, **kwargs
     ) -> Generator[str, None, None]:
         """
         yields response tokens from rag request.
@@ -73,16 +79,18 @@ class AgenticRAG(RAG):
             similarities, references = results[0]
             references = references[:limit]
         elif input.get("agent", "") == "FOLLOW_UP":
-           input["FOLLOW_UP"] = True
-           if input.get("reformulated_queries"):
-               results = await asyncio.gather(
-                   self.retriever.async_rerank_retrieve(input, n=limit, follow_up = True)
-               )
-           else:
-               results = await asyncio.gather(self.retriever.async_retrieve(input, follow_up = True))
-           similarities, references = results[0]
-           similarities = similarities[:limit]
-           references = references[:limit]
+            input["FOLLOW_UP"] = True
+            if input.get("reformulated_queries"):
+                results = await asyncio.gather(
+                    self.retriever.async_rerank_retrieve(input, n=limit, follow_up=True)
+                )
+            else:
+                results = await asyncio.gather(
+                    self.retriever.async_retrieve(input, follow_up=True)
+                )
+            similarities, references = results[0]
+            similarities = similarities[:limit]
+            references = references[:limit]
         else:
             references = None
 
@@ -137,4 +145,3 @@ class AgenticRAG(RAG):
         stream = self.generator(references, messages)
         response = "".join(gen_wrapper(stream))
         return references, response
-
