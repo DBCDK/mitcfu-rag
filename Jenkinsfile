@@ -35,6 +35,7 @@ pipeline {
 		}
 		stage("docker build") {
 			steps {
+				updateGitlabCommitStatus name: 'build', state: 'running'
 				buildImage()
 			}
 		}
@@ -163,5 +164,15 @@ pipeline {
 	post {
 		unstable { slackSend message: "build became unstable for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
 		// failure { slackSend message: "build failed for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
+		failure {
+			updateGitlabCommitStatus name: 'build', state: 'failed'
+		}
+		success { 
+			updateGitlabCommitStatus name: 'build', state: 'success'
+		}
+		fixed {
+			updateGitlabCommitStatus name: 'build', state: 'success'
+		}
+
 	}
 }
