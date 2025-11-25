@@ -92,19 +92,8 @@ class EmbeddingRetriever(Retriever):
         return all_materialtypes
 
     def format_doc(self, doc_id, doc):
-        # work info
+        # work info. Currently empty since we are using only abstracts from LangChain document page_content field.
         text = " ".join(doc.get("abstract"))
-        # subjects = [sub.get("display") for sub in doc.get("subjects", {}).get("all", {}).get("subjects", [])]
-        # material_types_general = [mat.get("general").get("display") for mat in doc.get("materialTypes", [])]
-        # material_types_specific = [mat.get("general").get("specific") for mat in doc.get("materialTypes", [])]
-        # genre_and_form = doc.get("genreAndForm", [])
-        # languages = [lan.get("display") for lan in doc.get("mainLanguages", [])]
-        # creators_person = [lan.get("display") for lan in doc.get("creators", {}).get("persons", [])]
-        # series_titles = [serie.get("title") for serie in doc.get("series", [])]
-        # manifestation info
-        # manifestation = doc.get("manifestations", {}).get("all")[0]
-        # creators_publisher = manifestation.get("publisher", [])
-        # audience_subject = manifestation.get("audience", {}).get("generalAudience", [])
         subjects = []
         creators_person = []
         creators_publisher = []
@@ -112,11 +101,11 @@ class EmbeddingRetriever(Retriever):
         material_types_empty = []
         languages = []
         series_titles = []
-        # the doc_id is composed of a string.pdf + page number + chunk number. Let us split them up
+        # the doc_id is composed of a string.pdf + page number + chunk number. Here we split them up.
         # an example could be Fight the Bite.pdf_side58_chunk0 --> Fight the Bite.pdf, side 58, chunk0
+        # currently, the chunk number is not used.
         pdf_title = doc_id.rsplit("_side", maxsplit=1)[0]
         page_number = doc_id.rsplit("_side", maxsplit=1)[1].rsplit("_chunk", maxsplit=1)[0]
-        chunk_number = doc_id.rsplit("_chunk", maxsplit=1)[1]
         return Reference(
             id=str(doc_id),
             # article_headline=doc.get("titles").get("full")[0],

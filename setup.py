@@ -13,7 +13,7 @@ setup(
     version="0.1.0",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
-    description="science-RAG for MitCFU",
+    description="science-rag",
     test_suite="tests",
     # faiss skal tilføjes install_requires, når problemet med faiss er løst.
     install_requires=[

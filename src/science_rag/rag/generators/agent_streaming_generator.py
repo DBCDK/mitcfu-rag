@@ -65,13 +65,11 @@ class AgentStreamingGenerator(Generator):
         self.tokenizers = load_tokenizers(list(self.tgi_endpoints.keys()), use_ceph=use_ceph)
         self.model_output_function = None
         self.system_message = (
-            "Du er MitCFU-Chat. Du hjælper med søgninger i MitCFU kataloget. Du svarer altid på dansk."
+            "Du er Science-RAG. Du hjælper med søgninger et katalog af PDF'er. Du svarer altid på dansk."
         )
         self.missing_reference_prompt = """
 Brugeren har stillet et spørgsmål du ikke kan finde nogen kilder om.
 Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at omformulere det.
-Afslut ALTID dit svar med følgende:
-Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
 """
         self.session = aiohttp.ClientSession()
 
