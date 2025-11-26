@@ -30,7 +30,7 @@ setup(
         "sentence_transformers",
         "rich",
         "rank_bm25",
-        "transformers",
+        "transformers==4.57.1",
         "torch",
         "dbc_pyutils",
         "tornado",
