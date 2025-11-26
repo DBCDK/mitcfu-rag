@@ -30,8 +30,8 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from mitcfu_rag.tools.knn_searcher import KNNSearch
-from mitcfu_rag.tools.embedder import Embedder
+from science_rag.tools.knn_searcher import KNNSearch
+from science_rag.tools.embedder import Embedder
 from transformers import AutoTokenizer, AutoModel
 
 # from langchain.vectorstores import FAISS
@@ -49,12 +49,8 @@ class e5multilingualEmbedder(Embedder):
         self.max_length = 512
         # os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            path_to_embedding_model, device_map=self.device
-        )
-        self.model = AutoModel.from_pretrained(
-            path_to_embedding_model, device_map=self.device
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(path_to_embedding_model, device_map=self.device)
+        self.model = AutoModel.from_pretrained(path_to_embedding_model, device_map=self.device)
         self.model.eval()
 
     def __call__(self, texts: list[str]) -> np.array:
@@ -79,12 +75,8 @@ class e5multilingualEmbedder(Embedder):
             )
 
             # Checking if GPU is available and switching
-            def average_pool(
-                last_hidden_states: torch.Tensor, attention_mask: torch.Tensor
-            ) -> torch.Tensor:
-                last_hidden = last_hidden_states.masked_fill(
-                    ~attention_mask[..., None].bool(), 0.0
-                )
+            def average_pool(last_hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+                last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
                 return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
             embeddings = []
@@ -92,15 +84,11 @@ class e5multilingualEmbedder(Embedder):
             # batch_dict = self.tokenizer(texts, self.max_length, padding=True, truncation=True, return_tensors="pt")
             batch_dict = {k: v.to(self.device) for k, v in inputs.items()}
             outputs = self.model(**batch_dict)
-            embeddings = average_pool(
-                outputs.last_hidden_state, batch_dict["attention_mask"]
-            )
+            embeddings = average_pool(outputs.last_hidden_state, batch_dict["attention_mask"])
             embeddeded_passage = F.normalize(embeddings, p=2, dim=1).detach().cpu()
         return embeddeded_passage
 
-    def last_token_pool(
-        self, last_hidden_states: Tensor, attention_mask: Tensor
-    ) -> Tensor:
+    def last_token_pool(self, last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
         left_padding = attention_mask[:, -1].sum() == attention_mask.shape[0]
         if left_padding:
             return last_hidden_states[:, -1]
@@ -122,9 +110,7 @@ def validate_abstract(document):
     abstract = " ".join(abstract_list)
     # before appending, check if the text is non-string type
     if not isinstance(abstract, str):
-        logger.debug(
-            f"Abstract is not a string: {abstract} in doc {doc} with id {doc['id']}"
-        )
+        logger.debug(f"Abstract is not a string: {abstract} in doc {doc} with id {doc['id']}")
         return False
 
     if len(abstract) < 150:
@@ -166,9 +152,7 @@ def parse_args():
         action="store_true",
         help="Create a new index extract from the folder",
     )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Set logging level to DEBUG"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Set logging level to DEBUG")
     return parser.parse_args()
 
 
@@ -181,14 +165,8 @@ def index_paragraph_docs_GPU_batches(
     create_new_index_extract=False,
 ):
     if create_new_index_extract is True:
-        logger.info(
-            f"Creating new index extract at {path} using files from {path_to_folder}"
-        )
-        onlyfiles = [
-            f
-            for f in os.listdir(path_to_folder)
-            if os.path.isfile(os.path.join(path_to_folder, f))
-        ]
+        logger.info(f"Creating new index extract at {path} using files from {path_to_folder}")
+        onlyfiles = [f for f in os.listdir(path_to_folder) if os.path.isfile(os.path.join(path_to_folder, f))]
 
         # creating a list of dictionaries, by loading the (json) files in the folder
         json_files = []
@@ -223,9 +201,7 @@ def index_paragraph_docs_GPU_batches(
     labels = []
     abstracts_to_embed_batch = []
     labels_for_batch = []
-    logger.info(
-        "Embedding documents with batch approach and indexing them into a FAISS db with KNNSearch."
-    )
+    logger.info("Embedding documents with batch approach and indexing them into a FAISS db with KNNSearch.")
 
     # approach from: https://python.langchain.com/v0.1/docs/modules/data_connection/document_transformers/recursive_text_splitter/
     # chunk size could prabably be higher, since RecursiveCharacterTextSplitter chunk_size argument is based on characters, not tokens
@@ -252,9 +228,7 @@ def index_paragraph_docs_GPU_batches(
 
             # Check if the batch size is reached, so we can start embedding the current batch. Otherwise, we continue filling the batch
             if len(abstracts_to_embed_batch) >= batch_size:
-                embeddings_for_this_batch = e5_embedder.embed_documents(
-                    abstracts_to_embed_batch
-                )
+                embeddings_for_this_batch = e5_embedder.embed_documents(abstracts_to_embed_batch)
                 embeddings.extend(embeddings_for_this_batch)
                 labels.extend(labels_for_batch)
 
@@ -264,9 +238,7 @@ def index_paragraph_docs_GPU_batches(
 
     # Check if there are any remaining embeddings in the (final) batch
     if abstracts_to_embed_batch:
-        embeddings_for_this_batch = e5_embedder.embed_documents(
-            abstracts_to_embed_batch
-        )
+        embeddings_for_this_batch = e5_embedder.embed_documents(abstracts_to_embed_batch)
         embeddings.extend(embeddings_for_this_batch)
         labels.extend(labels_for_batch)
 
@@ -301,4 +273,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

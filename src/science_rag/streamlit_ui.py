@@ -1,3 +1,7 @@
+import torch
+
+torch.classes.__path__ = []  # type: ignore
+
 import os
 import time
 import random
@@ -5,7 +9,7 @@ import json
 import streamlit as st
 import requests
 
-from mitcfu_rag.tools.llm_formatting import gen_wrapper, GEMMA_3_12B, MIXTRAL_8X7B
+from science_rag.tools.llm_formatting import gen_wrapper, GEMMA_3_12B, MIXTRAL_8X7B
 
 # from fakta_chat.config import RAG
 
@@ -37,11 +41,9 @@ st.sidebar.button("New Chat", on_click=clear_chat_history)
 st.image(relative_img_path, width=150)
 
 
-greeting = (
-    "Hej 👋 Jeg er MitCFU-RAG og jeg kan hjælpe dig med at finde information om materialer\
+greeting = "Hej 👋 Jeg er MitCFU-RAG og jeg kan hjælpe dig med at finde information om materialer\
               fra MitCFU. Men indtil videre er jeg vist stadig mest en kopi af FaktaChat. \
               \n\nHvad kan jeg hjælpe dig med?"
-)
 
 # Initialize chat
 if "messages" not in st.session_state:

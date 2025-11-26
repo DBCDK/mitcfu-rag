@@ -22,9 +22,9 @@ import asyncio
 import torch.nn.functional as F
 # from langchain_community.vectorstores.faiss import FAISS
 
-from mitcfu_rag.rag.rag import Retriever, Reference
-from mitcfu_rag.tools import KNNSearch
-from mitcfu_rag.rag.retrievers.indexes.mistrale5_instruct import e5mistralEmbedder
+from science_rag.rag.rag import Retriever, Reference
+from science_rag.tools import KNNSearch
+from science_rag.rag.retrievers.indexes.mistrale5_instruct import e5mistralEmbedder  # Old import
 
 
 logger = logging.getLogger(__name__)
@@ -54,9 +54,7 @@ class Mistrale5Retriever(Retriever):
             data = json.load(file)
         for doc in data:
             for paragraph in doc:
-                text = text = (
-                    paragraph["subheadline"] + "\n" + " ".join(paragraph["sentences"])
-                )
+                text = text = paragraph["subheadline"] + "\n" + " ".join(paragraph["sentences"])
                 index2references[paragraph["id"]] = Reference(
                     id=paragraph["id"],
                     article_link=paragraph["article_link"],
@@ -65,9 +63,7 @@ class Mistrale5Retriever(Retriever):
                 )
         return index2references
 
-    def retrieve(
-        self, messages: list[str], n: int = 5
-    ) -> tuple[list[float], list[Reference]]:
+    def retrieve(self, messages: list[str], n: int = 5) -> tuple[list[float], list[Reference]]:
         # message = messages[-1]['content']
         message = ""
         for msg in messages:
@@ -103,9 +99,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--message", type=str)
-    parser.add_argument(
-        "--verbose", help="increase output verbosity", action="store_true"
-    )
+    parser.add_argument("--verbose", help="increase output verbosity", action="store_true")
     args = parser.parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)

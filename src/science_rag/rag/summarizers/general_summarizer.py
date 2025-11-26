@@ -31,9 +31,7 @@ logger = logging.getLogger(__name__)
 
 class GeneralSummarizer(Summarizer):
     def __init__(self):
-        self.client = InferenceClient(
-            "http://skolegpt-tgi-1-0.mi-prod.svc.cloud.dbc.dk"
-        )
+        self.client = InferenceClient("http://skolegpt-tgi-1-0.mi-prod.svc.cloud.dbc.dk")
 
     def summarize(self, current_summary: str, query: str, answer: str) -> str:
         prompt = (

@@ -10,7 +10,7 @@ pipeline {
         disableConcurrentBuilds()
     }
     environment {
-        PACKAGE="mitcfu-rag"
+        PACKAGE="science-rag"
         DOCKER_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
         GITLAB_PRIVATE_TOKEN = credentials("ai-gitlab-api-token")
     }
@@ -35,6 +35,7 @@ pipeline {
 		}
 		stage("docker build") {
 			steps {
+				updateGitlabCommitStatus name: 'build', state: 'running'
 				buildImage()
 			}
 		}
@@ -49,7 +50,7 @@ pipeline {
 // 						nextBuild=sh(returnStdout: true, script: "curl -s ${JENKINS_URL}job/gitops-secrets/job/main/api/json | jq -r .nextBuildNumber")
 // 						sh """
 // 							nix run --refresh git+https://gitlab.dbc.dk/public-de-team/gitops-secrets-set-variables.git \
-// 								ai-staging:MITCFU_RAG_1_0_VERSION=${env.DOCKER_TAG}
+// 								ai-staging:SCIENCE_RAG_1_0_VERSION=${env.DOCKER_TAG}
 // 						"""
 // 						waitForGitops("${nextBuild}")
 // 					}
@@ -93,9 +94,9 @@ pipeline {
 			}
 			steps {
 				dir("deploy") {
-					sh 'set-new-version mitcfu-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/mitcfu-rag-secrets $DOCKER_TAG -b staging'
+					sh 'set-new-version science-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/science-rag-secrets $DOCKER_TAG -b staging'
 				}
-				build job: "ai/mitcfu-rag/mitcfu-rag-deployment/staging", wait: true
+				build job: "ai/science-rag/science-rag-deployment/staging", wait: true
 			}
 		}
 
@@ -154,14 +155,24 @@ pipeline {
 			}
 			steps {
 				dir("deploy") {
-					sh 'set-new-version mitcfu-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/mitcfu-rag-secrets $DOCKER_TAG -b prod'
+					sh 'set-new-version science-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/science-rag-secrets $DOCKER_TAG -b prod'
 				}
-				build job: "ai/mitcfu-rag/mitcfu-rag-deployment/prod", wait: true
+				build job: "ai/science-rag/science-rag-deployment/prod", wait: true
 			}
 		}
 	}
 	post {
 		unstable { slackSend message: "build became unstable for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
-		failure { slackSend message: "build failed for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
+		// failure { slackSend message: "build failed for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
+		failure {
+			updateGitlabCommitStatus name: 'build', state: 'failed'
+		}
+		success { 
+			updateGitlabCommitStatus name: 'build', state: 'success'
+		}
+		fixed {
+			updateGitlabCommitStatus name: 'build', state: 'success'
+		}
+
 	}
 }

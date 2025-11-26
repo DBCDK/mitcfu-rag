@@ -12,11 +12,7 @@ Functions for formatting input for llm's and reading the streamed output from ll
 import json
 from transformers import AutoTokenizer
 
-from mitcfu_rag.config import (
-    MODEL_MAP,
-    GEMMA_3_12B,
-    MIXTRAL_8X7B
-)
+from science_rag.config import MODEL_MAP, GEMMA_3_12B, MIXTRAL_8X7B
 
 
 def load_tokenizers(model_names: list[str], use_ceph: bool = False):
@@ -31,13 +27,10 @@ def load_tokenizers(model_names: list[str], use_ceph: bool = False):
     tokenizers = {}
     for model_name in model_names:
         if use_ceph:
-            tokenizers[model_name] = AutoTokenizer.from_pretrained(
-                f"/data/{model_name}"
-            )
+            tokenizers[model_name] = AutoTokenizer.from_pretrained(f"/data/{model_name}")
+            # tokenizers[model_name] = AutoTokenizer.from_pretrained("/data/huggingface/gemma-3-12b-it")
         else:
-            tokenizers[model_name] = AutoTokenizer.from_pretrained(
-                MODEL_MAP[model_name]
-            )
+            tokenizers[model_name] = AutoTokenizer.from_pretrained(MODEL_MAP[model_name])
     return tokenizers
 
 
@@ -98,22 +91,26 @@ def clean_sources_from_messages(messages: list[dict]):
 def __gemma_tgi_output_format(content):
     return {"choices": [{"delta": {"content": content}}]}
 
+
 def __mixtral_tgi_output_format(content):
     return {"token": {"text": content}}
+
 
 def __gemma_tgi_input_format(request_body):
     return {
         "messages": request_body["messages"],
         "model": request_body["model"],
         "stream": request_body["stream"],
-        "max_tokens": request_body["max_tokens"]
+        "max_tokens": request_body["max_tokens"],
     }
+
 
 def __mixtral_tgi_input_format(request_body):
     return {
         "inputs": request_body["messages"][0]["content"],
         "parameters": request_body["parameters"],
     }
+
 
 def __gemma_gen_wrapper(obj):
     token = obj.get("choices", [{}])[0].get("delta", {}).get("content", "")

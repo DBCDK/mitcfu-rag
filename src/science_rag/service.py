@@ -22,8 +22,8 @@ from dbc_pyutils import StatusHandler
 from dbc_pyutils import PrometheusMixIn
 from dbc_pyutils import MetricsHandler
 from dbc_pyutils import BaseHandler
-from mitcfu_rag.rag.langgraph_graphs import AgenticGraph
-from mitcfu_rag.rag.agent_streaming_rag import AgenticRAG
+from science_rag.rag.langgraph_graphs import AgenticGraph
+from science_rag.rag.agent_streaming_rag import AgenticRAG
 
 INSTANCE_ID = create_instance_id(num_digits=8)
 STATS = {"query": Statistics(name="query")}
@@ -72,7 +72,7 @@ class MetricsApp(PrometheusMixIn, tw.Application):
 
 
 def make_app(model, graph_type):
-    info = build_info.get_info("mitcfu_rag")
+    info = build_info.get_info("science_rag")
     handlers = [
         (
             r"/",
@@ -155,9 +155,7 @@ def cli():
         action="store_true",
         help="Set this flag if running on Ceph or in dockerfile",
     )
-    parser.add_argument(
-        "-a", "--ab-id", dest="ab_id", help="ab id of service. default is 1", default=1
-    )
+    parser.add_argument("-a", "--ab-id", dest="ab_id", help="ab id of service. default is 1", default=1)
     parser.add_argument(
         "-p",
         "--port",
@@ -166,9 +164,7 @@ def cli():
         help=f"port to expose service on. Default is {port}",
         default=port,
     )
-    parser.add_argument(
-        "-v", "--verbose", dest="verbose", action="store_true", help="verbose output"
-    )
+    parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="verbose output")
 
     args = parser.parse_args()
     level = logging.INFO

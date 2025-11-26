@@ -25,15 +25,15 @@ import json
 import os
 import asyncio
 import aiohttp
-from mitcfu_rag.rag.rag import Generator, Reference
-from mitcfu_rag.tools.llm_formatting import (
+from science_rag.rag.rag import Generator, Reference
+from science_rag.tools.llm_formatting import (
     load_tokenizers,
     select_model_function,
     tgi_input_format,
     tgi_output_format,
     clean_sources_from_messages,
 )
-from mitcfu_rag.config import (
+from science_rag.config import (
     GEMMA_3_12B,
     MIXTRAL_8X7B,
     DEFAULT_MODEL,
@@ -62,16 +62,14 @@ class AgentStreamingGenerator(Generator):
                 "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk/generate_stream",
             ),
         }
-        self.tokenizers = load_tokenizers(
-            list(self.tgi_endpoints.keys()), use_ceph=use_ceph
-        )
+        self.tokenizers = load_tokenizers(list(self.tgi_endpoints.keys()), use_ceph=use_ceph)
         self.model_output_function = None
-        self.system_message = "Du er MitCFU-Chat. Du hjælper med søgninger i MitCFU kataloget. Du svarer altid på dansk."
+        self.system_message = (
+            "Du er Science-RAG. Du hjælper med søgninger et katalog af PDF'er. Du svarer altid på dansk."
+        )
         self.missing_reference_prompt = """
 Brugeren har stillet et spørgsmål du ikke kan finde nogen kilder om.
 Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at omformulere det.
-Afslut ALTID dit svar med følgende:
-Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
 """
         self.session = aiohttp.ClientSession()
 
@@ -85,15 +83,11 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             logger.debug(f"parsed_references: {references}")
         self.model_output_function = select_model_function(prompt_template["model"])
         # remove sources from output if generated
-        logger.info(
-            f"Replying as {prompt_template['name']} with model {prompt_template['model']}"
-        )
+        logger.info(f"Replying as {prompt_template['name']} with model {prompt_template['model']}")
         messages = input["input"]
         cleaned_messages = clean_sources_from_messages(messages)
 
-        max_new_tokens = (
-            1000 if prompt_template["name"] not in {"ROUTER", "REFORMULATOR"} else 200
-        )
+        max_new_tokens = 1000 if prompt_template["name"] not in {"ROUTER", "REFORMULATOR"} else 200
         async for chunk in self.llm_generate(
             {
                 "messages": cleaned_messages,
@@ -108,13 +102,9 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         ):
             yield chunk
 
-    async def async_llm_format(
-        self, msgs, model_name, prompt_template, agent_type, parsed_references
-    ):
+    async def async_llm_format(self, msgs, model_name, prompt_template, agent_type, parsed_references):
         await asyncio.sleep(0)
-        return self.llm_format(
-            msgs, model_name, prompt_template, agent_type, parsed_references
-        )
+        return self.llm_format(msgs, model_name, prompt_template, agent_type, parsed_references)
 
     def __format_messages(
         self,
@@ -125,18 +115,12 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
     ):
         if ignore_role:
             messages = [msg for msg in messages if not msg["role"] == ignore_role]
-        formatted_chat_history = self.tokenizers[model_name].apply_chat_template(
-            messages, tokenize=False
-        )
+        formatted_chat_history = self.tokenizers[model_name].apply_chat_template(messages, tokenize=False)
         if not use_bos:
-            formatted_chat_history = formatted_chat_history[
-                len(self.tokenizers[model_name].bos_token) :
-            ]
+            formatted_chat_history = formatted_chat_history[len(self.tokenizers[model_name].bos_token) :]
         return formatted_chat_history
 
-    def llm_format(
-        self, msgs, model_name, prompt_template, agent_type, parsed_references
-    ):
+    def llm_format(self, msgs, model_name, prompt_template, agent_type, parsed_references):
         # Set start token and add system prompt
         result = self.tokenizers[model_name].bos_token + START_TURN_USER[model_name]
         result += f"{self.system_message}"
@@ -149,13 +133,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                 result += prompt_template
                 # Format references
                 result += "Dokumenter:" + (
-                    ". ".join(
-                        [
-                            f"{ref.article_headline}: {ref.text[:500]}"
-                            for ref in parsed_references
-                        ]
-                    )
-                    + ""
+                    ". ".join([f"{ref.article_headline}: {ref.text[:500]}" for ref in parsed_references]) + ""
                 )
                 # End "system" instructions.
                 result += END_TURN_USER[model_name]
@@ -215,9 +193,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         async for ref in self.reference_generator(parsed_references):
             await asyncio.sleep(random.choice(self.streaming_delays))
             yield ref
-        yield json.dumps(
-            tgi_output_format(DEFAULT_MODEL, self.tokenizers[DEFAULT_MODEL].eos_token)
-        )
+        yield json.dumps(tgi_output_format(DEFAULT_MODEL, self.tokenizers[DEFAULT_MODEL].eos_token))
 
     async def llm_generate(self, input, parsed_references):
         fetch_options = {
@@ -248,9 +224,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             "temperature": 0.1,
             "parameters": {"temperature": 0.1, "max_new_tokens": input["max_tokens"]},
         }
-        request_body_str = json.dumps(
-            tgi_input_format(input["model_name"], request_body)
-        )
+        request_body_str = json.dumps(tgi_input_format(input["model_name"], request_body))
         async with self.session.post(
             self.tgi_endpoints[input["model_name"]],
             headers=fetch_options["headers"],
@@ -263,18 +237,13 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                     try:
                         obj = json.loads(decoded_value.replace("data:", ""))
                         token = self.model_output_function(obj)
-                        if (
-                            token == self.tokenizers[input["model_name"]].eos_token
-                            and parsed_references
-                        ):
+                        if token == self.tokenizers[input["model_name"]].eos_token and parsed_references:
                             continue
                         else:
                             if input["model_name"] == DEFAULT_MODEL:
                                 yield chunk
                             else:
-                                yield json.dumps(
-                                    tgi_output_format(DEFAULT_MODEL, token)
-                                )
+                                yield json.dumps(tgi_output_format(DEFAULT_MODEL, token))
                     except json.JSONDecodeError:
                         pass
                     except Exception as e:

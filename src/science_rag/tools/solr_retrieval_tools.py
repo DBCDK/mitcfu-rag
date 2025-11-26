@@ -47,9 +47,7 @@ question_search_params = ["subheadline^100", "gen_questions^100"]
 meta_search_params = ["article_headline", "article_topics", "subheadline"]
 
 
-def search(
-    message: str, searcher: Searcher, n: int, params: list = default_search_params
-) -> list[Reference]:
+def search(message: str, searcher: Searcher, n: int, params: list = default_search_params) -> list[Reference]:
     """
     Takes the whole message or another input and execute a search in solr with the given parameters.
     This method finds matches with all fields given in the parameters.
@@ -118,9 +116,7 @@ def search_by_question(
     return references
 
 
-def search_by_meta(
-    message: str, searcher: Searcher, n: int, params: list = meta_search_params
-) -> list[Reference]:
+def search_by_meta(message: str, searcher: Searcher, n: int, params: list = meta_search_params) -> list[Reference]:
     """
     Takes a message and execute a search in solr with meta_search_parameters.
     This method finds matches with headline, subheadlines and topics of articles.

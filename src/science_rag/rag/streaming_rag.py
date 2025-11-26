@@ -26,19 +26,19 @@ import datetime
 import asyncio
 import json
 from typing import Generator, Any
-from mitcfu_rag.rag.rag import RAG, Reference
+from science_rag.rag.rag import RAG, Reference
 
 # from fakta_chat.rag.parsers.solr_parser import SolrParser
 # from mitcfu_rag.rag.retrievers.solr_retriever import SolrRetriever
 # from mitcfu_rag.rag.retrievers.bm25_retriever import BM25Retriever
 # from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
-from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import (
+from science_rag.rag.retrievers.streaming_multilingual_retriever import (
     EmbeddingRetriever,
 )
-from mitcfu_rag.rag.generators.streaming_with_history_generator import (
+from science_rag.rag.generators.streaming_with_history_generator import (
     EmbeddingGenerator,
 )
-from mitcfu_rag.rag.validators.ms_marco_minilm_validator import MsValidator
+from science_rag.rag.validators.ms_marco_minilm_validator import MsValidator
 
 
 logger = logging.getLogger(__name__)
@@ -52,9 +52,7 @@ class StreamingRAG(RAG):
         Components used in the RAG model.
         """
         self.parser = None
-        self.retriever = EmbeddingRetriever(
-            embedding_model, embeddings_path, jed_document_path
-        )
+        self.retriever = EmbeddingRetriever(embedding_model, embeddings_path, jed_document_path)
         # Mistrale5Retriever(embedding_model, faiss_index, article_index)
         self.reranker = None
         self.generator = EmbeddingGenerator()
@@ -137,15 +135,9 @@ class StreamingRAG(RAG):
 
         # Validation step. First, we check if the class has the validator attribute.
         if self.validator:
-            user_query = messages[-1][
-                "content"
-            ]  # using the latest user query under the content key
-            valid_references = self.validator.validate_references(
-                user_query, references
-            )
-            if (
-                not valid_references
-            ):  # If no valid references are found, we tell the user.
+            user_query = messages[-1]["content"]  # using the latest user query under the content key
+            valid_references = self.validator.validate_references(user_query, references)
+            if not valid_references:  # If no valid references are found, we tell the user.
                 fallback = {
                     "token": {
                         "text": "Jeg kan ikke finde svaret på dit spørgsmål. Kan du prøve at stille det på en anden måde?"

@@ -9,11 +9,11 @@ from setuptools import setup, find_packages
 # https://docs.python.org/3/distutils/setupscript.html
 
 setup(
-    name="mitcfu-rag",
+    name="science-rag",
     version="0.1.0",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
-    description="Chatbot to MitCFU",
+    description="science-rag",
     test_suite="tests",
     # faiss skal tilføjes install_requires, når problemet med faiss er løst.
     install_requires=[
@@ -43,17 +43,18 @@ setup(
         "accelerate",
     ],
     extras_require={"evaluation": []},
-    provides=["mitcfu_rag"],
-    package_data={"mitcfu_rag.evaluation_tool": ["evaluation_tool/data/*"]},
+    provides=["science_rag"],
+    package_data={"science_rag.evaluation_tool": ["evaluation_tool/data/*"]},
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "create-faiss-index = mitcfu_rag.rag.retrievers.indexes.multilinguale5:main",
-            "mitcfu-RAG-sh = mitcfu_rag.term_ui:cli",
-            "evaluate = mitcfu_rag.evaluation_tools.evaluation:run",
-            "evaluate-retrieval = mitcfu_rag.evaluation_tools.evaluate_retrieval:run",
-            "compare-retrievers = mitcfu_rag.evaluation_tools.compare_retrievers:run",
-            "streaming-service-mitcfu = mitcfu_rag.service:cli",
+            "create-faiss-index = science_rag.rag.retrievers.indexes.multilinguale5:main",
+            "create-faiss-index-generic-parser = science_rag.rag.retrievers.indexes.multilinguale5_generic_parser:main",
+            "science-RAG-sh = science_rag.term_ui:cli",
+            "evaluate = science_rag.evaluation_tools.evaluation:run",
+            "evaluate-retrieval = science_rag.evaluation_tools.evaluate_retrieval:run",
+            "compare-retrievers = science_rag.evaluation_tools.compare_retrievers:run",
+            "streaming-service-science-rag = science_rag.service:cli",
         ]
     },
     maintainer="ai",
@@ -62,15 +63,15 @@ setup(
 )
 
 # Standard setup
-# setup(name='MitCFU-RAG',
+# setup(name='science-RAG',
 #       version='0.1.0',
 #       package_dir={'': 'src'},
 #       packages=find_packages(where='src'),
-#       description='RAG-løsning til MitCFU 2025',
-#       test_suite='MitCFU_RAG.tests',
-#       provides=['MitCFU_RAG'],
+#       description='RAG-løsning til science 2025',
+#       test_suite='science_RAG.tests',
+#       provides=['science_RAG'],
 #       install_requires=[],
-#       package_data={'MitCFU_RAG': ['data/*', 'data/examples/*', 'data/html/*', 'data/cfg/*']},
+#       package_data={'science_RAG': ['data/*', 'data/examples/*', 'data/html/*', 'data/cfg/*']},
 #       include_package_data=True,
 #       entry_points=
 #         {"console_scripts": []},
