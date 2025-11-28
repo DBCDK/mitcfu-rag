@@ -16,7 +16,7 @@ Start the service with the following parameters
 
 ### Starting the streamlitui service
 Start the service with the following parameters.
-`streamlit run src/mitcfu_rag/streamlit_ui.py --server.port 8111`
+`streamlit run src/science_rag/streamlit_ui.py --server.port 8111`
 NOTE: If you did not run your streaming service on port 5011, you will have to manually change the endpoint by editing
 the variable `STREAMING_ENDPOINT` in `streamlit_ui.py`
 

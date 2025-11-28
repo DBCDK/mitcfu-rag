@@ -39,125 +39,88 @@ pipeline {
 				buildImage()
 			}
 		}
-// 		stage("set gitops variables for ai-staging") {
-// 			when {
-//                 branch "main"
-// 			}
-// 			steps {
-// 				script {
-// 					withCredentials([sshUserPrivateKey(credentialsId: "gitlab-isworker", keyFileVariable: "sshkeyfile")]) {
-// 						env.GIT_SSH_COMMAND = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${sshkeyfile}"
-// 						nextBuild=sh(returnStdout: true, script: "curl -s ${JENKINS_URL}job/gitops-secrets/job/main/api/json | jq -r .nextBuildNumber")
-// 						sh """
-// 							nix run --refresh git+https://gitlab.dbc.dk/public-de-team/gitops-secrets-set-variables.git \
-// 								ai-staging:SCIENCE_RAG_1_0_VERSION=${env.DOCKER_TAG}
-// 						"""
-// 						waitForGitops("${nextBuild}")
-// 					}
-// 				}
-// 			}
-// 		}
-// 		stage("wait for ai-staging to be ready") {
-// 			agent {
-// 				docker {
-// 					label workerNode
-// 					image "docker-dbc.artifacts.dbccloud.dk/k8s-deploy-env:latest"
-// 					args '-u 0:0'
-// 					alwaysPull true
-// 				}
-// 			}
-// 			environment {
-// 				KUBECONFIG = credentials("kubecert-mi")
-// 				KUBECTL = "kubectl --kubeconfig '${KUBECONFIG}'"
-// 			}
-// 			when {
-// 				branch "main"
-// 			}
-// 			steps {
-// 				script {
-// 					sh """
-// 						$KUBECTL -n ai-staging rollout status deployment/mitfcu-rag-1-0 --timeout=1200s
-// 					"""
-// 				}
-// 			}
-// 		}
-        stage("update staging version number") {
-			agent {
-				docker {
-					label workerNode
-					image "docker-dbc.artifacts.dbccloud.dk/build-env:latest"
-					alwaysPull true
-				}
-			}
+		stage("set gitops variables for ai-staging") {
 			when {
-				branch "main"
+                branch "main"
 			}
 			steps {
-				dir("deploy") {
-					sh 'set-new-version science-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/science-rag-secrets $DOCKER_TAG -b staging'
+				script {
+					withCredentials([sshUserPrivateKey(credentialsId: "gitlab-isworker", keyFileVariable: "sshkeyfile")]) {
+						env.GIT_SSH_COMMAND = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${sshkeyfile}"
+						nextBuild=sh(returnStdout: true, script: "curl -s ${JENKINS_URL}job/gitops-secrets/job/main/api/json | jq -r .nextBuildNumber")
+						sh """
+							nix run --refresh git+https://gitlab.dbc.dk/public-de-team/gitops-secrets-set-variables.git \
+								ai-staging:SCIENCE_RAG_1_0_VERSION=${env.DOCKER_TAG}
+						"""
+						waitForGitops("${nextBuild}")
+					}
 				}
-				build job: "ai/science-rag/science-rag-deployment/staging", wait: true
 			}
 		}
-
-// 		stage("set gitops variables for ai-prod") {
-// 			when {
-// 				branch "main"
-// 			}
-// 			steps {
-// 				script {
-// 					withCredentials([sshUserPrivateKey(credentialsId: "gitlab-isworker", keyFileVariable: "sshkeyfile")]) {
-// 						env.GIT_SSH_COMMAND = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${sshkeyfile}"
-// 						nextBuild=sh(returnStdout: true, script: "curl -s ${JENKINS_URL}job/gitops-secrets/job/main/api/json | jq -r .nextBuildNumber")
-// 						sh """
-// 							nix run --refresh git+https://gitlab.dbc.dk/public-de-team/gitops-secrets-set-variables.git \
-// 								ai-prod:MITCFU_RAG_1_0_VERSION=${env.DOCKER_TAG}
-// 						"""
-// 						waitForGitops("${nextBuild}")
-// 					}
-// 				}
-// 			}
-// 		}
-// 		stage("wait for ai-prod to be ready") {
-// 			agent {
-// 				docker {
-// 					label workerNode
-// 					image "docker-dbc.artifacts.dbccloud.dk/k8s-deploy-env:latest"
-// 					args '-u 0:0'
-// 					alwaysPull true
-// 				}
-// 			}
-// 			environment {
-// 				KUBECONFIG = credentials("kubecert-mi")
-// 				KUBECTL = "kubectl --kubeconfig '${KUBECONFIG}'"
-// 			}
-// 			when {
-// 				branch "main"
-// 			}
-// 			steps {
-// 				script {
-// 					sh """
-// 						$KUBECTL -n ai-prod rollout status deployment/mitcfu-rag-1-0 --timeout=1200s
-// 					"""
-// 				}
-// 			}
-// 		}
-	    stage("update prod version number") {
+		stage("wait for ai-staging to be ready") {
 			agent {
 				docker {
 					label workerNode
-					image "docker-dbc.artifacts.dbccloud.dk/build-env:latest"
+					image "docker-dbc.artifacts.dbccloud.dk/k8s-deploy-env:latest"
+					args '-u 0:0'
 					alwaysPull true
 				}
+			}
+			environment {
+				KUBECONFIG = credentials("kubecert-mi")
+				KUBECTL = "kubectl --kubeconfig '${KUBECONFIG}'"
 			}
 			when {
 				branch "main"
 			}
 			steps {
-				dir("deploy") {
-					sh 'set-new-version science-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/science-rag-secrets $DOCKER_TAG -b prod'
+				script {
+					sh """
+						$KUBECTL -n ai-staging rollout status deployment/science-rag-1-0 --timeout=1200s
+					"""
 				}
-				build job: "ai/science-rag/science-rag-deployment/prod", wait: true
+			}
+		}
+		stage("set gitops variables for ai-prod") {
+			when {
+				branch "main"
+			}
+			steps {
+				script {
+					withCredentials([sshUserPrivateKey(credentialsId: "gitlab-isworker", keyFileVariable: "sshkeyfile")]) {
+						env.GIT_SSH_COMMAND = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${sshkeyfile}"
+						nextBuild=sh(returnStdout: true, script: "curl -s ${JENKINS_URL}job/gitops-secrets/job/main/api/json | jq -r .nextBuildNumber")
+						sh """
+							nix run --refresh git+https://gitlab.dbc.dk/public-de-team/gitops-secrets-set-variables.git \
+								ai-prod:SCIENCE_RAG_1_0_VERSION=${env.DOCKER_TAG}
+						"""
+						waitForGitops("${nextBuild}")
+					}
+				}
+			}
+		}
+		stage("wait for ai-prod to be ready") {
+			agent {
+				docker {
+					label workerNode
+					image "docker-dbc.artifacts.dbccloud.dk/k8s-deploy-env:latest"
+					args '-u 0:0'
+					alwaysPull true
+				}
+			}
+			environment {
+				KUBECONFIG = credentials("kubecert-mi")
+				KUBECTL = "kubectl --kubeconfig '${KUBECONFIG}'"
+			}
+			when {
+				branch "main"
+			}
+			steps {
+				script {
+					sh """
+						$KUBECTL -n ai-prod rollout status deployment/science-rag-1-0 --timeout=1200s
+					"""
+				}
 			}
 		}
 	}

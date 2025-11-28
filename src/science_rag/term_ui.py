@@ -7,7 +7,7 @@ from rich.prompt import Prompt
 from rich.panel import Panel
 from rich.align import Align
 from rich.live import Live
-from mitcfu_rag.config import RAG
+from science_rag.config import RAG
 
 
 # Config of colors
