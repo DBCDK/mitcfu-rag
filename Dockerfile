@@ -26,7 +26,6 @@ RUN wget -nv --no-check-certificate ${MODEL_PATH} -O ms-marco-MiniLM-L-6-v2.tgz 
     pip install --user pip && \
     pip install --user .
 
-# /data/mitcfu-rag-1-0 is a symlink to the model on the k8s volume mount
-# temporarily use non-symlinked version while switching embedding models
-CMD ["streaming-service-science-rag", "/data/multilingual-e5-large-instruct", "pdf_test_index", "--article_index_path", "science_docs_list_jed_for_index.json", "--validator-model-path", "ms-marco-MiniLM-L-6-v2", "--port", "5000", "--use-ceph"]
+# /data/science-rag-1-0 is a symlink to the model (multilingual-e5-large-instruct) on the k8s volume mount
+CMD ["streaming-service-science-rag", "/data/science-rag-1-0", "pdf_test_index", "--article_index_path", "science_docs_list_jed_for_index.json", "--validator-model-path", "ms-marco-MiniLM-L-6-v2", "--port", "5000", "--use-ceph"]
 EXPOSE 5000
