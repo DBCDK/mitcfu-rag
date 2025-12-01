@@ -35,7 +35,6 @@ from science_rag.tools.llm_formatting import (
 )
 from science_rag.config import (
     GEMMA_3_12B,
-    MIXTRAL_8X7B,
     DEFAULT_MODEL,
     START_TURN_USER,
     END_TURN_USER,
@@ -56,10 +55,6 @@ class AgentStreamingGenerator(Generator):
             GEMMA_3_12B: os.environ.get(
                 "MITCFU_TGI_URL",
                 "http://gemma-3-12b-it.mi-prod.svc.cloud.dbc.dk/v1/chat/completions",
-            ),
-            MIXTRAL_8X7B: os.environ.get(
-                "CHAT_BIB_URL",
-                "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk/generate_stream",
             ),
         }
         self.tokenizers = load_tokenizers(list(self.tgi_endpoints.keys()), use_ceph=use_ceph)
