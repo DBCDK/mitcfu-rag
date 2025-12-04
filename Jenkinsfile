@@ -67,7 +67,7 @@ pipeline {
 			steps {
 				script {
 					sh """
-						$KUBECTL -n ai-staging rollout status deployment/mitfcu-rag-1-0 --timeout=1200s
+						$KUBECTL -n ai-staging rollout status deployment/mitcfu-rag-1-0 --timeout=1200s
 					"""
 				}
 			}
