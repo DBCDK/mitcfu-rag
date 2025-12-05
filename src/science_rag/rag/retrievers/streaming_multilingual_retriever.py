@@ -109,7 +109,7 @@ class EmbeddingRetriever(Retriever):
         return Reference(
             id=str(doc_id),
             # article_headline=doc.get("titles").get("full")[0],
-            article_headline="- ",
+            article_headline="-",
             article_link=pdf_title + " side " + page_number,
             score=0.0,
             text=text,
