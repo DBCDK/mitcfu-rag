@@ -174,7 +174,7 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
         for ref in references:
             yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
             yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
-            tokens = [f"[{ref.article_headline}]({ref.article_link})"]
+            tokens = [f"- {ref.article_link}"]
             for token in tokens:
                 yield json.dumps(tgi_output_format(DEFAULT_MODEL, token))
 
