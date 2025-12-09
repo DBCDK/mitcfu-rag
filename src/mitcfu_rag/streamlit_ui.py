@@ -79,5 +79,7 @@ if prompt := st.chat_input("Indsæt dit spørgmål her ..."):
                 json={"messages": st.session_state.messages},
                 stream=True,
             )
-            response = st.write_stream(gen_wrapper(response_stream, model_name=GEMMA_3_12B))
+            response = st.write_stream(
+                gen_wrapper(response_stream, model_name=GEMMA_3_12B)
+            )
             st.session_state.messages.append({"role": "assistant", "content": response})

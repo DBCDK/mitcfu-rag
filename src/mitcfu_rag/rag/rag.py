@@ -96,7 +96,6 @@ class Parser(ABC):
 
 
 class Retriever(ABC):
-
     def __call__(self, messages: list[str], *args, **kwargs):
         return self.retrieve(messages)
 
@@ -150,7 +149,6 @@ class Ensembler(ABC):
 
 
 class Generator(ABC):
-    
     def __call__(self, references: list[Reference], query: str, *args, **kwargs) -> str:
         return self.generate(references, query)
 

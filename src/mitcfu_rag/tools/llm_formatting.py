@@ -12,11 +12,7 @@ Functions for formatting input for llm's and reading the streamed output from ll
 import json
 from transformers import AutoTokenizer
 
-from mitcfu_rag.config import (
-    MODEL_MAP,
-    GEMMA_3_12B,
-    MIXTRAL_8X7B
-)
+from mitcfu_rag.config import MODEL_MAP, GEMMA_3_12B, MIXTRAL_8X7B
 
 
 def load_tokenizers(model_names: list[str], use_ceph: bool = False):
@@ -98,22 +94,26 @@ def clean_sources_from_messages(messages: list[dict]):
 def __gemma_tgi_output_format(content):
     return {"choices": [{"delta": {"content": content}}]}
 
+
 def __mixtral_tgi_output_format(content):
     return {"token": {"text": content}}
+
 
 def __gemma_tgi_input_format(request_body):
     return {
         "messages": request_body["messages"],
         "model": request_body["model"],
         "stream": request_body["stream"],
-        "max_tokens": request_body["max_tokens"]
+        "max_tokens": request_body["max_tokens"],
     }
+
 
 def __mixtral_tgi_input_format(request_body):
     return {
         "inputs": request_body["messages"][0]["content"],
         "parameters": request_body["parameters"],
     }
+
 
 def __gemma_gen_wrapper(obj):
     token = obj.get("choices", [{}])[0].get("delta", {}).get("content", "")

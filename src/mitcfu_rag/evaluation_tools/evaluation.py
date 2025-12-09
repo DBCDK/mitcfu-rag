@@ -117,22 +117,21 @@ def generate_predictions(participant_model, evaluation_file):
         query = [line["query"]]
         list_links = [line["link_to_answer_1"], line["link_to_answer_2"]]
 
-
         response_stream = requests.post(
             participant_model,
-            json={"messages": [{"role": "user", "content": query}],
-                  "type": "evaluate_rag"},
+            json={
+                "messages": [{"role": "user", "content": query}],
+                "type": "evaluate_rag",
+            },
             stream=True,
         )
-        raw_response = [
-            r for r in gen_wrapper(response_stream, DEFAULT_MODEL)
-        ]
+        raw_response = [r for r in gen_wrapper(response_stream, DEFAULT_MODEL)]
         response = "".join(raw_response)
 
         if "**Kilder**" in response:
             prediction, raw_reference = response.split("**Kilder**", 1)
             print(prediction)
-            references = re.findall(r'\[.*?\]\((.*?)\)', raw_reference)
+            references = re.findall(r"\[.*?\]\((.*?)\)", raw_reference)
             print(references)
         else:
             prediction = ""
@@ -326,8 +325,9 @@ def evaluate_references():
     pass
 
 
-def main(model:str, limit: int, question_type: str, compare_model: bool, save_log: bool):
-
+def main(
+    model: str, limit: int, question_type: str, compare_model: bool, save_log: bool
+):
     EVALUATION_MODEL_NAME = os.getenv("EVALUATION_MODEL_NAME", "gpt-4o")
 
     # Generate predictions
@@ -414,7 +414,13 @@ def cli():
 def run():
     """Entrypoint for running these methods using the CLI"""
     args = cli()
-    main(args.model, args.n_questions, args.question_type, args.compare_model, args.save_log)
+    main(
+        args.model,
+        args.n_questions,
+        args.question_type,
+        args.compare_model,
+        args.save_log,
+    )
 
 
 if __name__ == "__main__":

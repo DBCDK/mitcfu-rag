@@ -79,7 +79,11 @@ class TestGenericParser(unittest.TestCase):
                     "mainTitle": "Konspirationskulten QAnon",
                     "materialTypes": "film",
                     "publicationDateForRanking": "2022-01-01",
-                    "contributors": ["Benjamin Zand", "Christian Aalborg Frandsen", "Josh Reynolds"],
+                    "contributors": [
+                        "Benjamin Zand",
+                        "Christian Aalborg Frandsen",
+                        "Josh Reynolds",
+                    ],
                     "source": "https://mitcfu.dk/MaterialeInfo/?faust=TV0000129447",
                 },
                 page_content='Engelsk dokumentar fra 2021. 31. oktober 2017 postede Q Clearence Patriot sit første indlæg på 4chan og den 8. december 2020 sit sidste indlæg. I denne periode lykkedes det Q at skabe en enorm følgerskare blandt almindelige amerikanere, og bevægelsen QAnon voksede frem, og fik en skræmmende indflydelse på alle niveauer af det politiske liv. I dokumentaren undersøger den engelske journalist Benjamin Zand hvilke mennesker, der repræsenterer og støtter QAnon. Vi møder både indflydelsesrige mennesker som den 3-stjernede general og sikkerhedsrådgiver for Trump Michael Flynn, kongresmedlem Marjorie Taylor Greene, indflydelsesrigt republikansk partimedlem Roger Stone og ganske "almindelige" mennesker som Dave Roberts og Amanda Quimper. Zand interviewer dem, diskuterer med dem og må konstatere, at der overhovedet ikke er nogen sprækker i deres faste overbevisning.',
