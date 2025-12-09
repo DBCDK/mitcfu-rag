@@ -17,6 +17,7 @@ setup(
     test_suite="tests",
     # faiss skal tilføjes install_requires, når problemet med faiss er løst.
     install_requires=[
+        "dbc-data",
         "langchain",
         "langchain-text-splitters",
         "langchain_community",
@@ -48,7 +49,7 @@ setup(
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "create-faiss-index = mitcfu_rag.rag.retrievers.indexes.multilinguale5:main",
+            "create-faiss-index = mitcfu_rag.rag.index_vector_db:main",
             "mitcfu-RAG-sh = mitcfu_rag.term_ui:cli",
             "evaluate = mitcfu_rag.evaluation_tools.evaluation:run",
             "evaluate-retrieval = mitcfu_rag.evaluation_tools.evaluate_retrieval:run",
