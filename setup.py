@@ -28,7 +28,6 @@ setup(
         "nltk",
         "sentence_transformers",
         "rich",
-        "rank_bm25",
         "transformers",
         "torch",
         "dbc_pyutils",
