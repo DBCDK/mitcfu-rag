@@ -23,7 +23,6 @@ setup(
         "langchain_community",
         "langchain_unstructured",
         "langgraph",
-        "langsmith",
         "streamlit",
         "scikit-learn",
         "numpy",
