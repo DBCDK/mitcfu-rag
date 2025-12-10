@@ -36,7 +36,6 @@ setup(
         "pydantic",
         "aiohttp",
         "requests",
-        "keybert",
         "tokenizers",
         "accelerate",
     ],
