@@ -11,6 +11,7 @@ pipeline {
 	}
 	environment {
 		PACKAGE="mitcfu-rag"
+		ARTIFACTORY_LOGIN = credentials("artifactory_login")
 		DOCKER_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
 		GITLAB_PRIVATE_TOKEN = credentials("ai-gitlab-api-token")
 		KAFKA_TOPIC = "cisterne-work-jed-1-3"
