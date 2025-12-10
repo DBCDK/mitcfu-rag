@@ -71,12 +71,12 @@ pipeline {
 				branch 'main'
 			}
 			steps {
-				build job: "ai/mitcfu-rag/mitfu-rag-service/main", wait: false, propagate: false
+				build job: "ai/mitcfu-rag/mitcfu-rag-service/main", wait: false, propagate: false
 			}
 		}
 	}
-	//post {
-	//	unstable { slackSend message: "build became unstable for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
-	//	failure { slackSend message: "build failed for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
-	//}
+	post {
+		unstable { slackSend message: "build became unstable for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
+		failure { slackSend message: "build failed for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
+	}
 }
