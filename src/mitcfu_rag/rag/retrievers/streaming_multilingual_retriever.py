@@ -124,10 +124,16 @@ class EmbeddingRetriever(Retriever):
         manifestation = doc.get("manifestations", {}).get("all")[0]
         creators_publisher = manifestation.get("publisher", [])
         audience_subject = manifestation.get("audience", {}).get("generalAudience", [])
+        article_link = "https://mitcfu.dk/MaterialeInfo/?faust=" + str(doc_id)
+        # some movie urls are not based on faust, but can be found in accessUrls.
+        if access_urls := manifestation.get("access", {}).get("accessUrls", []):
+            for url in access_urls:
+                if "https://link.mitcfu.dk/m/" in url.get("url", ""):
+                    article_link = url.get("url")
         return Reference(
             id=str(doc_id),
             article_headline=doc.get("titles").get("full")[0],
-            article_link="https://mitcfu.dk/MaterialeInfo/?faust=" + str(doc_id),
+            article_link=article_link,
             score=0.0,
             text=text,
             chunk="Not chunked",

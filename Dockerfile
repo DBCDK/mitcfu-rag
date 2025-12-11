@@ -3,9 +3,9 @@ FROM docker-dbc.artifacts.dbccloud.dk/dbc-python3:latest
 RUN apt-get update && apt-get install -y --no-install-recommends wget && \
     conda install -y -c conda-forge faiss
 
-ARG MODEL_PATH=${ARTIFACTORY_URL}/${AI_PRODUCTION}/mitcfu-rag/ms-marco-MiniLM-L-6-v2.tgz
-ARG FAISS_PATH=${ARTIFACTORY_URL}/${AI_PRODUCTION}/mitcfu-rag/mitcfu_faiss_index_instruct.tgz
-ARG INDEX_PATH=${ARTIFACTORY_URL}/${AI_PRODUCTION}/mitcfu-rag/mitcfu_faiss_index_file_instruct.json
+ARG MODEL_PATH=${ARTIFACTORY_URL}/${AI_DOCKER_LAYERS}/mitcfu-rag/ms-marco-MiniLM-L-6-v2.tgz
+ARG FAISS_PATH=${ARTIFACTORY_URL}/${AI_DOCKER_LAYERS}/mitcfu-rag/mitcfu_faiss_index.tgz
+ARG INDEX_PATH=${ARTIFACTORY_URL}/${AI_DOCKER_LAYERS}/mitcfu-rag/mitcfu_faiss_index_file.json
 
 RUN useradd -m python
 USER python
