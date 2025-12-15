@@ -72,24 +72,6 @@ pipeline {
 				}
 			}
 		}
-		stage("update staging version number") {
-			agent {
-				docker {
-					label workerNode
-					image "docker-dbc.artifacts.dbccloud.dk/build-env:latest"
-					alwaysPull true
-				}
-			}
-			when {
-				branch "main"
-			}
-			steps {
-				dir("deploy") {
-					sh 'set-new-version mitcfu-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/mitcfu-rag-secrets $DOCKER_TAG -b staging'
-				}
-				build job: "ai/mitcfu-rag/mitcfu-rag-deployment/staging", wait: true
-			}
-		}
 		stage("set gitops variables for ai-prod") {
 			when {
 				branch "main"
@@ -122,24 +104,6 @@ pipeline {
 						$KUBECTL -n ai-prod rollout status deployment/mitcfu-rag-1-0 --timeout=1200s
 					"""
 				}
-			}
-		}
-		stage("update prod version number") {
-			agent {
-				docker {
-					label workerNode
-					image "docker-dbc.artifacts.dbccloud.dk/build-env:latest"
-					alwaysPull true
-				}
-			}
-			when {
-				branch "main"
-			}
-			steps {
-				dir("deploy") {
-					sh 'set-new-version mitcfu-rag-1-0.yml $GITLAB_PRIVATE_TOKEN ai/mitcfu-rag-secrets $DOCKER_TAG -b prod'
-				}
-				build job: "ai/mitcfu-rag/mitcfu-rag-deployment/prod", wait: true
 			}
 		}
 	}
