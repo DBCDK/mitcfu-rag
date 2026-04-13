@@ -27,6 +27,7 @@ setup(
         "scikit-learn",
         "numpy",
         "nltk",
+        "docling",
         "sentence_transformers",
         "rich",
         "rank_bm25",

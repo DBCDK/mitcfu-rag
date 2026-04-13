@@ -11,26 +11,22 @@ in "So you want to index your own documents ..."
 ## So you want to index your own documents ...
 On ai-p301:
 1. Place all your documents (pdfs, text files, etc.) in a directory of your choice (I have mine locally under git/science-rag/data)
-2. Load a list of all the document file paths.
-3. Use the GenericParser to parse the documents into LangChain Document objects.
-4. Convert the LangChain document objects into dictionary structure (JED), which is compatible with the MitCFU RAG pipeline.
-Here, it is important that page_content --> abstract, and that you create a form of unique_id for each document. 
-5. Save a list of these JED documents as a json file (this will be used later when starting the service)
-6. Create a FAISS index from the JED documents using e.g. multilingual-e5 embeddings. You can upload these to artifactory or save them
-locally or on ai-p301.
-7. When starting the RAG service, point to the location of the json file list and the FAISS index (as well as embedding/validator models).
-8. You can start the service using: 
+2. Make a directory where you want to store your embeddings/FAISS index such as `output_embedding_dir`
+3. To parse the documents and create the faiss index, run
 
-`streaming-service-science-rag /data/mitCFU-models/multilingual-e5-large /data/mitCFU/science-RAG/faiss-indexes/pdf-test-index 
---article_index_path ./src/science_rag/data/parsed_science_docs.json --validator-model-path /data/mitCFU-models/ms-marco-MiniLM-L-6-v2 
---verbose --use-ceph --port 5009`
+`python src/science_rag/rag/retrievers/indexes/docling_indexer.py path/to/all/documents name_of_output_chunk_document.json output_embedding_dir/`
 
-9. You can then start Streamlit using:
+4. When starting the RAG service, point to the location of the json file list and the FAISS index (as well as embedding/validator models).
+5. You can start the service using: 
+
+`streaming-service-science-rag /data/mitCFU-models/multilingual-e5-large output_embedding_dir --article_index_path name_of_output_chunk_document --validator-model-path /data/mitCFU-models/ms-marco-MiniLM-L-6-v2 
+--verbose --port 5011`
+
+6. You can then start Streamlit using:
 streamlit run src/science_rag/streamlit_ui.py --server.port 8111
+7. Hooray! You should now be able to query your own documents using RAG.
 
-10. Hooray! You should now be able to query your own documents using RAG.
-
-If you have further questions about the process, ask rani for his notebook example for the PDFs from CFU.
+If you have further questions about the process, ask rani or nily for their notebook example for the PDFs from CFU.
 
 ## NOTE: The rest of the documentation is from MitCFU-RAG.
 Many of commands should be analogous, but see the guide above for greater clarity.
