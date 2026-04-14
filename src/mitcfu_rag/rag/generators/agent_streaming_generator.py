@@ -62,6 +62,23 @@ class AgentStreamingGenerator(Generator):
                 "http://chat-bib-tgi-1-0.mi-prod.svc.cloud.dbc.dk/generate_stream",
             ),
         }
+        self.vllm_endpoints = {
+            GEMMA_3_12B: os.environ.get(
+                "MITCFU_VLLM_URL",
+                "http://vllm-gemma-3-12b-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
+            ),
+            MIXTRAL_8X7B: self.tgi_endpoints[MIXTRAL_8X7B],
+        }
+        self.request_models = {
+            "tgi": {
+                GEMMA_3_12B: os.environ.get("MITCFU_TGI_MODEL", "tgi"),
+                MIXTRAL_8X7B: MIXTRAL_8X7B,
+            },
+            "vllm": {
+                GEMMA_3_12B: os.environ.get("MITCFU_VLLM_MODEL", ""),
+                MIXTRAL_8X7B: MIXTRAL_8X7B,
+            },
+        }
         self.tokenizers = load_tokenizers(
             list(self.tgi_endpoints.keys()), use_ceph=use_ceph
         )
@@ -89,6 +106,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             f"Replying as {prompt_template['name']} with model {prompt_template['model']}"
         )
         messages = input["input"]
+        endpoint_profile = input.get("endpoint_profile", "tgi")
         cleaned_messages = clean_sources_from_messages(messages)
 
         max_new_tokens = (
@@ -97,7 +115,10 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         async for chunk in self.llm_generate(
             {
                 "messages": cleaned_messages,
-                "model": "tgi",
+                "model": self.request_models.get(endpoint_profile, {}).get(
+                    prompt_template["model"], prompt_template["model"]
+                ),
+                "endpoint_profile": endpoint_profile,
                 "stream": True,
                 "model_name": prompt_template["model"],
                 "prompt_template": prompt_template["prompt"],
@@ -251,34 +272,110 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         request_body_str = json.dumps(
             tgi_input_format(input["model_name"], request_body)
         )
+        endpoint_profile = input.get("endpoint_profile", "tgi")
+        endpoint_lookup = (
+            self.vllm_endpoints if endpoint_profile == "vllm" else self.tgi_endpoints
+        )
+        endpoint_url = endpoint_lookup.get(
+            input["model_name"], self.tgi_endpoints[input["model_name"]]
+        )
+
+        endpoint_profile = input.get("endpoint_profile", "tgi")
         async with self.session.post(
-            self.tgi_endpoints[input["model_name"]],
+            endpoint_url,
             headers=fetch_options["headers"],
             data=request_body_str,
         ) as response:
+            if response.status >= 400:
+                error_body = await response.text()
+                logger.info(
+                    f"Model endpoint returned status {response.status}: {error_body}"
+                )
+                return
+            stream_buffer = ""
             async for chunk in response.content.iter_chunked(1024):
                 if chunk:
-                    # yield chunk
-                    decoded_value = self.decode(chunk, stream=True)
-                    try:
-                        obj = json.loads(decoded_value.replace("data:", ""))
-                        token = self.model_output_function(obj)
-                        if (
-                            token == self.tokenizers[input["model_name"]].eos_token
-                            and parsed_references
-                        ):
-                            continue
-                        else:
-                            if input["model_name"] == DEFAULT_MODEL:
-                                yield chunk
+                    if endpoint_profile == "vllm":
+                        decoded_value = self.decode(chunk, stream=True)
+                        stream_buffer += decoded_value
+                        lines = stream_buffer.split("\n")
+                        stream_buffer = lines.pop()
+                        for line in lines:
+                            line = line.strip()
+                            if not line:
+                                continue
+                            payload = (
+                                line[len("data:") :].strip()
+                                if line.startswith("data:")
+                                else line
+                            )
+                            if payload == "[DONE]":
+                                continue
+                            try:
+                                obj = json.loads(payload)
+                                token = self.model_output_function(obj)
+                                if (
+                                    token == self.tokenizers[input["model_name"]].eos_token
+                                    and parsed_references
+                                ):
+                                    continue
+                                if input["model_name"] == DEFAULT_MODEL:
+                                    yield f"data: {json.dumps(obj)}\n\n"
+                                else:
+                                    yield (
+                                        f"data: {json.dumps(tgi_output_format(DEFAULT_MODEL, token))}\n\n"
+                                    )
+                            except json.JSONDecodeError:
+                                continue
+                            except Exception as e:
+                                logger.info(f"Error during streaming: {e}")
+                    else:
+                        # yield chunk
+                        decoded_value = self.decode(chunk, stream=True)
+                        try:
+                            obj = json.loads(decoded_value.replace("data:", ""))
+                            token = self.model_output_function(obj)
+                            if (
+                                token == self.tokenizers[input["model_name"]].eos_token
+                                and parsed_references
+                            ):
+                                continue
                             else:
-                                yield json.dumps(
-                                    tgi_output_format(DEFAULT_MODEL, token)
-                                )
-                    except json.JSONDecodeError:
-                        pass
-                    except Exception as e:
-                        logger.info(f"Error during streaming: {e}")
+                                if input["model_name"] == DEFAULT_MODEL:
+                                    yield chunk
+                                else:
+                                    yield json.dumps(
+                                        tgi_output_format(DEFAULT_MODEL, token)
+                                    )
+                        except json.JSONDecodeError:
+                            pass
+                        except Exception as e:
+                            logger.info(f"Error during streaming: {e}")
+
+            if endpoint_profile == "vllm":
+                residual = stream_buffer.strip()
+                if residual:
+                    payload = (
+                        residual[len("data:") :].strip()
+                        if residual.startswith("data:")
+                        else residual
+                    )
+                    if payload and payload != "[DONE]":
+                        try:
+                            obj = json.loads(payload)
+                            token = self.model_output_function(obj)
+                            if not (
+                                token == self.tokenizers[input["model_name"]].eos_token
+                                and parsed_references
+                            ):
+                                if input["model_name"] == DEFAULT_MODEL:
+                                    yield f"data: {json.dumps(obj)}\n\n"
+                                else:
+                                    yield (
+                                        f"data: {json.dumps(tgi_output_format(DEFAULT_MODEL, token))}\n\n"
+                                    )
+                        except Exception:
+                            pass
 
         # filter references so that no two references have the same article_link
         if parsed_references and input["agent_type"] in {"RAG", "FOLLOW_UP"}:
@@ -289,5 +386,10 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                     seen_links.add(ref.article_link)
                     filtered_references.append(ref)
 
+            endpoint_profile = input.get("endpoint_profile", "tgi")
             async for ref in self.async_reference_generator(filtered_references):
-                yield f"data:{ref}\n"
+                if endpoint_profile == "vllm":
+                    # Keep SSE framing consistent with model chunks.
+                    yield f"data: {ref}\n\n"
+                else:
+                    yield f"data:{ref}\n"
