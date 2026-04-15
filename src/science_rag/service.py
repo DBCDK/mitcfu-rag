@@ -100,6 +100,13 @@ class GlyphGateHandler(BaseHandler):
         stream = body.get("stream", False)
         model_name = body.get("model", DEFAULT_MODEL)
 
+        # The rag pipeline expects content to be a str, not a list of dicts
+        messages = [
+            {"role": msg["role"], "content": content["text"]}
+            for msg in messages
+            for content in msg["content"] if content.get("type", "") == "text"
+        ]
+
         result = await self.agentic_graph.graph.ainvoke(
             {"input": messages, "endpoint_profile": "vllm"}
         )
