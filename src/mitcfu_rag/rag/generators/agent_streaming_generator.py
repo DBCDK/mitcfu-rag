@@ -172,7 +172,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                 result += "Dokumenter:" + (
                     ". ".join(
                         [
-                            f"{ref.article_headline}: {ref.text[:500]}"
+                            f"{ref.text}"
                             for ref in parsed_references
                         ]
                     )
@@ -217,7 +217,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         for ref in references:
             yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
             yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
-            tokens = [f"[{ref.article_headline}]({ref.article_link})"]
+            tokens = [f"{ref.text[:50]}"]
             for token in tokens:
                 yield json.dumps(tgi_output_format(DEFAULT_MODEL, token))
 
@@ -382,8 +382,8 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             seen_links = set()
             filtered_references = []
             for ref in parsed_references:
-                if ref.article_link not in seen_links:
-                    seen_links.add(ref.article_link)
+                if ref.text[0] not in seen_links:
+                    seen_links.add(ref.text[0])
                     filtered_references.append(ref)
 
             endpoint_profile = input.get("endpoint_profile", "tgi")

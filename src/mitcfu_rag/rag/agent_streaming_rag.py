@@ -25,11 +25,15 @@ import logging
 import asyncio
 from typing import Generator, Any
 from mitcfu_rag.rag.rag import RAG
-
+from mitcfu_rag.tools.llm_formatting import clean_sources_from_messages
 # from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
 from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import (
     EmbeddingRetriever,
 )
+
+from retrieval_utils.embedders import LocalHFEmbedder
+from retrieval_utils.retrievers.embedding import EmbeddingRetriever
+from retrieval_utils.index.faiss_store import FAISSVectorStore
 
 # from mitcfu_rag.rag.retrievers.multilinguale5_large_retriever import EmbeddingRetriever
 from mitcfu_rag.rag.generators.agent_streaming_generator import AgentStreamingGenerator
@@ -50,11 +54,17 @@ class AgenticRAG(RAG):
         Components used in the RAG model.
         """
         self.parser = None
-        self.retriever = EmbeddingRetriever(
+        self.embedder = LocalHFEmbedder(
             model_path=embedding_model,
-            embeddings_path=faiss_index,
-            jed_document_path=jed_document_path,
-            cross_model_path=validator_model,
+            query_prefix="Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:",
+            max_length=512,
+            device="cpu",
+            batch_size=256,
+        )
+        self.vector_store = FAISSVectorStore.load("test_mitcfu_store")
+        self.retriever = EmbeddingRetriever(
+            embedder=self.embedder,
+            store=self.vector_store,
         )
         self.reranker = None
         self.generator = AgentStreamingGenerator(use_ceph=use_ceph)
@@ -69,31 +79,32 @@ class AgenticRAG(RAG):
         """
         yields response tokens from rag request.
         """
+        messages = clean_sources_from_messages(input["input"])[-1]["content"]
         if input.get("agent", "") == "RAG":
             if input.get("reformulated_queries"):
                 results = await asyncio.gather(
-                    self.retriever.async_rerank_retrieve(input, n=limit)
+                    self.retriever.retrieve(messages, top_k=limit)
                 )
             else:
-                results = await asyncio.gather(self.retriever.async_retrieve(input))
-            similarities, references = results[0]
+                results = await asyncio.gather(self.retriever.retrieve(messages))
+            references = results[0]
             references = references[:limit]
         elif input.get("agent", "") == "FOLLOW_UP":
             input["FOLLOW_UP"] = True
             if input.get("reformulated_queries"):
                 results = await asyncio.gather(
-                    self.retriever.async_rerank_retrieve(input, n=limit, follow_up=True)
+                    self.retriever.retrieve(messages, top_k=limit)
                 )
             else:
                 results = await asyncio.gather(
-                    self.retriever.async_retrieve(input, follow_up=True)
+                    self.retriever.retrieve(messages)
                 )
-            similarities, references = results[0]
-            similarities = similarities[:limit]
+            references = results[0]
             references = references[:limit]
         else:
             references = None
 
+        print(references)
         async for item in self.generator.generate(references, input, prompt_template):
             yield item
 
