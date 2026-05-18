@@ -35,5 +35,6 @@ custom-rag-sandbox.ipynb
 #Example files
 Examples/
 .vscode/settings.json
-rani_science_preprocessing.ipynb
-rani_testing.ipynb
+
+# develop 
+develop/
