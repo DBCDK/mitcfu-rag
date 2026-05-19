@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 class AstraPreprocessor:
     """
     Preprocessing for cleaning and normalizing raw page content from Astra
-    .csv exportts, which may include:
+    .csv exports, which may include:
 
     - HTML fragments
     - widgets/layout noise
@@ -16,8 +16,10 @@ class AstraPreprocessor:
     - Duplicated text from activities or headings
     - Extra whitespaces
 
-    Editors note: Helper functions are AI-generated using few-shot prompting
-    and may need further manual review.
+    Workflow should be:
+    1. Concatenate relevant columns into 'page_content_raw' and 'metadata'.
+    2. Apply `preprocess` to clean and normalize the text into 'page_content'.
+    3. Validate cleaned 'page_content' using 'test_astra_preprocessor.py' functions.
     """
 
     def __init__(
@@ -67,6 +69,41 @@ class AstraPreprocessor:
             r"\bLæs mere om modellen her\b",
             r"\bLæs mere om modellen\b",
         ]
+
+    # ---------------------------------------
+    # --- Extract raw content + metadata ----
+    # ---------------------------------------
+    def concatenate_page_content_raw(
+        df, metadata_cols: list[str] = [], exclude_cols: list[str] = [], exclude_col_if_contains: list[str] = []
+    ):
+        """
+        Concatenates the content of all string type columns in the DataFrame into a single column 'page_content_raw',
+        excluding columns specified in `exclude_cols` or columns containing any substring in `exclude_col_if_contains`.
+
+        Parameters:
+        df (pd.DataFrame): The input DataFrame.
+        metadata_cols (list[str]): List of column names to add to the metadata dictionary for each row.
+        exclude_cols (list[str]): List of column names to exclude from concatenation.
+        exclude_col_if_contains (list[str]): List of substrings; columns containing any of these substrings will be excluded.
+
+        Returns:
+        pd.DataFrame: The DataFrame with the new 'page_content_raw' and 'metadata' columns.
+        """
+        df["page_content_raw"] = ""
+        df["metadata"] = None
+        for index, row in df.iterrows():
+            page_content_parts = []
+            for col in df.columns:
+                if col in exclude_cols or col in metadata_cols:
+                    continue
+                if any(substring in col for substring in exclude_col_if_contains):
+                    continue
+                if isinstance(row[col], str):
+                    page_content_parts.append(row[col])
+
+            df.at[index, "page_content_raw"] = " ".join(page_content_parts)
+            df.at[index, "metadata"] = {col: row[col] for col in metadata_cols}
+        return df
 
     # ---------------------------------------
     # ----- Main preprocessing function -----
