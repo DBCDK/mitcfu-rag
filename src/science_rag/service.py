@@ -104,7 +104,12 @@ class GlyphGateHandler(BaseHandler):
         messages = [
             {"role": msg["role"], "content": content["text"]}
             for msg in messages
-            for content in msg["content"] if content.get("type", "") == "text"
+            for content in (
+                msg["content"]
+                if isinstance(msg["content"], list)
+                else [{"type": "text", "text": msg["content"]}]
+            )
+            if content.get("type", "") == "text"
         ]
 
         result = await self.agentic_graph.graph.ainvoke(
