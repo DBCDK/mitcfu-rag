@@ -236,9 +236,6 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         async for ref in self.reference_generator(parsed_references):
             await asyncio.sleep(random.choice(self.streaming_delays))
             yield ref
-        yield json.dumps(
-            tgi_output_format(DEFAULT_MODEL, self.tokenizers[DEFAULT_MODEL].eos_token)
-        )
 
     async def llm_generate(self, input, parsed_references):
         fetch_options = {
@@ -393,3 +390,11 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                     yield f"data: {ref}\n\n"
                 else:
                     yield f"data:{ref}\n"
+
+            if endpoint_profile != "vllm":
+                ref = json.dumps(
+                    tgi_output_format(
+                        DEFAULT_MODEL, self.tokenizers[DEFAULT_MODEL].eos_token
+                    )
+                )
+                yield f"data:{ref}\n"
