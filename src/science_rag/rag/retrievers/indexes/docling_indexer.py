@@ -28,21 +28,25 @@ WEBPDF_MAP = {
     "Fight the Bite.pdf": "https://undervisning.life.dk/fb",
 }
 
+
 def get_science_rag_document_paths(path_to_folder):
     # temporary list of documents to ignore
-    documents_to_ignore = {"Samling af datakilder til RAG.docx",
-                           "links til kilder.docx",
-                           "Webhenvisning fra zoo.docx",
-                           "speciale-henvisninger.docx"}
+    documents_to_ignore = {
+        "Samling af datakilder til RAG.docx",
+        "links til kilder.docx",
+        "Webhenvisning fra zoo.docx",
+        "speciale-henvisninger.docx",
+    }
 
     science_rag_doc_paths = []
     for root, dirs, files in os.walk(path_to_folder):
         for file in files:
             if file in documents_to_ignore:
                 continue
-            if file.endswith('.pdf'):
+            if file.endswith(".pdf"):
                 science_rag_doc_paths.append(os.path.join(root, file))
     return science_rag_doc_paths
+
 
 def get_docling_chunks(input_file):
     # parse document
@@ -66,6 +70,7 @@ def get_docling_chunks(input_file):
 
     return jedish_docs
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -75,10 +80,8 @@ def parse_args():
         type=str,
     )
     parser.add_argument(
-        "document_index_file_path",
-        metavar="document-index-file-path",
-        help="path to save the indexed chunks",
-        type=str)
+        "document_index_file_path", metavar="document-index-file-path", help="path to save the indexed chunks", type=str
+    )
     parser.add_argument(
         "faiss_db_directory",
         metavar="faiss-db-directory",
@@ -93,27 +96,28 @@ def parse_args():
     )
     return parser.parse_args()
 
+
 def main():
     args = parse_args()
     logger.info(f"Getting paths to science rag documents from {args.path_to_science_rag_folder}")
     science_rag_doc_paths = get_science_rag_document_paths(args.path_to_science_rag_folder)
-    scince_rag_chunks = []
+    science_rag_chunks = []
 
     logger.info(f"Reading and chunking {len(science_rag_doc_paths)} science rag documents")
     for file_path in science_rag_doc_paths:
-        scince_rag_chunks.extend(get_docling_chunks(file_path))
+        science_rag_chunks.extend(get_docling_chunks(file_path))
 
-    logger.info(f"Saving {len(scince_rag_chunks)} science rag chunks")
-    with open(args.document_index_file_path, 'w') as f:
-        json.dump(scince_rag_chunks, f)
+    logger.info(f"Saving {len(science_rag_chunks)} science rag chunks")
+    with open(args.document_index_file_path, "w") as f:
+        json.dump(science_rag_chunks, f)
 
-    logger.info(f"Embedding {len(scince_rag_chunks)} science rag chunks and saving FAISS db to {args.faiss_db_directory}")
-    index_paragraph_docs_GPU_batches(
-        path_to_index_file=args.document_index_file_path,
-        path=args.faiss_db_directory,
-        batch_size=args.batch_size
+    logger.info(
+        f"Embedding {len(science_rag_chunks)} science rag chunks and saving FAISS db to {args.faiss_db_directory}"
     )
+    index_paragraph_docs_GPU_batches(
+        path_to_index_file=args.document_index_file_path, path=args.faiss_db_directory, batch_size=args.batch_size
+    )
+
 
 if __name__ == "__main__":
     main()
-
