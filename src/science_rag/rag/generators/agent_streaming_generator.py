@@ -65,7 +65,7 @@ class AgentStreamingGenerator(Generator):
         self.vllm_endpoints = {
             GEMMA_3_12B: os.environ.get(
                 "SCIENCE_RAG_VLLM_URL",
-                "http://vllm-gemma-3-12b-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
+                "http://vllm-skolegpt-v3-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
             ),
             MIXTRAL_8X7B: self.tgi_endpoints[MIXTRAL_8X7B],
         }
@@ -113,6 +113,7 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
                     "model": self.request_models.get(endpoint_profile, {}).get(
                     prompt_template["model"], prompt_template["model"]
                 ),
+                "endpoint_profile": endpoint_profile,
                 "stream": True,
                 "model_name": prompt_template["model"],
                 "prompt_template": prompt_template["prompt"],
@@ -214,7 +215,6 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
         async for ref in self.reference_generator(parsed_references):
             await asyncio.sleep(random.choice(self.streaming_delays))
             yield ref
-        yield json.dumps(tgi_output_format(DEFAULT_MODEL, self.tokenizers[DEFAULT_MODEL].eos_token))
 
     async def llm_generate(self, input, parsed_references):
         fetch_options = {
@@ -365,4 +365,7 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
                     yield f"data: {ref}\n\n"
                 else:
                     yield f"data:{ref}\n"
+            if endpoint_profile != "vllm":
+                ref = json.dumps(tgi_output_format(DEFAULT_MODEL, self.tokenizers[DEFAULT_MODEL].eos_token))
+                yield f"data:{ref}\n"
 
