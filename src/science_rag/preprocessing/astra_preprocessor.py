@@ -74,7 +74,11 @@ class AstraPreprocessor:
     # --- Extract raw content + metadata ----
     # ---------------------------------------
     def concatenate_page_content_raw(
-        df, metadata_cols: list[str] = [], exclude_cols: list[str] = [], exclude_col_if_contains: list[str] = []
+        self,
+        df,
+        metadata_cols: list[str] = None,
+        exclude_cols: list[str] = None,
+        exclude_col_if_contains: list[str] = None,
     ):
         """
         Concatenates the content of all string type columns in the DataFrame into a single column 'page_content_raw',
@@ -89,6 +93,11 @@ class AstraPreprocessor:
         Returns:
         pd.DataFrame: The DataFrame with the new 'page_content_raw' and 'metadata' columns.
         """
+        metadata_cols = metadata_cols or []
+        exclude_cols = exclude_cols or []
+        exclude_col_if_contains = exclude_col_if_contains or []
+
+        df = df.copy()
         df["page_content_raw"] = ""
         df["metadata"] = None
         for index, row in df.iterrows():

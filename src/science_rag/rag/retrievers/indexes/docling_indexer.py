@@ -1,3 +1,5 @@
+from science_rag.preprocessing.astra_preprocessor import AstraPreprocessor
+from science_rag.preprocessing.astra_df_to_chunked_docs import astra_df_to_docling_chunks
 from science_rag.tools.generic_parser import GenericParser
 from docling.document_converter import DocumentConverter
 from docling.chunking import HybridChunker
@@ -16,8 +18,36 @@ import random
 import logging
 import os
 import json
+import pandas as pd
+
 
 logger = logging.getLogger(__name__)
+
+# Standard columns to keep for metadata/exclude from the CSV files
+aktiviteter_metadata_cols = [
+    "ID",
+    "Title",
+    "[Manchet] Varighed",
+    "[Manchet] Niveau",
+    "Fag",
+    "Klassetrin",
+    "Emneord",
+    "Kategori",
+]
+aktiviteter_exclude_cols = ["Which tabs to show", "URL", "page_content_raw", "page_content"]
+aktiviteter_exclude_col_if_contains = []
+
+forlob_metadata_cols = ["ID", "Title", "Varighed", "Partnere", "Tilknyttede aktiviteter"]
+forlob_exclude_col_if_contains = ["download_or_link", "pdf_link"]
+forlob_exclude_cols = [
+    "Hvilke faner skal vises",
+    "Video url",
+    "Sidebar email_acf_education_material_sidebar_boxes_email_header",
+    "Sidebar email_acf_education_material_sidebar_boxes_email_content",
+    "URL",
+    "page_content_raw",
+    "page_content",
+]
 
 # Temporary map to show some examples of why links work/don't work
 WEBPDF_MAP = {
@@ -94,6 +124,10 @@ def parse_args():
         help="batch size for embedding chunks",
         default=50,
     )
+    parser.add_argument(
+        "--aktiviteter-csv", type=str, required=False, help="(Optional) Path to the Aktiviteter CSV file."
+    )
+    parser.add_argument("--forlob-csv", type=str, required=False, help="(Optional) Path to the Forløb CSV file.")
     return parser.parse_args()
 
 
@@ -101,11 +135,44 @@ def main():
     args = parse_args()
     logger.info(f"Getting paths to science rag documents from {args.path_to_science_rag_folder}")
     science_rag_doc_paths = get_science_rag_document_paths(args.path_to_science_rag_folder)
+
+    # a science_rag_chunk must - in order (to work with index_paragraph_docs_GPU_batches - contain:
+    # ID as the key to a dictionary with at least "abstract" as a key, and the value of "abstract"
+    # should be the text to embed
     science_rag_chunks = []
 
     logger.info(f"Reading and chunking {len(science_rag_doc_paths)} science rag documents")
     for file_path in science_rag_doc_paths:
         science_rag_chunks.extend(get_docling_chunks(file_path))
+
+    # For now, adding hardcoded .csv files for astra csv's (should we add .csv handling?)
+    if args.aktiviteter_csv and args.forlob_csv:
+        logger.info(f"Processing Aktiviteter CSV from {args.aktiviteter_csv} and Forløb CSV from {args.forlob_csv}")
+        preprocessor = AstraPreprocessor()
+
+        # Loading the CSV files into dataframes
+        aktiviteter_df = pd.read_csv(args.aktiviteter_csv, sep=",", encoding="utf-8")
+        forlob_df = pd.read_csv(args.forlob_csv, sep=",", encoding="utf-8")
+
+        # Preprocessing and chunking the dataframes into docling chunks
+        aktiviteter_list_of_jedish_docs = astra_df_to_docling_chunks(
+            aktiviteter_df,
+            preprocessor=preprocessor,
+            metadata_cols=aktiviteter_metadata_cols,
+            exclude_cols=aktiviteter_exclude_cols,
+            exclude_col_if_contains=aktiviteter_exclude_col_if_contains,
+        )
+
+        forlob_list_of_jedish_docs = astra_df_to_docling_chunks(
+            forlob_df,
+            preprocessor=preprocessor,
+            metadata_cols=forlob_metadata_cols,
+            exclude_cols=forlob_exclude_cols,
+            exclude_col_if_contains=forlob_exclude_col_if_contains,
+        )
+
+        science_rag_chunks.extend(aktiviteter_list_of_jedish_docs)
+        science_rag_chunks.extend(forlob_list_of_jedish_docs)
 
     logger.info(f"Saving {len(science_rag_chunks)} science rag chunks")
     with open(args.document_index_file_path, "w") as f:
