@@ -65,7 +65,7 @@ class AgentStreamingGenerator(Generator):
         self.vllm_endpoints = {
             GEMMA_3_12B: os.environ.get(
                 "MITCFU_VLLM_URL",
-                "http://vllm-gemma-3-12b-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
+                "http://vllm-skolegpt-v3-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
             ),
             MIXTRAL_8X7B: self.tgi_endpoints[MIXTRAL_8X7B],
         }
