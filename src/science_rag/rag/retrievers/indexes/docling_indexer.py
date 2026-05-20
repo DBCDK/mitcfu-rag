@@ -1,25 +1,15 @@
-from science_rag.preprocessing.astra_preprocessor import AstraPreprocessor
-from science_rag.preprocessing.astra_df_to_chunked_docs import astra_df_to_docling_chunks
-from science_rag.tools.generic_parser import GenericParser
-from docling.document_converter import DocumentConverter
-from docling.chunking import HybridChunker
 import argparse
-import multiprocessing as mp
-import numpy as np
-from tqdm import tqdm
-import torch
-import torch.nn.functional as F
-from torch import Tensor
-from science_rag.tools.knn_searcher import KNNSearch
-from science_rag.tools.embedder import Embedder
-from science_rag.rag.retrievers.indexes.multilinguale5 import index_paragraph_docs_GPU_batches
-from transformers import AutoTokenizer, AutoModel
-import random
+import json
 import logging
 import os
-import json
-import pandas as pd
 
+import pandas as pd
+from docling.chunking import HybridChunker
+from docling.document_converter import DocumentConverter
+
+from science_rag.preprocessing.astra_df_to_chunked_docs import astra_df_to_docling_chunks
+from science_rag.preprocessing.astra_preprocessor import AstraPreprocessor
+from science_rag.rag.retrievers.indexes.multilinguale5 import index_paragraph_docs_GPU_batches
 
 logger = logging.getLogger(__name__)
 
