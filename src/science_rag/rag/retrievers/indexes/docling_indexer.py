@@ -136,15 +136,12 @@ def main():
         science_rag_chunks.extend(get_docling_chunks(file_path))
 
     # For now, adding hardcoded .csv files for astra csv's (should we add a more general .csv handling?)
-    if args.aktiviteter_csv and args.forlob_csv:
-        logger.info(f"Processing Aktiviteter CSV from {args.aktiviteter_csv} and Forløb CSV from {args.forlob_csv}")
+    if args.aktiviteter_csv or args.forlob_csv:
         preprocessor = AstraPreprocessor()
 
-        # Loading the CSV files into dataframes
+    # Reading and preprocessing activities (aktiviteter)
+    if args.aktiviteter_csv:
         aktiviteter_df = pd.read_csv(args.aktiviteter_csv, sep=",", encoding="utf-8")
-        forlob_df = pd.read_csv(args.forlob_csv, sep=",", encoding="utf-8")
-
-        # Preprocessing and chunking the dataframes into docling chunks
         aktiviteter_list_of_jedish_docs = astra_df_to_docling_chunks(
             aktiviteter_df,
             preprocessor=preprocessor,
@@ -153,6 +150,11 @@ def main():
             exclude_col_if_contains=aktiviteter_exclude_col_if_contains,
         )
 
+        science_rag_chunks.extend(aktiviteter_list_of_jedish_docs)
+
+    # Reading and preprocessing courses (forløb)
+    if args.forlob_csv:
+        forlob_df = pd.read_csv(args.forlob_csv, sep=",", encoding="utf-8")
         forlob_list_of_jedish_docs = astra_df_to_docling_chunks(
             forlob_df,
             preprocessor=preprocessor,
@@ -161,7 +163,6 @@ def main():
             exclude_col_if_contains=forlob_exclude_col_if_contains,
         )
 
-        science_rag_chunks.extend(aktiviteter_list_of_jedish_docs)
         science_rag_chunks.extend(forlob_list_of_jedish_docs)
 
     logger.info(f"Saving {len(science_rag_chunks)} science rag chunks")
