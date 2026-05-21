@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 aktiviteter_metadata_cols = [
     "ID",
     "Title",
+    "URL",
     "[Manchet] Varighed",
     "[Manchet] Niveau",
     "Fag",
@@ -24,17 +25,16 @@ aktiviteter_metadata_cols = [
     "Emneord",
     "Kategori",
 ]
-aktiviteter_exclude_cols = ["Which tabs to show", "URL", "page_content_raw", "page_content"]
+aktiviteter_exclude_cols = ["Which tabs to show", "page_content_raw", "page_content"]
 aktiviteter_exclude_col_if_contains = []
 
-forlob_metadata_cols = ["ID", "Title", "Varighed", "Partnere", "Tilknyttede aktiviteter"]
+forlob_metadata_cols = ["ID", "Title", "URL", "Varighed", "Partnere", "Tilknyttede aktiviteter"]
 forlob_exclude_col_if_contains = ["download_or_link", "pdf_link"]
 forlob_exclude_cols = [
     "Hvilke faner skal vises",
     "Video url",
     "Sidebar email_acf_education_material_sidebar_boxes_email_header",
     "Sidebar email_acf_education_material_sidebar_boxes_email_content",
-    "URL",
     "page_content_raw",
     "page_content",
 ]

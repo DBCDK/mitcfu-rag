@@ -6,6 +6,7 @@ import pandas as pd
 from docling.document_converter import DocumentConverter
 from docling.chunking import HybridChunker
 from docling.datamodel.base_models import InputFormat
+from science_rag.preprocessing.astra_preprocessor import AstraPreprocessor
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s")
 aktiviteter_metadata_cols = [
     "ID",
     "Title",
+    "URL",
     "[Manchet] Varighed",
     "[Manchet] Niveau",
     "Fag",
@@ -24,17 +26,16 @@ aktiviteter_metadata_cols = [
     "Emneord",
     "Kategori",
 ]
-aktiviteter_exclude_cols = ["Which tabs to show", "URL", "page_content_raw", "page_content"]
+aktiviteter_exclude_cols = ["Which tabs to show", "page_content_raw", "page_content"]
 aktiviteter_exclude_col_if_contains = []
 
-forlob_metadata_cols = ["ID", "Title", "Varighed", "Partnere", "Tilknyttede aktiviteter"]
+forlob_metadata_cols = ["ID", "Title", "URL", "Varighed", "Partnere", "Tilknyttede aktiviteter"]
 forlob_exclude_col_if_contains = ["download_or_link", "pdf_link"]
 forlob_exclude_cols = [
     "Hvilke faner skal vises",
     "Video url",
     "Sidebar email_acf_education_material_sidebar_boxes_email_header",
     "Sidebar email_acf_education_material_sidebar_boxes_email_content",
-    "URL",
     "page_content_raw",
     "page_content",
 ]
@@ -52,7 +53,30 @@ def _df_to_json_safe_dict(value):
     return value
 
 
-def astra_df_to_docling_chunks(df, preprocessor, metadata_cols, exclude_cols, exclude_col_if_contains):
+def astra_df_to_docling_chunks(
+    df: pd.DataFrame,
+    preprocessor: AstraPreprocessor,
+    metadata_cols: list[str],
+    exclude_cols: list[str],
+    exclude_col_if_contains: list[str],
+):
+    """
+    Convert a DataFrame to Docling chunks in a jedish-compatible format. This format is a list of
+    dictionaries, where each dictionary has a chunk ID_chunk_idx as keys and values are dictionaries
+    containing 'abstract' (text to be embedded) and 'metadata' - including at least the Title and URL
+    in this metadata is important for downstream tasks.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame containing the data to be processed (should contain Title and URL column).
+        preprocessor (AstraPreprocessor): An instance of AstraPreprocessor or similar to preprocess the text.
+        metadata_cols (list[str]): List of column names to keep as metadata and not use in abstract.
+        exclude_cols (list[str]): List of column names to exclude from the abstract.
+        exclude_col_if_contains (list[str]): List of substrings; any column containing these are excluded from abstract.
+
+    Returns:
+        list[dict]: A list of dictionaries, where each dictionary has a chunk ID as key and a
+        value that is another dictionary with 'abstract' (text for embedding) and 'metadata'.
+    """
     df_raw = preprocessor.concatenate_page_content_raw(
         df,
         metadata_cols=metadata_cols,

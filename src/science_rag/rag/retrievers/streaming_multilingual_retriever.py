@@ -79,6 +79,7 @@ class EmbeddingRetriever(Retriever):
         for document in all_documents:
             for doc_id, doc in document.items():
                 text = doc.get("abstract")
+                metadata = doc.get("metadata", {})
                 if text:
                     all_articles[str(doc_id)] = self.format_doc(doc_id, doc)
 
@@ -94,6 +95,7 @@ class EmbeddingRetriever(Retriever):
     def format_doc(self, doc_id, doc):
         # work info. Currently empty since we are using only abstracts from LangChain document page_content field.
         text = doc.get("abstract")
+        metadata = doc.get("metadata", None)
         subjects = []
         creators_person = []
         creators_publisher = []
@@ -105,12 +107,19 @@ class EmbeddingRetriever(Retriever):
         # an example could be Fight the Bite.pdf_side58_chunk0 --> Fight the Bite.pdf, side 58, chunk0
         # currently, the chunk number is not used.
         pdf_title = doc_id.rsplit("_side", maxsplit=1)[0]
-        page_number = doc_id.rsplit("_side", maxsplit=1)[1].rsplit("_chunk", maxsplit=1)[0]
+        if "_side" in doc_id:
+            page_number = doc_id.rsplit("_side", maxsplit=1)[1].rsplit("_chunk", maxsplit=1)[0]
+            article_link = pdf_title + "#page=" + page_number
+        elif metadata and "URL" in metadata:
+            article_link = metadata["URL"]
+        else:
+            article_link = "No PDF-link or URL found."
+
         return Reference(
             id=str(doc_id),
             # article_headline=doc.get("titles").get("full")[0],
             article_headline="-",
-            article_link=pdf_title + "#page=" + page_number,
+            article_link=article_link,
             score=0.0,
             text=text,
             chunk="Not chunked",
