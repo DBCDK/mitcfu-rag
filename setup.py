@@ -42,6 +42,7 @@ setup(
         "keybert",
         "tokenizers",
         "accelerate",
+        "faiss",
     ],
     extras_require={"evaluation": []},
     provides=["science_rag"],

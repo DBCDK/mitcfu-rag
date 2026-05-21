@@ -61,14 +61,13 @@ def stream_tokens(response, model_name):
             continue
 
 
-
 st.sidebar.button("New Chat", on_click=clear_chat_history)
 
 st.image(relative_img_path, width=150)
 
 
-greeting = "Hej 👋 Jeg er MitCFU-RAG og jeg kan hjælpe dig med at finde information om materialer\
-              fra MitCFU. Men indtil videre er jeg vist stadig mest en kopi af FaktaChat. \
+greeting = "Hej 👋 Jeg er Science-RAG og jeg kan hjælpe dig med at finde information om materialer\
+              fra MitCFU og andre kilder, der omhandler naturvidenskab. \
               \n\nHvad kan jeg hjælpe dig med?"
 
 # Initialize chat

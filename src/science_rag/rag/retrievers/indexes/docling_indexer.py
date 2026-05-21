@@ -135,7 +135,7 @@ def main():
     for file_path in science_rag_doc_paths:
         science_rag_chunks.extend(get_docling_chunks(file_path))
 
-    # For now, adding hardcoded .csv files for astra csv's (should we add .csv handling?)
+    # For now, adding hardcoded .csv files for astra csv's (should we add a more general .csv handling?)
     if args.aktiviteter_csv and args.forlob_csv:
         logger.info(f"Processing Aktiviteter CSV from {args.aktiviteter_csv} and Forløb CSV from {args.forlob_csv}")
         preprocessor = AstraPreprocessor()

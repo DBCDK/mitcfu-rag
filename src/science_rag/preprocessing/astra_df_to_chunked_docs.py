@@ -2,11 +2,7 @@
 # Indtil videre har jeg kun lavet cleaning delen, så der skal laves et script til
 # chunking + at få disse chunks ind i pipelinen, fx gennem et Langchain eller DBC-Dokument-objekt
 
-import argparse
-import json
-from pathlib import Path
 import pandas as pd
-from science_rag.preprocessing.astra_preprocessor import AstraPreprocessor
 from docling.document_converter import DocumentConverter
 from docling.chunking import HybridChunker
 from docling.datamodel.base_models import InputFormat
