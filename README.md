@@ -1,7 +1,7 @@
 # Science-RAG
 
 RAG-solution for PDFs from CFU. The repository uses the same RAG-structure as MitCFU-RAG, but instead of getting data from
-MitCFU Marc entries (which are then converted to JED), the PDFs are loaded using LangChain Documentloaders through the script
+MitCFU Marc entries, PDFs (and optionally CSVs) are loaded using LangChain Documentloaders through the script
 tools/GenericParser.py. This script can handle common filetypes (such as .pdf, .txt, .json) and has the option to try to read
 other filetypes. Then, a list of LangChain Document objects are created. From this, we can use the metadata and page_content
 to create FAISS indexes for similarity search. For now, we simply extract page_content and create a JED-like structure to enable
