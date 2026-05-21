@@ -113,7 +113,7 @@ class EmbeddingRetriever(Retriever):
         elif metadata and "URL" in metadata:
             article_link = metadata["URL"]
         else:
-            article_link = "No PDF-link or URL found."
+            article_link = pdf_title
 
         return Reference(
             id=str(doc_id),
