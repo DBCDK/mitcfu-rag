@@ -1,7 +1,3 @@
-# TO BE IMPLEMENTED
-# Indtil videre har jeg kun lavet cleaning delen, så der skal laves et script til
-# chunking + at få disse chunks ind i pipelinen, fx gennem et Langchain eller DBC-Dokument-objekt
-
 import pandas as pd
 from docling.document_converter import DocumentConverter
 from docling.chunking import HybridChunker
@@ -12,33 +8,6 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s")
-
-
-# Standard columns to keep for metadata/exclude from the CSV files
-aktiviteter_metadata_cols = [
-    "ID",
-    "Title",
-    "URL",
-    "[Manchet] Varighed",
-    "[Manchet] Niveau",
-    "Fag",
-    "Klassetrin",
-    "Emneord",
-    "Kategori",
-]
-aktiviteter_exclude_cols = ["Which tabs to show", "page_content_raw", "page_content"]
-aktiviteter_exclude_col_if_contains = []
-
-forlob_metadata_cols = ["ID", "Title", "URL", "Varighed", "Partnere", "Tilknyttede aktiviteter"]
-forlob_exclude_col_if_contains = ["download_or_link", "pdf_link"]
-forlob_exclude_cols = [
-    "Hvilke faner skal vises",
-    "Video url",
-    "Sidebar email_acf_education_material_sidebar_boxes_email_header",
-    "Sidebar email_acf_education_material_sidebar_boxes_email_content",
-    "page_content_raw",
-    "page_content",
-]
 
 
 def _df_to_json_safe_dict(value):

@@ -11,33 +11,20 @@ from science_rag.preprocessing.astra_df_to_chunked_docs import astra_df_to_docli
 from science_rag.preprocessing.astra_preprocessor import AstraPreprocessor
 from science_rag.rag.retrievers.indexes.multilinguale5 import index_paragraph_docs_GPU_batches
 
+# Importing standard config for Astra csv's ---> which columns use for abstract and metadata
+# all columns not listed: used in abstact.
+# aktiviteter_metadata_cols: use for metadata (but exclude from abstract).
+# exclude_cols or exclude_col_if_contains: exclude altogether, based on exact column name or if the column contains a certain string.
+from science_rag.preprocessing.astra_csv_cols_config import (
+    AKTIVITETER_METADATA_COLS,
+    AKTIVITETER_EXCLUDE_COLS,
+    AKTIVITETER_EXCLUDE_COL_IF_CONTAINS,
+    FORLOB_METADATA_COLS,
+    FORLOB_EXCLUDE_COLS,
+    FORLOB_EXCLUDE_COL_IF_CONTAINS,
+)
+
 logger = logging.getLogger(__name__)
-
-# Standard columns to keep for metadata/exclude from the CSV files
-aktiviteter_metadata_cols = [
-    "ID",
-    "Title",
-    "URL",
-    "[Manchet] Varighed",
-    "[Manchet] Niveau",
-    "Fag",
-    "Klassetrin",
-    "Emneord",
-    "Kategori",
-]
-aktiviteter_exclude_cols = ["Which tabs to show", "page_content_raw", "page_content"]
-aktiviteter_exclude_col_if_contains = []
-
-forlob_metadata_cols = ["ID", "Title", "URL", "Varighed", "Partnere", "Tilknyttede aktiviteter"]
-forlob_exclude_col_if_contains = ["download_or_link", "pdf_link"]
-forlob_exclude_cols = [
-    "Hvilke faner skal vises",
-    "Video url",
-    "Sidebar email_acf_education_material_sidebar_boxes_email_header",
-    "Sidebar email_acf_education_material_sidebar_boxes_email_content",
-    "page_content_raw",
-    "page_content",
-]
 
 # Temporary map to show some examples of why links work/don't work
 WEBPDF_MAP = {
@@ -135,7 +122,7 @@ def main():
     for file_path in science_rag_doc_paths:
         science_rag_chunks.extend(get_docling_chunks(file_path))
 
-    # For now, adding hardcoded .csv files for astra csv's (should we add a more general .csv handling?)
+    # Initializing preprocessor only if we have to preprocess Astra CSV files
     if args.aktiviteter_csv or args.forlob_csv:
         preprocessor = AstraPreprocessor()
 
@@ -145,9 +132,9 @@ def main():
         aktiviteter_list_of_jedish_docs = astra_df_to_docling_chunks(
             aktiviteter_df,
             preprocessor=preprocessor,
-            metadata_cols=aktiviteter_metadata_cols,
-            exclude_cols=aktiviteter_exclude_cols,
-            exclude_col_if_contains=aktiviteter_exclude_col_if_contains,
+            metadata_cols=AKTIVITETER_METADATA_COLS,
+            exclude_cols=AKTIVITETER_EXCLUDE_COLS,
+            exclude_col_if_contains=AKTIVITETER_EXCLUDE_COL_IF_CONTAINS,
         )
 
         science_rag_chunks.extend(aktiviteter_list_of_jedish_docs)
@@ -158,9 +145,9 @@ def main():
         forlob_list_of_jedish_docs = astra_df_to_docling_chunks(
             forlob_df,
             preprocessor=preprocessor,
-            metadata_cols=forlob_metadata_cols,
-            exclude_cols=forlob_exclude_cols,
-            exclude_col_if_contains=forlob_exclude_col_if_contains,
+            metadata_cols=FORLOB_METADATA_COLS,
+            exclude_cols=FORLOB_EXCLUDE_COLS,
+            exclude_col_if_contains=FORLOB_EXCLUDE_COL_IF_CONTAINS,
         )
 
         science_rag_chunks.extend(forlob_list_of_jedish_docs)
