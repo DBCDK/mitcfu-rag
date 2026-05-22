@@ -79,7 +79,6 @@ class EmbeddingRetriever(Retriever):
         for document in all_documents:
             for doc_id, doc in document.items():
                 text = doc.get("abstract")
-                metadata = doc.get("metadata", {})
                 if text:
                     all_articles[str(doc_id)] = self.format_doc(doc_id, doc)
 
@@ -106,19 +105,21 @@ class EmbeddingRetriever(Retriever):
         # the doc_id is composed of a string.pdf + page number + chunk number. Here we split them up.
         # an example could be Fight the Bite.pdf_side58_chunk0 --> Fight the Bite.pdf, side 58, chunk0
         # currently, the chunk number is not used.
-        pdf_title = doc_id.rsplit("_side", maxsplit=1)[0]
+        title = doc_id.rsplit("_side", maxsplit=1)[0]
         if "_side" in doc_id:
             page_number = doc_id.rsplit("_side", maxsplit=1)[1].rsplit("_chunk", maxsplit=1)[0]
-            article_link = pdf_title + "#page=" + page_number
+            article_link = title + "#page=" + page_number
         elif metadata and "URL" in metadata:
             article_link = metadata["URL"]
+            if "Title" in metadata:
+                title = metadata["Title"]
         else:
-            article_link = pdf_title
+            article_link = title
 
         return Reference(
             id=str(doc_id),
             # article_headline=doc.get("titles").get("full")[0],
-            article_headline="-",
+            article_headline=f"{title}:",
             article_link=article_link,
             score=0.0,
             text=text,
@@ -128,7 +129,7 @@ class EmbeddingRetriever(Retriever):
             audience=audience_subject,
             # materialtypes=material_types_general + material_types_specific,
             materialtypes=material_types_empty,
-            publicationdate=doc.get("firstPublicationDate", None),
+            publicationdate=doc.get("firstPublicationDate") or "",
             languages=languages,
             series=series_titles,
         )
