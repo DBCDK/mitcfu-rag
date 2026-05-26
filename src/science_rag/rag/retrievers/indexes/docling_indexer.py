@@ -70,7 +70,8 @@ def get_docling_chunks(input_file):
         source = WEBPDF_MAP.get(chunk.meta.origin.filename, chunk.meta.origin.filename)
         jedish_json = {
             f"{source}_side{chunk.meta.doc_items[0].prov[0].page_no}_chunk{i}": {
-                "abstract": chunker.contextualize(chunk=chunk)
+                "abstract": chunker.contextualize(chunk=chunk),
+                "metadata": {"URL": source if source.startswith("http") else None},
             }
         }
         jedish_docs.append(jedish_json)
