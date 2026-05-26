@@ -68,12 +68,14 @@ def get_docling_chunks(input_file):
     jedish_docs = []
     for i, chunk in enumerate(chunks):
         source = WEBPDF_MAP.get(chunk.meta.origin.filename, chunk.meta.origin.filename)
+        url = source if source.startswith("http") else f"{source}#page={chunk.meta.doc_items[0].prov[0].page_no}"
+        title = chunk.meta.origin.filename.replace(".pdf", "")
         jedish_json = {
             f"{source}_side{chunk.meta.doc_items[0].prov[0].page_no}_chunk{i}": {
                 "abstract": chunker.contextualize(chunk=chunk),
                 "metadata": {
-                    "URL": source if source.startswith("http") else None,
-                    "Title": chunk.meta.origin.filename.replace(".pdf", ""),
+                    "URL": url,
+                    "Title": title,
                 },
             }
         }
