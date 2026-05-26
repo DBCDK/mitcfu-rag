@@ -104,8 +104,8 @@ class EmbeddingRetriever(Retriever):
         series_titles = []
 
         # the doc_id is composed of a string.pdf + page number + chunk number.
-        # Link logic: Use URL if it exists in metadata, otherwise combine title and page number or just use title.
 
+        # Link logic: Use URL if it exists in metadata, otherwise combine title and page number or just use title.
         page_number = None
         if "_side" in doc_id:
             pdf_title = doc_id.rsplit("_side", maxsplit=1)[0]
@@ -120,6 +120,7 @@ class EmbeddingRetriever(Retriever):
         else:
             article_link = pdf_title
 
+        # Headline logic. Use title from metadata, otherwise use the fallback (pdf) title.
         if metadata.get("Title"):
             article_headline = metadata["Title"]
         else:
