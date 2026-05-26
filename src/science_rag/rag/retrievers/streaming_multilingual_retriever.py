@@ -103,30 +103,31 @@ class EmbeddingRetriever(Retriever):
         languages = []
         series_titles = []
 
-        # the doc_id is composed of a string.pdf + page number + chunk number. Here we split them up.
-        # an example could be Fight the Bite.pdf_side58_chunk0 --> Fight the Bite.pdf, side 58, chunk0
-        # currently, the chunk number is not used.
+        # the doc_id is composed of a string.pdf + page number + chunk number.
         # Link logic: Use URL if it exists in metadata, otherwise combine title and page number or just use title.
-        title = doc_id
-        page_number = None
 
+        page_number = None
         if "_side" in doc_id:
-            title = doc_id.rsplit("_side", maxsplit=1)[0]
+            pdf_title = doc_id.rsplit("_side", maxsplit=1)[0]
             page_number = doc_id.rsplit("_side", maxsplit=1)[1].rsplit("_chunk", maxsplit=1)[0]
 
         if metadata.get("URL"):
             article_link = metadata["URL"]
 
         elif page_number is not None:
-            article_link = f"{title}#page={page_number}"
+            article_link = f"{pdf_title}#page={page_number}"
 
         else:
-            article_link = title
+            article_link = pdf_title
+
+        if metadata.get("Title"):
+            article_headline = metadata["Title"]
+        else:
+            article_headline = pdf_title
 
         return Reference(
             id=str(doc_id),
-            # article_headline=doc.get("titles").get("full")[0],
-            article_headline=f"{title}:",
+            article_headline=article_headline,
             article_link=article_link,
             score=0.0,
             text=text,

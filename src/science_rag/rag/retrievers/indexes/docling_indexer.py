@@ -71,7 +71,10 @@ def get_docling_chunks(input_file):
         jedish_json = {
             f"{source}_side{chunk.meta.doc_items[0].prov[0].page_no}_chunk{i}": {
                 "abstract": chunker.contextualize(chunk=chunk),
-                "metadata": {"URL": source if source.startswith("http") else None},
+                "metadata": {
+                    "URL": source if source.startswith("http") else None,
+                    "Title": chunk.meta.origin.filename.replace(".pdf", ""),
+                },
             }
         }
         jedish_docs.append(jedish_json)

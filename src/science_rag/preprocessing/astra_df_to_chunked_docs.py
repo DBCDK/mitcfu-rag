@@ -70,9 +70,10 @@ def astra_df_to_docling_chunks(
             logger.warning(f"Row {row_idx} has invalid metadata: {row['metadata']}. Skipping.")
             continue
 
+        # Base metadata is all metadata columns (see astra_csv_cols_config.py).
+        # Should contain at least URL and Title, which are used downstream during generation.
         base_metadata = {k: _df_to_json_safe_dict(v) for k, v in row["metadata"].items()}
-        title = base_metadata.get("Title", "No_title_found").replace(" ", "_").replace(",", "")
-        doc_name = f"{title}"
+        doc_name = base_metadata.get("Title", "No_Title").replace(" ", "_").replace(",", "")
         doc = converter.convert_string(content=page_content, format=InputFormat.MD, name=doc_name).document
 
         chunks = [chunk for chunk in chunker.chunk(dl_doc=doc)]
