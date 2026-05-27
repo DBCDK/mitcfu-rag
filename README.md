@@ -1,7 +1,7 @@
 # Science-RAG
 
 RAG-solution for PDFs from CFU. The repository uses the same RAG-structure as MitCFU-RAG, but instead of getting data from
-MitCFU Marc entries (which are then converted to JED), the PDFs are loaded using LangChain Documentloaders through the script
+MitCFU Marc entries, PDFs (and optionally CSVs) are loaded using LangChain Documentloaders through the script
 tools/GenericParser.py. This script can handle common filetypes (such as .pdf, .txt, .json) and has the option to try to read
 other filetypes. Then, a list of LangChain Document objects are created. From this, we can use the metadata and page_content
 to create FAISS indexes for similarity search. For now, we simply extract page_content and create a JED-like structure to enable
@@ -14,7 +14,11 @@ On ai-p301:
 2. Make a directory where you want to store your embeddings/FAISS index such as `output_embedding_dir`
 3. To parse the documents and create the faiss index, run
 
-`python src/science_rag/rag/retrievers/indexes/docling_indexer.py path/to/all/documents name_of_output_chunk_document.json output_embedding_dir/`
+`python src/science_rag/rag/retrievers/indexes/docling_indexer.py path/to/all/documents  name_of_output_chunk_document.json output_embedding_dir/`
+
+you can optionally include Astra .csv files (to be preprocessed, chunked and indexed together with the documents) using the following flags: 
+
+`python src/science_rag/rag/retrievers/indexes/docling_indexer.py path/to/all/documents  name_of_output_chunk_document.json output_embedding_dir/ --aktiviteter-csv path/to/aktiviteter.csv --forlob-csv path/to/forlob.csv`
 
 4. When starting the RAG service, point to the location of the json file list and the FAISS index (as well as embedding/validator models).
 5. You can start the service using: 

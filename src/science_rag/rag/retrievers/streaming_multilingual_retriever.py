@@ -94,6 +94,7 @@ class EmbeddingRetriever(Retriever):
     def format_doc(self, doc_id, doc):
         # work info. Currently empty since we are using only abstracts from LangChain document page_content field.
         text = doc.get("abstract")
+        metadata = doc.get("metadata", None)
         subjects = []
         creators_person = []
         creators_publisher = []
@@ -101,16 +102,14 @@ class EmbeddingRetriever(Retriever):
         material_types_empty = []
         languages = []
         series_titles = []
-        # the doc_id is composed of a string.pdf + page number + chunk number. Here we split them up.
-        # an example could be Fight the Bite.pdf_side58_chunk0 --> Fight the Bite.pdf, side 58, chunk0
-        # currently, the chunk number is not used.
-        pdf_title = doc_id.rsplit("_side", maxsplit=1)[0]
-        page_number = doc_id.rsplit("_side", maxsplit=1)[1].rsplit("_chunk", maxsplit=1)[0]
+
+        article_link_fallback = f"{metadata.get('Title', 'No_Link')}.pdf"
+        pdf_title_fallback = metadata.get("Title", "No_Title").replace(".pdf", "")
+
         return Reference(
             id=str(doc_id),
-            # article_headline=doc.get("titles").get("full")[0],
-            article_headline="-",
-            article_link=pdf_title + "#page=" + page_number,
+            article_headline=metadata.get("Title", pdf_title_fallback),
+            article_link=metadata.get("URL", article_link_fallback),
             score=0.0,
             text=text,
             chunk="Not chunked",
@@ -119,7 +118,7 @@ class EmbeddingRetriever(Retriever):
             audience=audience_subject,
             # materialtypes=material_types_general + material_types_specific,
             materialtypes=material_types_empty,
-            publicationdate=doc.get("firstPublicationDate", None),
+            publicationdate=doc.get("firstPublicationDate") or "",
             languages=languages,
             series=series_titles,
         )

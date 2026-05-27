@@ -1,21 +1,28 @@
-from science_rag.tools.generic_parser import GenericParser
-from docling.document_converter import DocumentConverter
-from docling.chunking import HybridChunker
 import argparse
-import multiprocessing as mp
-import numpy as np
-from tqdm import tqdm
-import torch
-import torch.nn.functional as F
-from torch import Tensor
-from science_rag.tools.knn_searcher import KNNSearch
-from science_rag.tools.embedder import Embedder
-from science_rag.rag.retrievers.indexes.multilinguale5 import index_paragraph_docs_GPU_batches
-from transformers import AutoTokenizer, AutoModel
-import random
+import json
 import logging
 import os
-import json
+
+import pandas as pd
+from docling.chunking import HybridChunker
+from docling.document_converter import DocumentConverter
+
+from science_rag.preprocessing.astra_df_to_chunked_docs import astra_df_to_docling_chunks
+from science_rag.preprocessing.astra_preprocessor import AstraPreprocessor
+from science_rag.rag.retrievers.indexes.multilinguale5 import index_paragraph_docs_GPU_batches
+
+# Importing standard config for Astra csv's ---> which columns use for abstract and metadata
+# all columns not listed: used in abstact.
+# aktiviteter_metadata_cols: use for metadata (but exclude from abstract).
+# exclude_cols or exclude_col_if_contains: exclude altogether, based on exact column name or if the column contains a certain string.
+from science_rag.preprocessing.astra_csv_cols_config import (
+    AKTIVITETER_METADATA_COLS,
+    AKTIVITETER_EXCLUDE_COLS,
+    AKTIVITETER_EXCLUDE_COL_IF_CONTAINS,
+    FORLOB_METADATA_COLS,
+    FORLOB_EXCLUDE_COLS,
+    FORLOB_EXCLUDE_COL_IF_CONTAINS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +68,15 @@ def get_docling_chunks(input_file):
     jedish_docs = []
     for i, chunk in enumerate(chunks):
         source = WEBPDF_MAP.get(chunk.meta.origin.filename, chunk.meta.origin.filename)
+        url = f"{source}#page={chunk.meta.doc_items[0].prov[0].page_no}"
+        title = chunk.meta.origin.filename.replace(".pdf", "")
         jedish_json = {
             f"{source}_side{chunk.meta.doc_items[0].prov[0].page_no}_chunk{i}": {
-                "abstract": chunker.contextualize(chunk=chunk)
+                "abstract": chunker.contextualize(chunk=chunk),
+                "metadata": {
+                    "URL": url,
+                    "Title": title,
+                },
             }
         }
         jedish_docs.append(jedish_json)
@@ -94,6 +107,10 @@ def parse_args():
         help="batch size for embedding chunks",
         default=50,
     )
+    parser.add_argument(
+        "--aktiviteter-csv", type=str, required=False, help="(Optional) Path to the Aktiviteter CSV file."
+    )
+    parser.add_argument("--forlob-csv", type=str, required=False, help="(Optional) Path to the Forløb CSV file.")
     return parser.parse_args()
 
 
@@ -101,11 +118,45 @@ def main():
     args = parse_args()
     logger.info(f"Getting paths to science rag documents from {args.path_to_science_rag_folder}")
     science_rag_doc_paths = get_science_rag_document_paths(args.path_to_science_rag_folder)
+
+    # a science_rag_chunk must - in order (to work with index_paragraph_docs_GPU_batches - contain:
+    # ID as the key to a dictionary with at least "abstract" as a key, and the value of "abstract"
+    # should be the text to embed
     science_rag_chunks = []
 
     logger.info(f"Reading and chunking {len(science_rag_doc_paths)} science rag documents")
     for file_path in science_rag_doc_paths:
         science_rag_chunks.extend(get_docling_chunks(file_path))
+
+    # Initializing preprocessor only if we have to preprocess Astra CSV files
+    if args.aktiviteter_csv or args.forlob_csv:
+        preprocessor = AstraPreprocessor()
+
+    # Reading and preprocessing activities (aktiviteter)
+    if args.aktiviteter_csv:
+        aktiviteter_df = pd.read_csv(args.aktiviteter_csv, sep=",", encoding="utf-8")
+        aktiviteter_list_of_jedish_docs = astra_df_to_docling_chunks(
+            aktiviteter_df,
+            preprocessor=preprocessor,
+            metadata_cols=AKTIVITETER_METADATA_COLS,
+            exclude_cols=AKTIVITETER_EXCLUDE_COLS,
+            exclude_col_if_contains=AKTIVITETER_EXCLUDE_COL_IF_CONTAINS,
+        )
+
+        science_rag_chunks.extend(aktiviteter_list_of_jedish_docs)
+
+    # Reading and preprocessing courses (forløb)
+    if args.forlob_csv:
+        forlob_df = pd.read_csv(args.forlob_csv, sep=",", encoding="utf-8")
+        forlob_list_of_jedish_docs = astra_df_to_docling_chunks(
+            forlob_df,
+            preprocessor=preprocessor,
+            metadata_cols=FORLOB_METADATA_COLS,
+            exclude_cols=FORLOB_EXCLUDE_COLS,
+            exclude_col_if_contains=FORLOB_EXCLUDE_COL_IF_CONTAINS,
+        )
+
+        science_rag_chunks.extend(forlob_list_of_jedish_docs)
 
     logger.info(f"Saving {len(science_rag_chunks)} science rag chunks")
     with open(args.document_index_file_path, "w") as f:

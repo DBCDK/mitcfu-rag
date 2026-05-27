@@ -110,7 +110,7 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
         async for chunk in self.llm_generate(
             {
                 "messages": cleaned_messages,
-                    "model": self.request_models.get(endpoint_profile, {}).get(
+                "model": self.request_models.get(endpoint_profile, {}).get(
                     prompt_template["model"], prompt_template["model"]
                 ),
                 "endpoint_profile": endpoint_profile,
@@ -196,7 +196,7 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
         for ref in references:
             yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
             yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
-            tokens = [f"- {ref.article_link}"]
+            tokens = [f"- [{ref.article_headline}]({ref.article_link})"]
             for token in tokens:
                 yield json.dumps(tgi_output_format(DEFAULT_MODEL, token))
 
@@ -247,12 +247,8 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
         }
         request_body_str = json.dumps(tgi_input_format(input["model_name"], request_body))
         endpoint_profile = input.get("endpoint_profile", "tgi")
-        endpoint_lookup = (
-            self.vllm_endpoints if endpoint_profile == "vllm" else self.tgi_endpoints
-        )
-        endpoint_url = endpoint_lookup.get(
-            input["model_name"], self.tgi_endpoints[input["model_name"]]
-        )
+        endpoint_lookup = self.vllm_endpoints if endpoint_profile == "vllm" else self.tgi_endpoints
+        endpoint_url = endpoint_lookup.get(input["model_name"], self.tgi_endpoints[input["model_name"]])
 
         endpoint_profile = input.get("endpoint_profile", "tgi")
 
@@ -263,9 +259,7 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
         ) as response:
             if response.status >= 400:
                 error_body = await response.text()
-                logger.info(
-                    f"Model endpoint returned status {response.status}: {error_body}"
-                )
+                logger.info(f"Model endpoint returned status {response.status}: {error_body}")
                 return
             stream_buffer = ""
 
@@ -280,27 +274,18 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
                             line = line.strip()
                             if not line:
                                 continue
-                            payload = (
-                                line[len("data:") :].strip()
-                                if line.startswith("data:")
-                                else line
-                            )
+                            payload = line[len("data:") :].strip() if line.startswith("data:") else line
                             if payload == "[DONE]":
                                 continue
                             try:
                                 obj = json.loads(payload)
                                 token = self.model_output_function(obj)
-                                if (
-                                    token == self.tokenizers[input["model_name"]].eos_token
-                                    and parsed_references
-                                ):
+                                if token == self.tokenizers[input["model_name"]].eos_token and parsed_references:
                                     continue
                                 if input["model_name"] == DEFAULT_MODEL:
                                     yield f"data: {json.dumps(obj)}\n\n"
                                 else:
-                                    yield (
-                                        f"data: {json.dumps(tgi_output_format(DEFAULT_MODEL, token))}\n\n"
-                                    )
+                                    yield (f"data: {json.dumps(tgi_output_format(DEFAULT_MODEL, token))}\n\n")
                             except json.JSONDecodeError:
                                 continue
                             except Exception as e:
@@ -327,28 +312,18 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
             if endpoint_profile == "vllm":
                 residual = stream_buffer.strip()
                 if residual:
-                    payload = (
-                        residual[len("data:") :].strip()
-                        if residual.startswith("data:")
-                        else residual
-                    )
+                    payload = residual[len("data:") :].strip() if residual.startswith("data:") else residual
                     if payload and payload != "[DONE]":
                         try:
                             obj = json.loads(payload)
                             token = self.model_output_function(obj)
-                            if not (
-                                    token == self.tokenizers[input["model_name"]].eos_token
-                                    and parsed_references
-                            ):
+                            if not (token == self.tokenizers[input["model_name"]].eos_token and parsed_references):
                                 if input["model_name"] == DEFAULT_MODEL:
                                     yield f"data: {json.dumps(obj)}\n\n"
                                 else:
-                                    yield (
-                                        f"data: {json.dumps(tgi_output_format(DEFAULT_MODEL, token))}\n\n"
-                                    )
+                                    yield (f"data: {json.dumps(tgi_output_format(DEFAULT_MODEL, token))}\n\n")
                         except Exception:
                             pass
-
 
         # filter references so that no two references have the same article_link
         if parsed_references and input["agent_type"] in {"RAG", "FOLLOW_UP"}:
@@ -368,4 +343,3 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
             if endpoint_profile != "vllm":
                 ref = json.dumps(tgi_output_format(DEFAULT_MODEL, self.tokenizers[DEFAULT_MODEL].eos_token))
                 yield f"data:{ref}\n"
-
