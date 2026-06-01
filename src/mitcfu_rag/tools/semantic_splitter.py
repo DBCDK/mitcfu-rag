@@ -133,7 +133,7 @@ class SemanticSplitter:
             embedder = HuggingfaceEmbedder()
         if not breakpoint_threshold_type:
             breakpoint_threshold_type = "cosine-distance"
-        if not breakpoint_threshold_type in get_args(BreakpointThresholdType):
+        if breakpoint_threshold_type not in get_args(BreakpointThresholdType):
             raise KeyError(
                 f"Unknown breakpoint_threshold_type: {breakpoint_threshold_type}"
             )

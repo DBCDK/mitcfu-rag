@@ -41,7 +41,7 @@ def main():
         logger.info(f"Loaded {len(document_dict)} documents from {args.index_input_path}")
     else:
         document_dict = {}
-        logger.info(f"Created empty document dict.")
+        logger.info("Created empty document dict.")
 
 
     new_documents, documents_to_delete = read_kafka_topic(

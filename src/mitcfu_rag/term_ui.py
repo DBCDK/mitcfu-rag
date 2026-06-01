@@ -2,11 +2,10 @@
 import argparse
 
 import json
-from rich.console import Console, OverflowMethod
+from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
 from rich.align import Align
-from rich.live import Live
 from mitcfu_rag.config import RAG
 
 
@@ -83,7 +82,7 @@ def chat(user_cfg: dict | None = None):
 
     while True:
         console.print(" :nerd_face: >", end="")
-        user_input = cprompt.ask(f"").strip()
+        user_input = cprompt.ask("").strip()
 
         if not user_input or b"[" in user_input.encode():
             continue
