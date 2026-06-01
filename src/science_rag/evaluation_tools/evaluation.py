@@ -9,7 +9,6 @@ import pprint
 import re
 import logging
 from openai import APIConnectionError, OpenAI, RateLimitError
-from mitcfu_rag.rag.langgraph_graphs import AgenticGraph
 from mitcfu_rag.config import DEFAULT_MODEL
 from mitcfu_rag.tools.llm_formatting import gen_wrapper
 from mitcfu_rag.evaluation_tools.prompt_template import (

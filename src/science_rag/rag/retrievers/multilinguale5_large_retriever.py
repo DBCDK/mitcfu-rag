@@ -22,9 +22,6 @@ You can also use the mitcfu-sandbox-file.ipynb to test the retriever by starting
 import logging
 from mitcfu_rag.rag.rag import Retriever, Reference
 from mitcfu_rag.tools import KNNSearch
-from mitcfu_rag.tools.embedder import HuggingfaceEmbedder
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 
 # from langchain.text_splitter import RecursiveCharacterTextSplitter
 from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification

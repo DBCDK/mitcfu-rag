@@ -22,11 +22,10 @@ example of usage:
 """
 
 import logging
-import datetime
 import asyncio
 import json
 from typing import Generator, Any
-from science_rag.rag.rag import RAG, Reference
+from science_rag.rag.rag import RAG
 
 # from fakta_chat.rag.parsers.solr_parser import SolrParser
 # from mitcfu_rag.rag.retrievers.solr_retriever import SolrRetriever

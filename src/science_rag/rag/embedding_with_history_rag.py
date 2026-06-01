@@ -23,7 +23,7 @@ example of usage:
 
 import logging
 from typing import Generator, Any
-from fakta_chat.rag.rag import RAG, Reference
+from fakta_chat.rag.rag import RAG
 from fakta_chat.rag.parsers.solr_parser import SolrParser
 from fakta_chat.rag.retrievers.multilinguale5_large_retriever import EmbeddingRetriever
 from fakta_chat.rag.generators.embedding_with_history_generator import (

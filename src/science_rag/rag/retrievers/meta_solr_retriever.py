@@ -62,7 +62,7 @@ class MetaSolrRetriever(Retriever):
         # search with full message string in metadata-fields
         all_results += solr_retrieval_tools.search_by_meta(message, self.searcher, n=5)
         if cli:
-            print(f"- results by meta fields: \n")
+            print("- results by meta fields: \n")
             for result in results:
                 print(result)
 

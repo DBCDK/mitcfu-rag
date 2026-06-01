@@ -19,7 +19,6 @@ or the example at the bottom of this file.
 
 import argparse
 import json
-import multiprocessing as mp
 import numpy as np
 import logging
 from tqdm import tqdm

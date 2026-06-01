@@ -20,20 +20,11 @@ example of usage:
 """
 
 import logging
-from mitcfu_rag.rag.rag import Retriever, Reference, Validator
-from mitcfu_rag.tools import KNNSearch
-from mitcfu_rag.tools.embedder import HuggingfaceEmbedder
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+from mitcfu_rag.rag.rag import Reference, Validator
 
 # from langchain.text_splitter import RecursiveCharacterTextSplitter
-from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
-import numpy as np
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
-import torch.nn.functional as F
-from os import listdir
-import json
-from os.path import isfile, join
 
 logger = logging.getLogger(__name__)
 

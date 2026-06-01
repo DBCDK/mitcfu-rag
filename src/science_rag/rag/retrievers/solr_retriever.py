@@ -430,11 +430,11 @@ class SolrRetriever(Retriever):
         combined_response = []
         for i in range(max(len(keyword_response), len(question_response))):
             if i < len(keyword_response):
-                if not keyword_response[i]["id"] in seen_ids:
+                if keyword_response[i]["id"] not in seen_ids:
                     combined_response.append(keyword_response[i])
                     seen_ids.add(keyword_response[i]["id"])
             if i < len(question_response):
-                if not question_response[i]["id"] in seen_ids:
+                if question_response[i]["id"] not in seen_ids:
                     combined_response.append(question_response[i])
                     seen_ids.add(question_response[i]["id"])
 

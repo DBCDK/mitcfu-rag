@@ -3,13 +3,12 @@ import torch
 torch.classes.__path__ = []  # type: ignore
 
 import os
-import time
 import random
 import json
 import streamlit as st
 import requests
 
-from science_rag.tools.llm_formatting import gen_wrapper, select_model_function, GEMMA_3_12B, MIXTRAL_8X7B
+from science_rag.tools.llm_formatting import select_model_function, GEMMA_3_12B
 
 # from fakta_chat.config import RAG
 

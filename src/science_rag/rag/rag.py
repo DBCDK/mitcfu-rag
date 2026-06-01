@@ -8,7 +8,7 @@ All rag models must inherit from this class and implement the abstractmethods
 from typing import Generator, Any
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from pydantic import BaseModel, confloat, StringConstraints, conint
+from pydantic import BaseModel, StringConstraints, conint
 from typing import List, Annotated
 
 

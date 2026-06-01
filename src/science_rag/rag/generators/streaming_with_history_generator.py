@@ -22,12 +22,10 @@ example of usage:
 import random
 import logging
 import json
-import datetime
 import os
 import asyncio
 import aiohttp
-import requests
-from mitcfu_rag.rag.rag import Generator, SourcesWithScore, AnswerWithSource, Reference
+from mitcfu_rag.rag.rag import Generator, Reference
 
 roles_to_ignore = ["resetter", "summarizer"]
 

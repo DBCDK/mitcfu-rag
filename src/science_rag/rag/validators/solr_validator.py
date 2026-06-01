@@ -19,7 +19,6 @@ example of usage:
     print(f'response: {response}')
 """
 
-import random
 import logging
 import json
 from huggingface_hub import InferenceClient
@@ -42,7 +41,7 @@ class SolrValidator(Validator):
 
         if (
             "http" in generated_answer
-            and not "https://faktalink.dk/" in generated_answer
+            and "https://faktalink.dk/" not in generated_answer
         ):
             return False
 

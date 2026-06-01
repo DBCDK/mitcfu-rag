@@ -19,12 +19,10 @@ example of usage:
     print(f'response: {response}')
 """
 
-import random
 import logging
 import json
 import requests
-from huggingface_hub import InferenceClient
-from mitcfu_rag.rag.rag import Generator, SourcesWithScore, AnswerWithSource
+from mitcfu_rag.rag.rag import Generator
 
 roles_to_ignore = ["resetter", "summarizer"]
 
