@@ -1,15 +1,18 @@
 #!/usr/bin/env python
+import os
 import unittest
-from langchain.schema import Document
+from langchain_core.documents import Document
 from mitcfu_rag.tools.generic_parser import GenericParser
+
+TEST_DIR = os.path.dirname(__file__)
 
 
 class TestGenericParser(unittest.TestCase):
     def setUp(self):
         self.inputs = [
-            "./generic_parser_example_data/TV0000129447.pdf",
+            os.path.join(TEST_DIR, "generic_parser_example_data/TV0000129447.pdf"),
             "facebok.com/definetely-not-a-phishing-link",
-            "./generic_parser_example_data/TV0000129447.json",
+            os.path.join(TEST_DIR, "generic_parser_example_data/TV0000129447.json"),
         ]
         # The following links could be used to test the parser with mitcfu.dk pdfs.
         # "https://mitcfu.dk/pv/TV0000129447.pdf",
@@ -17,6 +20,7 @@ class TestGenericParser(unittest.TestCase):
 
         self.generic_parser = GenericParser()
         self.all_documents = self.generic_parser.parse_all(self.inputs)
+        pdf_path = os.path.join(TEST_DIR, "generic_parser_example_data/TV0000129447.pdf")
         self.expected_output = [
             Document(
                 metadata={
@@ -25,7 +29,7 @@ class TestGenericParser(unittest.TestCase):
                     "creationdate": "2023-01-20T11:38:41+01:00",
                     "author": "Christian Aalborg Frandsen",
                     "moddate": "2023-01-20T11:38:41+01:00",
-                    "source": "./generic_parser_example_data/TV0000129447.pdf",
+                    "source": pdf_path,
                     "total_pages": 4,
                     "page": 0,
                     "page_label": "1",
@@ -39,7 +43,7 @@ class TestGenericParser(unittest.TestCase):
                     "creationdate": "2023-01-20T11:38:41+01:00",
                     "author": "Christian Aalborg Frandsen",
                     "moddate": "2023-01-20T11:38:41+01:00",
-                    "source": "./generic_parser_example_data/TV0000129447.pdf",
+                    "source": pdf_path,
                     "total_pages": 4,
                     "page": 1,
                     "page_label": "2",
@@ -53,7 +57,7 @@ class TestGenericParser(unittest.TestCase):
                     "creationdate": "2023-01-20T11:38:41+01:00",
                     "author": "Christian Aalborg Frandsen",
                     "moddate": "2023-01-20T11:38:41+01:00",
-                    "source": "./generic_parser_example_data/TV0000129447.pdf",
+                    "source": pdf_path,
                     "total_pages": 4,
                     "page": 2,
                     "page_label": "3",
@@ -67,7 +71,7 @@ class TestGenericParser(unittest.TestCase):
                     "creationdate": "2023-01-20T11:38:41+01:00",
                     "author": "Christian Aalborg Frandsen",
                     "moddate": "2023-01-20T11:38:41+01:00",
-                    "source": "./generic_parser_example_data/TV0000129447.pdf",
+                    "source": pdf_path,
                     "total_pages": 4,
                     "page": 3,
                     "page_label": "4",
