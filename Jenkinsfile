@@ -1,7 +1,6 @@
 #! groovy
 @Library('ai') _
 def workerNode = "ai-t01"
-def slackReceivers = "#ai-jenkins-warnings"
 
 pipeline {
     agent { label workerNode }
@@ -13,12 +12,13 @@ pipeline {
         PACKAGE="science-rag"
         DOCKER_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
         GITLAB_PRIVATE_TOKEN = credentials("ai-gitlab-api-token")
+        SLACK_CHANNEL = "${env.BRANCH_NAME == 'main' ? '#ai-jenkins-warnings' : '#ai-jenkins-warnings-debug'}"
     }
     triggers {
 	upstream(upstreamProjects: 'Docker-base-python3,Docker-base-python3-bump-trigger', threshold: hudson.model.Result.SUCCESS)
     }
     stages {
-		stage("upload wheel package") {
+		stage("test") {
 			agent {
 				docker {
 					label workerNode
@@ -26,16 +26,12 @@ pipeline {
 					alwaysPull true
 				}
 			}
-			when {
-				branch "main"
-			}
 			steps {
-				upload()
+				uvtest()
 			}
 		}
 		stage("docker build") {
 			steps {
-				updateGitlabCommitStatus name: 'build', state: 'running'
 				buildImage()
 			}
 		}
@@ -45,15 +41,7 @@ pipeline {
 			}
 			steps {
 				script {
-					withCredentials([sshUserPrivateKey(credentialsId: "gitlab-isworker", keyFileVariable: "sshkeyfile")]) {
-						env.GIT_SSH_COMMAND = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${sshkeyfile}"
-						nextBuild=sh(returnStdout: true, script: "curl -s ${JENKINS_URL}job/gitops-secrets/job/main/api/json | jq -r .nextBuildNumber")
-						sh """
-							nix run --refresh git+https://gitlab.dbc.dk/public-de-team/gitops-secrets-set-variables.git \
-								ai-staging:SCIENCE_RAG_1_0_VERSION=${env.DOCKER_TAG}
-						"""
-						waitForGitops("${nextBuild}")
-					}
+					setGitopsVersion("ai-staging", "SCIENCE_RAG_1_0_VERSION", "${env.DOCKER_TAG}")
 				}
 			}
 		}
@@ -87,15 +75,7 @@ pipeline {
 			}
 			steps {
 				script {
-					withCredentials([sshUserPrivateKey(credentialsId: "gitlab-isworker", keyFileVariable: "sshkeyfile")]) {
-						env.GIT_SSH_COMMAND = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${sshkeyfile}"
-						nextBuild=sh(returnStdout: true, script: "curl -s ${JENKINS_URL}job/gitops-secrets/job/main/api/json | jq -r .nextBuildNumber")
-						sh """
-							nix run --refresh git+https://gitlab.dbc.dk/public-de-team/gitops-secrets-set-variables.git \
-								ai-prod:SCIENCE_RAG_1_0_VERSION=${env.DOCKER_TAG}
-						"""
-						waitForGitops("${nextBuild}")
-					}
+					setGitopsVersion("ai-prod", "SCIENCE_RAG_1_0_VERSION", "${env.DOCKER_TAG}")
 				}
 			}
 		}
@@ -125,17 +105,19 @@ pipeline {
 		}
 	}
 	post {
-		unstable { slackSend message: "build became unstable for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
-		// failure { slackSend message: "build failed for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
+		success {
+			updateGitlabCommitStatus name: 'build', state: 'success'
+		}
+		unstable {
+			updateGitlabCommitStatus name: 'build', state: 'failed'
+			slackSend message: "build became unstable for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: env.SLACK_CHANNEL
+		}
 		failure {
 			updateGitlabCommitStatus name: 'build', state: 'failed'
-		}
-		success { 
-			updateGitlabCommitStatus name: 'build', state: 'success'
+			slackSend message: "build failed for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: env.SLACK_CHANNEL
 		}
 		fixed {
 			updateGitlabCommitStatus name: 'build', state: 'success'
 		}
-
 	}
 }
