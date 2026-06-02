@@ -1,3 +1,77 @@
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "science-rag"
+version = "0.1.0"
+description = "science-rag"
+requires-python = ">= 3.11"
+maintainers = [
+    { name = "ai", email = "ai@dbc.dk" }
+]
+dependencies = [
+    "langchain",
+    "langchain-text-splitters",
+    "langchain-community",
+    "langchain-unstructured",
+    "langgraph",
+    "langsmith",
+    "streamlit",
+    "scikit-learn",
+    "numpy",
+    "nltk",
+    "docling",
+    "sentence_transformers",
+    "rich",
+    "rank_bm25",
+    "transformers==4.57.1",
+    "torch",
+    "dbc_pyutils",
+    "tornado",
+    "pydantic",
+    "aiohttp",
+    "asyncio",
+    "requests",
+    "keybert",
+    "tokenizers",
+    "accelerate",
+    "faiss-cpu>=1.14.2",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit",
+    "pytest",
+    "ruff",
+    "pip-audit",
+]
+
+[project.scripts]
+create-faiss-index = "science_rag.rag.retrievers.indexes.multilinguale5:main"
+science-RAG-sh = "science_rag.term_ui:cli"
+evaluate = "science_rag.evaluation_tools.evaluation:run"
+evaluate-retrieval = "science_rag.evaluation_tools.evaluate_retrieval:run"
+compare-retrievers = "science_rag.evaluation_tools.compare_retrievers:run"
+streaming-service-science-rag = "science_rag.service:cli"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"science_rag.evaluation_tool" = ["evaluation_tool/data/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+
+[[tool.uv.index]]
+name = "dbc-devpi"
+url = "https://devpi.dbccloud.dk/dbc/packages/+simple/"
+publish-url = "https://devpi.dbccloud.dk/dbc/packages"
