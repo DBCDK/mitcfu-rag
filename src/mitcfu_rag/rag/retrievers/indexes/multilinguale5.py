@@ -33,12 +33,8 @@ class e5multilingualEmbedder(Embedder):
         self.name = "multilingual-e5-large-instruct"
         self.max_length = 512
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            path_to_embedding_model, device_map=self.device
-        )
-        self.model = AutoModel.from_pretrained(
-            path_to_embedding_model, device_map=self.device
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(path_to_embedding_model, device_map=self.device)
+        self.model = AutoModel.from_pretrained(path_to_embedding_model, device_map=self.device)
         self.model.eval()
 
     def __call__(self, texts: list[str]) -> np.array:
@@ -60,26 +56,18 @@ class e5multilingualEmbedder(Embedder):
             )
 
             # Checking if GPU is available and switching
-            def average_pool(
-                last_hidden_states: torch.Tensor, attention_mask: torch.Tensor
-            ) -> torch.Tensor:
-                last_hidden = last_hidden_states.masked_fill(
-                    ~attention_mask[..., None].bool(), 0.0
-                )
+            def average_pool(last_hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+                last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
                 return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
             # Tokenize the document
             batch_dict = {k: v.to(self.device) for k, v in inputs.items()}
             outputs = self.model(**batch_dict)
-            embeddings = average_pool(
-                outputs.last_hidden_state, batch_dict["attention_mask"]
-            )
+            embeddings = average_pool(outputs.last_hidden_state, batch_dict["attention_mask"]).float()
             embedded_passage = F.normalize(embeddings, p=2, dim=1).detach().cpu()
         return embedded_passage
 
-    def last_token_pool(
-        self, last_hidden_states: Tensor, attention_mask: Tensor
-    ) -> Tensor:
+    def last_token_pool(self, last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
         left_padding = attention_mask[:, -1].sum() == attention_mask.shape[0]
         if left_padding:
             return last_hidden_states[:, -1]
