@@ -55,7 +55,7 @@ class AgentStreamingGenerator(Generator):
         self.tgi_endpoints = {
             GEMMA_3_12B: os.environ.get(
                 "SCIENCE_RAG_TGI_URL",
-                "http://gemma-3-12b-it.mi-prod.svc.cloud.dbc.dk/v1/chat/completions",
+                "http://vllm-skolegpt-v3-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
             ),
             MIXTRAL_8X7B: os.environ.get(
                 "CHAT_BIB_URL",
