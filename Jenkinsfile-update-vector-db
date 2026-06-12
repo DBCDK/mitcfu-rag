@@ -24,19 +24,22 @@ pipeline {
 	}
 	stages {
 		stage("Update vector db") {
+			agent {
+				docker {
+					label workerNode
+					image "docker-dbc.artifacts.dbccloud.dk/build-env:latest"
+					alwaysPull true
+				}
+			}
 			when {
 				branch "main"
 			}
 			steps {
 				sh """#!/usr/bin/env bash
 				set -xe
-				rm -rf miniconda.sh miniconda/ embeddings labels.npy mitcfu_faiss_index mitcfu_faiss_index.tgz mitcfu_faiss_index_file.json
-				curl -k ${MINICONDA_DOWNLOAD_URL} -o miniconda.sh
-				bash miniconda.sh -b -p miniconda
-				source miniconda/bin/activate
-				conda install -y -c conda-forge faiss
-				pip install --upgrade pip
-				pip install .
+				rm -rf .venv/ embeddings labels.npy mitcfu_faiss_index mitcfu_faiss_index.tgz mitcfu_faiss_index_file.json
+				uv sync --frozen
+				source .venv/bin/activate
 				if ${params.BUILD_FROM_SCRATCH} ; then
 					echo "Creating index from scratch"
 					create-faiss-index --index-output-path mitcfu_faiss_index_file.json --kafka-topic ${KAFKA_TOPIC} --kafka-group-id ai-mitcfu-rag-prod-${DOCKER_TAG} --batch-size 100

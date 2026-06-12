@@ -48,7 +48,7 @@ class GenericParser:
                 "mainTitle": title,
                 "materialTypes": material_type,
                 "publicationDateForRanking": publication_date,
-                "contributors": list(person_names),
+                "contributors": sorted(person_names),
             }
 
             return metadata_dict

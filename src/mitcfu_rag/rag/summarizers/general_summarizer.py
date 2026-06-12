@@ -19,11 +19,9 @@ example of usage:
     print(f'response: {response}')
 """
 
-import random
 import logging
-import json
 from huggingface_hub import InferenceClient
-from fakta_chat.rag.rag import Summarizer, SourcesWithScore, AnswerWithSource
+from fakta_chat.rag.rag import Summarizer
 
 
 logger = logging.getLogger(__name__)

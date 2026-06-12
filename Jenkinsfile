@@ -1,7 +1,6 @@
 #! groovy
 @Library('ai') _
 def workerNode = "ai-t01"
-def slackReceivers = "#ai-jenkins-warnings"
 
 pipeline {
 	agent { label workerNode }
@@ -13,12 +12,13 @@ pipeline {
 		PACKAGE="mitcfu-rag"
 		DOCKER_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
 		GITLAB_PRIVATE_TOKEN = credentials("ai-gitlab-api-token")
+		SLACK_CHANNEL = "${env.BRANCH_NAME == 'main' ? '#ai-jenkins-warnings' : '#ai-jenkins-warnings-debug'}"
 	}
 	triggers {
 	upstream(upstreamProjects: 'Docker-base-python3,Docker-base-python3-bump-trigger', threshold: hudson.model.Result.SUCCESS)
 	}
 	stages {
-		stage("upload wheel package") {
+		stage("test") {
 			agent {
 				docker {
 					label workerNode
@@ -26,11 +26,8 @@ pipeline {
 					alwaysPull true
 				}
 			}
-			when {
-				branch "main"
-			}
 			steps {
-				upload()
+				uvtest()
 			}
 		}
 		stage("docker build") {
@@ -108,7 +105,19 @@ pipeline {
 		}
 	}
 	post {
-		unstable { slackSend message: "build became unstable for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
-		failure { slackSend message: "build failed for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
+		success {
+			updateGitlabCommitStatus name: 'build', state: 'success'
+		}
+		unstable {
+			updateGitlabCommitStatus name: 'build', state: 'failed'
+			slackSend message: "build became unstable for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: env.SLACK_CHANNEL
+		}
+		failure {
+			updateGitlabCommitStatus name: 'build', state: 'failed'
+			slackSend message: "build failed for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: env.SLACK_CHANNEL
+		}
+		fixed {
+			updateGitlabCommitStatus name: 'build', state: 'success'
+		}
 	}
 }
