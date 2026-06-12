@@ -172,7 +172,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                 result += "Dokumenter:" + (
                     ". ".join(
                         [
-                            f"{ref.text}"
+                            f"{ref.page_content}"
                             for ref in parsed_references
                         ]
                     )
@@ -217,7 +217,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         for ref in references:
             yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
             yield json.dumps(tgi_output_format(DEFAULT_MODEL, "\n"))
-            tokens = [f"{ref.text[:50]}"]
+            tokens = [f"{ref.page_content[:50]}"]
             for token in tokens:
                 yield json.dumps(tgi_output_format(DEFAULT_MODEL, token))
 
@@ -284,7 +284,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             data=request_body_str,
         ) as response:
             if response.status >= 400:
-                error_body = await response.text()
+                error_body = await response.page_content()
                 logger.info(
                     f"Model endpoint returned status {response.status}: {error_body}"
                 )
@@ -379,8 +379,8 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             seen_links = set()
             filtered_references = []
             for ref in parsed_references:
-                if ref.text[0] not in seen_links:
-                    seen_links.add(ref.text[0])
+                if ref.page_content[0] not in seen_links:
+                    seen_links.add(ref.page_content[0])
                     filtered_references.append(ref)
 
             endpoint_profile = input.get("endpoint_profile", "tgi")
