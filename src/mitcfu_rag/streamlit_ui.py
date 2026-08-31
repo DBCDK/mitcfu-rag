@@ -13,14 +13,9 @@ from mitcfu_rag.tools.llm_formatting import select_model_function, GEMMA_4_26B
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 relative_img_path = os.path.join(current_dir, "faktalink_icon.png")
-STREAMING_ENDPOINTS = {
-    "tgi": "http://ai-p301:5009",
-    "vllm": "http://ai-p301:5009/v1/chat/completions",
-}
-STREAMING_BACKEND = os.environ.get("MITCFU_UI_STREAM_BACKEND", "tgi").lower()
-if STREAMING_BACKEND not in STREAMING_ENDPOINTS:
-    STREAMING_BACKEND = "tgi"
-STREAMING_ENDPOINT = STREAMING_ENDPOINTS[STREAMING_BACKEND]
+STREAMING_ENDPOINT = os.environ.get(
+    "MITCFU_UI_STREAM_URL", "http://ai-p301:5009/v1/chat/completions"
+)
 
 version = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
@@ -97,9 +92,7 @@ if prompt := st.chat_input("Indsæt dit spørgmål her ..."):
         ]
         with st.spinner(random.choice(fillers)):
             references = []
-            payload = {"messages": st.session_state.messages}
-            if STREAMING_BACKEND == "vllm":
-                payload["stream"] = True
+            payload = {"messages": st.session_state.messages, "stream": True}
             response_stream = requests.post(
                 STREAMING_ENDPOINT,
                 json=payload,

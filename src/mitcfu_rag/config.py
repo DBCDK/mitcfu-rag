@@ -14,6 +14,10 @@ START_TURN_USER = {GEMMA_4_26B: "<|turn>user\n"}
 START_TURN_MODEL = {GEMMA_4_26B: "<|turn>model\n"}
 END_TURN_USER = {GEMMA_4_26B: "<turn|>\n"}
 END_TURN_MODEL = {GEMMA_4_26B: "<turn|>\n"}
+# gemma-4-26B-A4B-it may spontaneously emit a thought channel even with
+# thinking mode off. Google recommends priming the model turn with an
+# empty, already-closed thought channel to suppress this.
+THOUGHT_STUB = {GEMMA_4_26B: "<|channel>thought\n<channel|>"}
 
 # DEFAULT_MODEL also determines the output format of the service.
 # if the vLLM endpoint the model is served through differs in output format,

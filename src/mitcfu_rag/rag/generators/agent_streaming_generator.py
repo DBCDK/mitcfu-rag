@@ -39,6 +39,7 @@ from mitcfu_rag.config import (
     START_TURN_USER,
     END_TURN_USER,
     START_TURN_MODEL,
+    THOUGHT_STUB,
 )
 
 roles_to_ignore = ["resetter", "summarizer"]
@@ -180,7 +181,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             result += END_TURN_USER[model_name]
             result += self.__format_messages(msgs, model_name, use_bos=False)
         # Finally, add model start token at end of prompt
-        result += START_TURN_MODEL[model_name]
+        result += START_TURN_MODEL[model_name] + THOUGHT_STUB[model_name]
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"Input for agent {agent_type}:{str(result)}")
         return [{"role": "user", "content": result}]
