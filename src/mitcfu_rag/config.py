@@ -5,21 +5,18 @@
 # MODELS TO USE
 
 GEMMA_4_26B = "gemma-4-26b-it"
-MIXTRAL_8X7B = "chat-bib-tgi-1-0"
 
 MODEL_MAP = {
-    MIXTRAL_8X7B: "mistralai/Mixtral-8x7B-Instruct-v0.1",
-    "skolegpt-tgi-1-0": "mistralai/Mixtral-8x7B-Instruct-v0.1",
     GEMMA_4_26B: "google/gemma-4-26B-A4B-it",
 }
 
-START_TURN_USER = {GEMMA_4_26B: "<start_of_turn>user\n", MIXTRAL_8X7B: "[INST]"}
-START_TURN_MODEL = {GEMMA_4_26B: "<start_of_turn>model\n", MIXTRAL_8X7B: ""}
-END_TURN_USER = {GEMMA_4_26B: "<end_of_turn>\n", MIXTRAL_8X7B: "[/INST]"}
-END_TURN_MODEL = {GEMMA_4_26B: "<end_of_turn>\n", MIXTRAL_8X7B: ""}
+START_TURN_USER = {GEMMA_4_26B: "<start_of_turn>user\n"}
+START_TURN_MODEL = {GEMMA_4_26B: "<start_of_turn>model\n"}
+END_TURN_USER = {GEMMA_4_26B: "<end_of_turn>\n"}
+END_TURN_MODEL = {GEMMA_4_26B: "<end_of_turn>\n"}
 
 # DEFAULT_MODEL also determines the output format of the service.
-# if there is a difference in the output format of fx the tgi endpoint the model is served through,
+# if the vLLM endpoint the model is served through differs in output format,
 # a wrapper needs to be added to llm_formatting.py to mimic this style.
 DEFAULT_MODEL = GEMMA_4_26B
 
