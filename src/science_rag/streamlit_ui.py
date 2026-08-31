@@ -8,7 +8,7 @@ import json
 import streamlit as st
 import requests
 
-from science_rag.tools.llm_formatting import select_model_function, GEMMA_3_12B
+from science_rag.tools.llm_formatting import select_model_function, GEMMA_4_26B
 
 # from fakta_chat.config import RAG
 
@@ -110,6 +110,6 @@ if prompt := st.chat_input("Indsæt dit spørgmål her ..."):
                 stream=True,
             )
             response_stream.raise_for_status()
-            response = st.write_stream(stream_tokens(response_stream, GEMMA_3_12B))
+            response = st.write_stream(stream_tokens(response_stream, GEMMA_4_26B))
 
             st.session_state.messages.append({"role": "assistant", "content": response})

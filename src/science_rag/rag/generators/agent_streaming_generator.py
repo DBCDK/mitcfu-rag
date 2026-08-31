@@ -34,12 +34,13 @@ from science_rag.tools.llm_formatting import (
     clean_sources_from_messages,
 )
 from science_rag.config import (
-    GEMMA_3_12B,
+    GEMMA_4_26B,
     MIXTRAL_8X7B,
     DEFAULT_MODEL,
     START_TURN_USER,
     END_TURN_USER,
     START_TURN_MODEL,
+    THOUGHT_STUB,
 )
 
 roles_to_ignore = ["resetter", "summarizer"]
@@ -53,9 +54,9 @@ class AgentStreamingGenerator(Generator):
     def __init__(self, use_ceph=False):
         self.streaming_delays = [0.01, 0.02, 0.03]
         self.tgi_endpoints = {
-            GEMMA_3_12B: os.environ.get(
+            GEMMA_4_26B: os.environ.get(
                 "SCIENCE_RAG_TGI_URL",
-                "http://vllm-skolegpt-v3-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
+                "http://vllm-gemma-4-26b-a4b-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
             ),
             MIXTRAL_8X7B: os.environ.get(
                 "CHAT_BIB_URL",
@@ -63,19 +64,19 @@ class AgentStreamingGenerator(Generator):
             ),
         }
         self.vllm_endpoints = {
-            GEMMA_3_12B: os.environ.get(
+            GEMMA_4_26B: os.environ.get(
                 "SCIENCE_RAG_VLLM_URL",
-                "http://vllm-skolegpt-v3-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
+                "http://vllm-gemma-4-26b-a4b-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
             ),
             MIXTRAL_8X7B: self.tgi_endpoints[MIXTRAL_8X7B],
         }
         self.request_models = {
             "tgi": {
-                GEMMA_3_12B: os.environ.get("SCIENCE_RAG_TGI_MODEL", "tgi"),
+                GEMMA_4_26B: os.environ.get("SCIENCE_RAG_TGI_MODEL", "tgi"),
                 MIXTRAL_8X7B: MIXTRAL_8X7B,
             },
             "vllm": {
-                GEMMA_3_12B: os.environ.get("SCIENCE_RAG_VLLM_MODEL", ""),
+                GEMMA_4_26B: os.environ.get("SCIENCE_RAG_VLLM_MODEL", ""),
                 MIXTRAL_8X7B: MIXTRAL_8X7B,
             },
         }
@@ -180,7 +181,7 @@ Forklar brugeren at du ikke kan finde svaret på spørgsmålet, og bed dem om at
             result += END_TURN_USER[model_name]
             result += self.__format_messages(msgs, model_name, use_bos=False)
         # Finally, add model start token at end of prompt
-        result += START_TURN_MODEL[model_name]
+        result += START_TURN_MODEL[model_name] + THOUGHT_STUB[model_name]
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"Input for agent {agent_type}:{str(result)}")
         return [{"role": "user", "content": result}]

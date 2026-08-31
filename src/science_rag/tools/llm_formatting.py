@@ -12,7 +12,7 @@ Functions for formatting input for llm's and reading the streamed output from ll
 import json
 from transformers import AutoTokenizer
 
-from science_rag.config import MODEL_MAP, GEMMA_3_12B, MIXTRAL_8X7B
+from science_rag.config import MODEL_MAP, GEMMA_4_26B, MIXTRAL_8X7B
 
 
 def load_tokenizers(model_names: list[str], use_ceph: bool = False):
@@ -28,7 +28,7 @@ def load_tokenizers(model_names: list[str], use_ceph: bool = False):
     for model_name in model_names:
         if use_ceph:
             tokenizers[model_name] = AutoTokenizer.from_pretrained(f"/data/{model_name}")
-            # tokenizers[model_name] = AutoTokenizer.from_pretrained("/data/huggingface/gemma-3-12b-it")
+            # tokenizers[model_name] = AutoTokenizer.from_pretrained("/data/huggingface/gemma-4-26b-a4b-it")
         else:
             tokenizers[model_name] = AutoTokenizer.from_pretrained(MODEL_MAP[model_name])
     return tokenizers
@@ -51,7 +51,7 @@ async def async_gen_wrapper(stream, model_name):
 
 
 def select_model_function(model_name):
-    if GEMMA_3_12B in model_name.lower():
+    if GEMMA_4_26B in model_name.lower():
         return __gemma_gen_wrapper
     elif MIXTRAL_8X7B in model_name.lower():
         return __mixtral_gen_wrapper
@@ -60,7 +60,7 @@ def select_model_function(model_name):
 
 
 def tgi_input_format(model_name, request_body):
-    if GEMMA_3_12B in model_name.lower():
+    if GEMMA_4_26B in model_name.lower():
         return __gemma_tgi_input_format(request_body)
     elif MIXTRAL_8X7B in model_name.lower():
         return __mixtral_tgi_input_format(request_body)
@@ -69,7 +69,7 @@ def tgi_input_format(model_name, request_body):
 
 
 def tgi_output_format(model_name, content):
-    if GEMMA_3_12B in model_name.lower():
+    if GEMMA_4_26B in model_name.lower():
         return __gemma_tgi_output_format(content)
     elif MIXTRAL_8X7B in model_name.lower():
         return __mixtral_tgi_output_format(content)
@@ -114,7 +114,8 @@ def __mixtral_tgi_input_format(request_body):
 
 def __gemma_gen_wrapper(obj):
     token = obj.get("choices", [{}])[0].get("delta", {}).get("content", "")
-    if not token == "<eos>":
+    # Gemma 4 IT ends generation with "<turn|>", not Gemma 3's "<eos>".
+    if not token == "<turn|>":
         return token
     return ""
 
