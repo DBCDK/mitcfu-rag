@@ -12,7 +12,7 @@ Functions for formatting input for llm's and reading the streamed output from ll
 import json
 from transformers import AutoTokenizer
 
-from mitcfu_rag.config import MODEL_MAP, GEMMA_3_12B, MIXTRAL_8X7B
+from mitcfu_rag.config import MODEL_MAP, GEMMA_4_26B, MIXTRAL_8X7B
 
 
 def load_tokenizers(model_names: list[str], use_ceph: bool = False):
@@ -54,7 +54,7 @@ async def async_gen_wrapper(stream, model_name):
 
 
 def select_model_function(model_name):
-    if GEMMA_3_12B in model_name.lower():
+    if GEMMA_4_26B in model_name.lower():
         return __gemma_gen_wrapper
     elif MIXTRAL_8X7B in model_name.lower():
         return __mixtral_gen_wrapper
@@ -63,7 +63,7 @@ def select_model_function(model_name):
 
 
 def tgi_input_format(model_name, request_body):
-    if GEMMA_3_12B in model_name.lower():
+    if GEMMA_4_26B in model_name.lower():
         return __gemma_tgi_input_format(request_body)
     elif MIXTRAL_8X7B in model_name.lower():
         return __mixtral_tgi_input_format(request_body)
@@ -72,7 +72,7 @@ def tgi_input_format(model_name, request_body):
 
 
 def tgi_output_format(model_name, content):
-    if GEMMA_3_12B in model_name.lower():
+    if GEMMA_4_26B in model_name.lower():
         return __gemma_tgi_output_format(content)
     elif MIXTRAL_8X7B in model_name.lower():
         return __mixtral_tgi_output_format(content)
