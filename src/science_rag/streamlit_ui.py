@@ -18,12 +18,11 @@ from science_rag.tools.llm_formatting import select_model_function, GEMMA_4_26B
 current_dir = os.path.dirname(os.path.abspath(__file__))
 relative_img_path = os.path.join(current_dir, "faktalink_icon.png")
 STREAMING_ENDPOINTS = {
-    "tgi": "http://ai-p301:5009",
     "vllm": "http://ai-p301:5009/v1/chat/completions",
 }
-STREAMING_BACKEND = os.environ.get("SCIENCE_RAG_UI_STREAM_BACKEND", "tgi").lower()
+STREAMING_BACKEND = os.environ.get("SCIENCE_RAG_UI_STREAM_BACKEND", "vllm").lower()
 if STREAMING_BACKEND not in STREAMING_ENDPOINTS:
-    STREAMING_BACKEND = "tgi"
+    STREAMING_BACKEND = "vllm"
 STREAMING_ENDPOINT = STREAMING_ENDPOINTS[STREAMING_BACKEND]
 
 

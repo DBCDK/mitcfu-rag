@@ -36,7 +36,6 @@ class AgentState(TypedDict):
     output: str
     agent: str
     prompt_template: str
-    endpoint_profile: str
 
 
 class AgenticGraph:
