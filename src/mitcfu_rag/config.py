@@ -10,10 +10,10 @@ MODEL_MAP = {
     GEMMA_4_26B: "google/gemma-4-26B-A4B-it",
 }
 
-START_TURN_USER = {GEMMA_4_26B: "<start_of_turn>user\n"}
-START_TURN_MODEL = {GEMMA_4_26B: "<start_of_turn>model\n"}
-END_TURN_USER = {GEMMA_4_26B: "<end_of_turn>\n"}
-END_TURN_MODEL = {GEMMA_4_26B: "<end_of_turn>\n"}
+START_TURN_USER = {GEMMA_4_26B: "<|turn>user\n"}
+START_TURN_MODEL = {GEMMA_4_26B: "<|turn>model\n"}
+END_TURN_USER = {GEMMA_4_26B: "<turn|>\n"}
+END_TURN_MODEL = {GEMMA_4_26B: "<turn|>\n"}
 
 # DEFAULT_MODEL also determines the output format of the service.
 # if the vLLM endpoint the model is served through differs in output format,
@@ -93,9 +93,7 @@ def ROUTER_TEMPLATE():
 
 Du starter med at tænke højt over chathistorikken, så du kan forklare dig selv hvad brugerens intention er med den seneste besked.
     Agent beskrivelser: """
-        + ". ".join(
-            [f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES]
-        )
+        + ". ".join([f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES])
         + """
         Agent typer: """
         + ", ".join([f"[{TEMP['name']}]" for TEMP in ALL_TEMPLATES])
