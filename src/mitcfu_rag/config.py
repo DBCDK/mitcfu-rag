@@ -4,24 +4,25 @@
 # the model that should be used in evaluation, chatUI
 # MODELS TO USE
 
-GEMMA_3_12B = "gemma-3-12b-it"
-MIXTRAL_8X7B = "chat-bib-tgi-1-0"
+GEMMA_4_26B = "gemma-4-26b-it"
 
 MODEL_MAP = {
-    MIXTRAL_8X7B: "mistralai/Mixtral-8x7B-Instruct-v0.1",
-    "skolegpt-tgi-1-0": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-    GEMMA_3_12B: "google/gemma-3-12b-it",
+    GEMMA_4_26B: "google/gemma-4-26B-A4B-it",
 }
 
-START_TURN_USER = {GEMMA_3_12B: "<start_of_turn>user\n", MIXTRAL_8X7B: "[INST]"}
-START_TURN_MODEL = {GEMMA_3_12B: "<start_of_turn>model\n", MIXTRAL_8X7B: ""}
-END_TURN_USER = {GEMMA_3_12B: "<end_of_turn>\n", MIXTRAL_8X7B: "[/INST]"}
-END_TURN_MODEL = {GEMMA_3_12B: "<end_of_turn>\n", MIXTRAL_8X7B: ""}
+START_TURN_USER = {GEMMA_4_26B: "<|turn>user\n"}
+START_TURN_MODEL = {GEMMA_4_26B: "<|turn>model\n"}
+END_TURN_USER = {GEMMA_4_26B: "<turn|>\n"}
+END_TURN_MODEL = {GEMMA_4_26B: "<turn|>\n"}
+# gemma-4-26B-A4B-it may spontaneously emit a thought channel even with
+# thinking mode off. Google recommends priming the model turn with an
+# empty, already-closed thought channel to suppress this.
+THOUGHT_STUB = {GEMMA_4_26B: "<|channel>thought\n<channel|>"}
 
 # DEFAULT_MODEL also determines the output format of the service.
-# if there is a difference in the output format of fx the tgi endpoint the model is served through,
+# if the vLLM endpoint the model is served through differs in output format,
 # a wrapper needs to be added to llm_formatting.py to mimic this style.
-DEFAULT_MODEL = GEMMA_3_12B
+DEFAULT_MODEL = GEMMA_4_26B
 
 # AGENT PROMPT TEMPLATES
 RAG_TEMPLATE = {
@@ -96,9 +97,7 @@ def ROUTER_TEMPLATE():
 
 Du starter med at tænke højt over chathistorikken, så du kan forklare dig selv hvad brugerens intention er med den seneste besked.
     Agent beskrivelser: """
-        + ". ".join(
-            [f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES]
-        )
+        + ". ".join([f"[{TEMP['name']}] : {TEMP['description']}\n" for TEMP in ALL_TEMPLATES])
         + """
         Agent typer: """
         + ", ".join([f"[{TEMP['name']}]" for TEMP in ALL_TEMPLATES])

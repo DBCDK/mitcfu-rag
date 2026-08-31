@@ -38,41 +38,6 @@ path_to_labels = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds-e5-multiling
 path_to_JEDs = "/data/rani/mitcfu-data/10plus-abstract-77295-jeds"
 
 
-class StreamingHandler(BaseHandler):
-    """
-    StreamingHandler
-    """
-
-    def initialize(self, model, graph_type: str, info, stat_collector):
-        """
-        Initializes handler
-        """
-        self.info = info
-        self.stat_collector = stat_collector
-        self.static_header_content = {
-            "build": self.info["build_number"],
-            "git": self.info["git"],
-            "version": self.info["version"],
-        }
-        self.model = model
-        self.agentic_graph = AgenticGraph(type=graph_type, model=model)
-
-    async def post(self):
-        self.set_header("Content-Type", "text/plain; charset=utf-8")
-        body = json.loads(self.request.body.decode("utf8"))
-        self.version = body.get("version", "v1")
-        messages = body.get("messages", [])
-
-        self.flush()
-
-        result = await self.agentic_graph.graph.ainvoke(
-            {"input": messages, "endpoint_profile": "tgi"}
-        )
-        async for chunk in result["output"]:
-            self.write(chunk)
-            await self.flush()
-
-
 class GlyphGateHandler(BaseHandler):
     """
     GlyphGateHandler
@@ -104,16 +69,12 @@ class GlyphGateHandler(BaseHandler):
             {"role": msg["role"], "content": content["text"]}
             for msg in messages
             for content in (
-                msg["content"]
-                if isinstance(msg["content"], list)
-                else [{"type": "text", "text": msg["content"]}]
+                msg["content"] if isinstance(msg["content"], list) else [{"type": "text", "text": msg["content"]}]
             )
             if content.get("type", "") == "text"
         ]
 
-        result = await self.agentic_graph.graph.ainvoke(
-            {"input": messages, "endpoint_profile": "vllm"}
-        )
+        result = await self.agentic_graph.graph.ainvoke({"input": messages})
 
         if stream:
             async for chunk in result["output"]:
@@ -124,9 +85,7 @@ class GlyphGateHandler(BaseHandler):
             return
 
         self.set_header("Content-Type", "application/json; charset=utf-8")
-        output = "".join(
-            [token async for token in async_gen_wrapper(result["output"], DEFAULT_MODEL)]
-        )
+        output = "".join([token async for token in async_gen_wrapper(result["output"], DEFAULT_MODEL)])
         self.write(
             json.dumps(
                 {
@@ -154,16 +113,6 @@ class MetricsApp(PrometheusMixIn, tw.Application):
 def make_app(model, graph_type):
     info = build_info.get_info("mitcfu_rag")
     handlers = [
-        (
-            r"/",
-            StreamingHandler,
-            dict(
-                model=model,
-                graph_type=graph_type,
-                info=info,
-                stat_collector=STATS["query"],
-            ),
-        ),
         (
             r"/v1/chat/completions",
             GlyphGateHandler,
@@ -245,9 +194,7 @@ def cli():
         action="store_true",
         help="Set this flag if running on Ceph or in dockerfile",
     )
-    parser.add_argument(
-        "-a", "--ab-id", dest="ab_id", help="ab id of service. default is 1", default=1
-    )
+    parser.add_argument("-a", "--ab-id", dest="ab_id", help="ab id of service. default is 1", default=1)
     parser.add_argument(
         "-p",
         "--port",
@@ -256,9 +203,7 @@ def cli():
         help=f"port to expose service on. Default is {port}",
         default=port,
     )
-    parser.add_argument(
-        "-v", "--verbose", dest="verbose", action="store_true", help="verbose output"
-    )
+    parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="verbose output")
 
     args = parser.parse_args()
     level = logging.INFO
