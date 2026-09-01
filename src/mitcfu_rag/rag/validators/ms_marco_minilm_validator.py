@@ -2,21 +2,19 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
-:mod:`fakta_chat.embedding_retriever - embedding_retriever
+:mod:`mitcfu_rag.rag.validators.ms_marco_minilm_validator` -- ms-marco cross-encoder validator
 
-============
-EmbeddingRetriever
-============
+=============
+MsValidator
+=============
 
-EmbeddingRetriever retrieves relevant references based on the messages from the chat sent.
-There is no underlying database and EmbeddingRetriever returns an dummy document.
+MsValidator scores and filters retrieved references against the user's query
+using the `ms-marco-MiniLM-L-6-v2` cross-encoder model, so only references
+relevant enough to pass a similarity threshold are kept.
 
 example of usage:
-    from fakta_chat.embedding_retriever import EmbeddingRetriever
-    d_retriever = EmbeddingRetriever()
-    messages = messages = ["Hej", "Er der noget om biblioteker?"]
-    refs = d_retriever.retrieve(messages)
-    print(f'relevant references: {refs}')
+    validator = MsValidator()
+    filtered_references = validator.validate_references(query, references)
 """
 
 import logging

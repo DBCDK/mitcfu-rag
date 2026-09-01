@@ -169,27 +169,47 @@ load path the actual retrievers use, not just an import check.
 
 ---
 
-## Phase 5 — Smaller correctness fixes
+## Phase 5 — Smaller correctness fixes ✅ done (branch `cleanup-dead-code-phase1`, not yet committed)
 
-- [ ] `langgraph_graphs.py:52-54` — `create_graph(type)` only handles
+- [x] `langgraph_graphs.py:52-54` — `create_graph(type)` only handled
       `type == "service"`; any other value (including `"evaluate_router"`,
-      which `service.py`'s own `--graph-type` help text advertises as valid)
-      silently returns `None`, and the service only blows up later, on the
-      first request. Either implement `create_evaluate_router_graph()` or
-      strip the dead option from the CLI help text in `service.py`.
-- [ ] Narrow the two remaining bare `except:` blocks:
-  - `langgraph_graphs.py:95` — falls back to `agent = None` on *any*
-    exception, not just a JSON parse failure. Narrow to
-    `except (json.JSONDecodeError, KeyError, AttributeError):`.
-  - `langgraph_graphs.py:138` — same pattern for reformulated queries;
-    narrow similarly.
-- [ ] `ms_marco_minilm_validator.py:5-8` — docstring header describes an
-      unrelated class (`EmbeddingRetriever`), a copy-paste leftover from a
-      different file. Rewrite to describe the actual validator.
-- [ ] `service.py:36-38` — replace the hardcoded personal path defaults
-      (`/data/rani/mitcfu-data/...`) for `path_to_embeddings`,
-      `path_to_labels`, `path_to_JEDs` with environment-variable-backed
-      config, or drop the defaults and make the CLI args required.
+      which `service.py`'s own `--graph-type` help text advertised as valid)
+      silently returned `None`, deferring the crash to the first request.
+      Didn't implement `evaluate_router` (no spec for it, and the eval
+      tooling it would have served is gone as of Phase 3) — instead made
+      `create_graph` raise `ValueError` immediately for any unsupported type,
+      and stripped the dead `evaluate_router` mention from `service.py`'s
+      `--graph-type` help text. Verified: constructing `AgenticGraph(type="evaluate_router", ...)`
+      now raises immediately with a clear message; `type="service"` is
+      unaffected.
+- [x] Narrowed the two remaining bare `except:` blocks:
+  - `langgraph_graphs.py:95` → `except (json.JSONDecodeError, AttributeError):`
+    (`JSONDecodeError` for unparseable output, `AttributeError` for the case
+    where the parsed JSON is valid but not a dict, e.g. a bare list).
+  - `langgraph_graphs.py:138` → `except (AttributeError, TypeError):` —
+    `_extract_json` already narrowly catches `JSONDecodeError` internally and
+    always returns a dict, so this outer catch only needs to guard the
+    `.get()` call itself.
+  - Verified by replicating both try/except blocks standalone against
+    malformed JSON, JSON-that's-a-list, missing keys, and valid input — every
+    case produces the identical fallback behavior as the original bare
+    except, confirming no legitimate path regressed.
+- [x] `ms_marco_minilm_validator.py:5-8` — docstring header described an
+      unrelated class (`EmbeddingRetriever`), a copy-paste leftover. Rewrote
+      to describe `MsValidator` (the ms-marco-MiniLM-L-6-v2 cross-encoder
+      reference validator it actually is).
+- [x] `service.py:36-38` — `path_to_labels` and `path_to_JEDs` were dead
+      module-level variables (personal hardcoded path, zero references
+      anywhere else in the file) — deleted outright rather than moved to
+      env vars, since nothing reads them.
+      `path_to_embeddings` was only used as `default=path_to_embeddings` on
+      the required positional `faiss_path` CLI argument — verified with a
+      throwaway argparse script that **`default=` on a plain positional
+      argument is a no-op**; argparse still requires the value regardless,
+      so this line never did anything. Removed the dead variable and the
+      inert `default=` kwarg; `faiss_path` remains a required positional arg
+      exactly as it behaved before, just without a dead reference to a
+      colleague's home directory sitting in the source.
 
 ---
 
