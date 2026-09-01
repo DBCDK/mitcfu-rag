@@ -35,7 +35,6 @@ vidre mulige opgaver fakta-chat skal løses
 
 
 vidre udvikling evaluering af retrieval kvalitet:
-- compare-retrievers ikke håndterer i æjeblikket hvis mere end 1 reference skal findes frem
 - mulige retning ide 1: evaluering på sub-paragrafer - er den rigtige tekst afsnit ramt (hvordan referer man fra text snippet tilbage til text snippet)
 - mulige retning ide 2: giver referencer som fandt frem og golden paragraph til sprogmodel og lav det evalueres som her: https://gitlab.dbc.dk/ai/llm-notebooks/-/blob/main/Structured%20Generation.ipynb?ref_type=heads
 
