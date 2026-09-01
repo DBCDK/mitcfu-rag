@@ -99,67 +99,31 @@ referenced by README, Jenkinsfiles, or tests.
 
 ---
 
-## Phase 3 — Fix `evaluate` (`evaluation_tools/evaluation.py`)
+## Phase 3 — Delete `evaluate` too ✅ done (branch `cleanup-dead-code-phase1`)
 
-This is the one eval tool we're keeping. It currently fails outright and has
-a real correctness bug in the request it sends. Fix all of the following:
+Superseded decision: originally planned to fix `evaluate`
+(`evaluation_tools/evaluation.py`) rather than delete it — see
+commit `a1a1dba` on the now-abandoned `cleanup-fix-evaluate-phase3` branch for
+that work (kept for reference, not merged). Team decided afterward to drop
+it entirely instead, so no partner-maintained eval tooling ships with this
+repo at all for now.
 
-- [ ] **Missing dependency.** `evaluation.py:11` does
-      `from openai import APIConnectionError, OpenAI, RateLimitError`, but
-      `openai` is not declared in `pyproject.toml` and is not in `uv.lock`
-      (`grep -c 'name = "openai"' uv.lock` → 0). Under the pinned/`--frozen`
-      env every CI and Docker build uses, this is `ModuleNotFoundError` on
-      import. Add `openai` to `[project].dependencies`, re-lock with
-      `uv lock`.
-- [ ] **CWD-relative path bug.** `sample_evaluation_questions`
-      (`evaluation.py:26`) does
-      `pd.read_csv("src/mitcfu_rag/evaluation_tools/testset/query_answer.csv")`
-      — only works if the process CWD happens to be the repo root. Replace
-      with a path relative to the module: `Path(__file__).parent / "testset" / "query_answer.csv"`.
-- [ ] **Real bug: malformed request content.** `generate_predictions`
-      (`evaluation.py:116,122`):
-      ```python
-      query = [line["query"]]
-      ...
-      "messages": [{"role": "user", "content": query}],
-      ```
-      `content` ends up as a one-element list containing a raw string. The
-      live service's message parser (`service.py:68-75`) expects `content`
-      to be either a string or a list of `{"type": "text", "text": ...}`
-      dicts, and does `content["text"]` on each item — a plain string item
-      will raise `TypeError: string indices must be integers`. This means
-      `evaluate` currently cannot successfully call the real service at all.
-      Fix: `query = line["query"]` (plain string), and send
-      `"content": query` directly.
-      - Downstream, `predictions.append({"query": query, ...})` and the
-        `f"Question: {query}\n..."` formatting in `evaluate_responses`
-        (line 196) will also stop printing Python list reprs once `query` is
-        a plain string.
-- [ ] **Bare except swallows real bugs.** `parse_response` (`evaluation.py:109`)
-      has `except:` catching everything, including bugs in the parsing code
-      itself, and returning `-1` — indistinguishable from a legitimate
-      "hallucination" score. Narrow to
-      `except (json.JSONDecodeError, ValueError, KeyError):`.
-- [ ] **Debug print cruft.** `evaluation.py:132,134` (`print(prediction)`,
-      `print(references)`) — leftover debug prints inside
-      `generate_predictions`. Remove, or convert to `logger.debug(...)`.
-- [ ] **Dead commented-out blocks.** Remove the large commented-out code
-      blocks in `evaluate_responses` (`evaluation.py:199-228`, `266-270`,
-      `302-311`) — they reference variables (`n_miss`, `n_correct_exact`)
-      that no longer exist elsewhere in the function; keeping them as
-      comments only invites someone to "helpfully" uncomment broken code
-      later.
-- [ ] Document in README that `evaluate` calls the OpenAI API directly
-      (`OpenAI()` at `evaluation.py:338` picks up `OPENAI_API_KEY` from the
-      environment) — this is an external, billed dependency a partner needs
-      to know about before running it.
+- [x] Delete the entire `src/mitcfu_rag/evaluation_tools/` package:
+      `evaluation.py`, `prompt_template.py`, `notes_eval.txt`, and
+      `testset/*.csv` (`edge_cases.csv`, `query_answer.csv`,
+      `question_type_with_explanation.csv`,
+      `summarize_and_no_information.csv`, `top_10_searches.csv`). Confirmed
+      via grep that nothing outside this package imports any of it — the
+      `testset/*.csv` files other than `query_answer.csv` weren't even
+      referenced by `evaluation.py` itself, they were already dead data.
+- [x] Remove the `evaluate` entry from `pyproject.toml:[project.scripts]`.
 
-**Verify:** `evaluate --help` runs. Point `evaluate <staging-url>` at a real
-running instance of the service (staging) with a small `-n` and confirm it
-completes a full round trip without the `TypeError` above, and that a
-deliberately malformed model response gets logged (not silently swallowed) if
-you temporarily break `parse_response`'s regex/JSON parsing to check the
-narrowed except actually surfaces it.
+**Verify:** grep for `evaluation_tools`, `sample_evaluation_questions`,
+`IN_CONTEXT_EXAMPLES`, `INSTRUCTIONS` across `src/`, `tests/`,
+`pyproject.toml`, README, both Jenkinsfiles, `Dockerfile`, `MANIFEST.in` —
+zero hits. `uv sync --frozen` succeeds. `pytest` — 18 passed. `.venv/bin`
+now contains exactly `create-faiss-index` and `streaming-service-mitcfu` —
+the only two working CLI tools this project ships.
 
 ---
 
@@ -185,7 +149,6 @@ Verified by grepping for direct imports of every declared dependency across
       installs because `langchain-community` happens to pull it in
       transitively — an undeclared direct dependency is a latent break
       waiting for someone to bump `langchain-community`.
-- [ ] **Add `openai`** — see Phase 3.
 - [ ] Re-run `uv lock` after all the above and commit the updated `uv.lock`.
 
 **Verify:** `uv sync --frozen`, `pytest`, and a full local start of

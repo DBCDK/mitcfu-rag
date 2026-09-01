@@ -46,7 +46,6 @@ dev = [
 
 [project.scripts]
 create-faiss-index = "mitcfu_rag.rag.index_vector_db:main"
-evaluate = "mitcfu_rag.evaluation_tools.evaluation:run"
 streaming-service-mitcfu = "mitcfu_rag.service:cli"
 
 [tool.setuptools]
