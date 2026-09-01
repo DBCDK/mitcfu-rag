@@ -272,14 +272,45 @@ phase's "don't reformat things you weren't asked to touch" scope.
 
 ---
 
-## Phase 7 — Fill in README
+## Phase 7 — Fill in README ✅ done (branch `cleanup-dead-code-phase1`, not yet committed)
 
-Not code cleanup, but blocking for partner onboarding. `README.md` currently
-has empty headers for: Unit/Validation/Performance tests, Sanity checks
-before MR, Artifacts built, related Jenkins jobs, related Artifactory
-artifacts, related repositories, production version, Confluence docs. Fill
-these in or remove the headers — an empty section is worse than no section
-for someone trying to onboard.
+Filled in every empty section with content grounded in the actual repo
+(`Dockerfile`, `Jenkinsfile`, `Jenkinsfile-update-vector-db`,
+`index_vector_db.py`'s real argparse, `pyproject.toml`) — no invented links or
+URLs.
+
+- [x] **Also fixed, not just filled:** the existing "Create faiss embeddings"
+      section documented a CLI that no longer exists — flags like
+      `--path_to_db`, `--path_to_folder`, `--create_new_index_extract` aren't
+      in `index_vector_db.py`'s `parse_args()` at all; the tool was migrated
+      to Kafka-based ingestion at some point and the README was never
+      updated. Replaced with the two real invocations (build-from-scratch /
+      update-existing), taken directly from `Jenkinsfile-update-vector-db`'s
+      actual production usage.
+- [x] Removed a stray orphaned `"""` at the end of that section (leftover
+      formatting artifact, no matching opening quote anywhere in the file).
+- [x] **Unit tests** — documented (`pytest`, what `tests/` actually covers).
+- [x] **Validation tests / Performance tests** — stated honestly that neither
+      exists; noted the `evaluate`/`evaluate-retrieval`/`compare-retrievers`
+      tools that used to serve this role were removed as broken (Phase 2/3),
+      so this is explicitly open work rather than a silent gap.
+- [x] **Sanity checks before Merge Request** — `pytest`, `pre-commit run
+      --all-files` (now that Phase 6 added the config), `pip-audit`, and a
+      note that CI already runs the test step automatically via `Jenkinsfile`.
+- [x] **Artifacts built** / **Related Jenkins jobs** / **Related artifacts
+      from Artifactory** — filled from what's directly readable in the two
+      Jenkinsfiles and the Dockerfile (job names, deployment target
+      `mitcfu-rag-1-0`, cron schedule, Artifactory paths under `mitcfu-rag/`).
+- [x] **Related repositories** / **Production version** (exact URL) /
+      **Confluence docs** — left as explicit `_TODO_` markers rather than
+      fabricated. Nothing in this repo identifies related repos, a live
+      production URL, or a Confluence link — inventing any of those would be
+      worse than an honest gap. Someone on the team with that context needs
+      to fill these three in.
+
+**Verify:** `pytest` — 18 passed (README changes don't touch code, ran it
+anyway for discipline). Read the full rendered file back to confirm no
+leftover formatting artifacts and consistent structure.
 
 ---
 
