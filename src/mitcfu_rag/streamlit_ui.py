@@ -6,11 +6,6 @@ import requests
 
 from mitcfu_rag.tools.llm_formatting import select_model_function, GEMMA_4_26B
 
-# from fakta_chat.config import RAG
-
-# from langchain.memory import ConversationBufferMemory
-# from langchain.chains import ConversationChain
-
 current_dir = os.path.dirname(os.path.abspath(__file__))
 relative_img_path = os.path.join(current_dir, "faktalink_icon.png")
 STREAMING_ENDPOINT = os.environ.get(

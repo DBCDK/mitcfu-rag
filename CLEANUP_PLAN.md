@@ -213,40 +213,62 @@ load path the actual retrievers use, not just an import check.
 
 ---
 
-## Phase 6 — Repo hygiene sweep
+## Phase 6 — Repo hygiene sweep ✅ done (branch `cleanup-dead-code-phase1`, not yet committed)
 
-- [ ] Delete `src/mitcfu_rag/__init__ copy.py` (stray tracked 0-byte file).
-- [ ] Delete `README_TODO_UV.md` — it's a pasted `ruff` lint-error dump, not
-      documentation. All of its listed errors are addressed by this plan
-      (the F821 items go away with Phase 2's deletions; the bare-except items
-      in Phase 3/5; the `tools/__init__.py` star-import issues below).
-- [ ] Clean up `src/mitcfu_rag/tools/__init__.py` star-import pattern
-      (`from .embedder import *` etc. — flagged by ruff as F403/F405/E402).
-      Replace with explicit imports of the actual public names, or add
-      `# noqa` with a one-line reason if the star-export is intentional.
-- [ ] Fix `MANIFEST.in` — currently
-      `recursive-include src/topic_pages/data *`, referencing a
-      `topic_pages` package that doesn't exist in this repo (copy-pasted
-      from a sibling project). Either remove the line or point it at real
-      package data this project actually ships.
-- [ ] Sweep stale `:mod:`fakta_chat...`` docstring headers left over from
-      the rename, in: `tools/embedder.py:3`, `tools/knn_searcher.py:2`,
-      `tools/semantic_splitter.py:3`, `evaluation_tools/notes_eval.txt`
-      references, and any surviving after Phases 1-2 remove the files that
-      hold the rest. Update to `mitcfu_rag.*`.
-- [ ] Sweep dead commented-out imports referencing the old package name /
-      unimplemented retrievers, e.g. `config.py:1-2,166-175`,
-      `agent_streaming_rag.py:29,34`, `streamlit_ui.py:9,11-12` — either
-      delete outright or replace with a single-line "not implemented yet"
-      note if there's a genuine near-term plan to build them.
-- [ ] Delete `error.json` from the repo root (untracked debug artifact; not
-      in git history) and add a rule to `.gitignore` (e.g. `error.json`,
-      `api_responses/` — the latter is where `evaluate`'s `log_responses`
-      writes output per `evaluation.py:76`) so these stop accumulating in
-      working trees.
-- [ ] Add `.pre-commit-config.yaml` wiring up `ruff` — `pre-commit` is
-      already declared as a dev dependency in `pyproject.toml` but nothing
-      actually configures it.
+- [x] Deleted `src/mitcfu_rag/__init__ copy.py` (stray tracked 0-byte file).
+- [x] Deleted `README_TODO_UV.md`.
+- [x] Cleaned up `src/mitcfu_rag/tools/__init__.py` — replaced the
+      `from .x import *` / `__all__ += x.__all__` pattern with explicit
+      `from .embedder import Embedder, HuggingfaceEmbedder` etc. and a plain
+      `__all__` list. `ruff check` on the file is now clean (no more
+      F403/F405/E402).
+- [x] Fixed `MANIFEST.in` — it referenced a nonexistent `src/topic_pages/data`
+      (copy-pasted from a sibling project). Found the same dead-copy-paste
+      pattern in `pyproject.toml:[tool.setuptools.package-data]` too
+      (`"mitcfu_rag.evaluation_tool" = ["evaluation_tool/data/*"]` — wrong
+      module name, and the directory never existed even before Phase 3
+      deleted `evaluation_tools/`). Fixed both to point at the one real
+      static asset this project ships: `faktalink_icon.png` (used by
+      `streamlit_ui.py:11`), which had never actually been declared as
+      package data before.
+- [x] Swept stale `:mod:`fakta_chat...`` docstring headers →
+      `mitcfu_rag.*` in `tools/embedder.py`, `tools/knn_searcher.py` (header
+      + its `In [1]: from fakta_chat.tools import KNNSearch` usage example),
+      `tools/semantic_splitter.py`. The `evaluation_tools/notes_eval.txt`
+      instance no longer applies — that file was deleted in Phase 3.
+- [x] Swept dead commented-out imports referencing the old package name /
+      never-built retrievers: `config.py:1-2` (`DummyRAG`/`SolrRAG`) and
+      `config.py:161-175` (the `ComparisonRAG`/`Compare_Retrievers` block —
+      moot now that Phase 2/3 deleted the tools that used them),
+      `agent_streaming_rag.py:29,34` (`Mistrale5Retriever` /
+      `multilinguale5_large_retriever`, neither of which exist in this
+      repo), `streamlit_ui.py:9,11-12` (`fakta_chat.config.RAG` and two
+      `langchain.memory`/`langchain.chains` imports — the latter two doubly
+      dead since Phase 4 dropped the bare `langchain` dependency entirely).
+      Deleted outright rather than left as "not implemented" notes — none of
+      these referenced modules exist anywhere, so there was nothing
+      near-term to flag.
+- [x] Deleted `error.json` from the repo root and added it to `.gitignore`.
+      Dropped the plan's `api_responses/` gitignore suggestion — that was
+      `evaluate`'s log output directory, and `evaluate` no longer exists
+      (Phase 3).
+- [x] Added `.pre-commit-config.yaml` wiring up `astral-sh/ruff-pre-commit`
+      (`ruff check --fix` + `ruff format`), pinned to `v0.15.15` to match the
+      `ruff` version already resolved in `uv.lock`.
+
+**Verify:** `ruff check` on every file touched this session — clean, no new
+lint findings. `pytest` — 18 passed. Imported `mitcfu_rag.tools` directly and
+confirmed `__all__` and all three classes (`Embedder`, `KNNSearch`,
+`SemanticSplitter`) resolve correctly through the new explicit imports.
+Imported `mitcfu_rag.config` and `mitcfu_rag.streamlit_ui` — both still
+import cleanly after the dead-import sweep (`streamlit_ui`'s "missing
+ScriptRunContext" output is normal Streamlit noise when imported outside
+`streamlit run`, not an error). `.pre-commit-config.yaml` validated as
+well-formed YAML. Not yet verified: an actual `pre-commit run --all-files`
+against the *rest* of the untouched codebase, since that would surface
+pre-existing lint debt unrelated to this session's edits and risks a large
+unscoped diff — left for a deliberate follow-up, not bundled into this
+phase's "don't reformat things you weren't asked to touch" scope.
 
 ---
 

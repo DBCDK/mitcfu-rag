@@ -26,12 +26,10 @@ import asyncio
 from typing import Generator, Any
 from mitcfu_rag.rag.rag import RAG
 
-# from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
 from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import (
     EmbeddingRetriever,
 )
 
-# from mitcfu_rag.rag.retrievers.multilinguale5_large_retriever import EmbeddingRetriever
 from mitcfu_rag.rag.generators.agent_streaming_generator import AgentStreamingGenerator
 
 logger = logging.getLogger(__name__)
