@@ -33,13 +33,9 @@ class MsValidator(Validator):
         self.cross_sentence_model = AutoModelForSequenceClassification.from_pretrained(
             "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
         )
-        self.cross_sentence_tokenizer = AutoTokenizer.from_pretrained(
-            "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
-        )
+        self.cross_sentence_tokenizer = AutoTokenizer.from_pretrained("/data/mitCFU-models/ms-marco-MiniLM-L-6-v2")
 
-    def validate(
-        self, generated_response: str, references: list[Reference], query: str
-    ):
+    def validate(self, generated_response: str, references: list[Reference], query: str):
         pass
 
     def validate_references(self, query, references, threshold=0.1):
@@ -49,9 +45,7 @@ class MsValidator(Validator):
             ref.score = scores.get(ref.text, 0.0)
 
         filtered_references = [ref for ref in references if ref.score > threshold]
-        sorted_filtered_references = sorted(
-            filtered_references, key=lambda x: x.score, reverse=True
-        )
+        sorted_filtered_references = sorted(filtered_references, key=lambda x: x.score, reverse=True)
 
         return sorted_filtered_references
 

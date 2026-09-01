@@ -69,9 +69,7 @@ class RAG(ABC):
         pass
 
     @abstractmethod
-    def stream_response(
-        self, messages: list[dict[str, Any]], *args, **kwargs
-    ) -> Generator[str, None, None]:
+    def stream_response(self, messages: list[dict[str, Any]], *args, **kwargs) -> Generator[str, None, None]:
         """
         yields response tokens from rag request.
         """
@@ -91,9 +89,7 @@ class Retriever(ABC):
         return self.retrieve(messages)
 
     @abstractmethod
-    def retrieve(
-        self, messages: list[str], *args, **kwargs
-    ) -> tuple[list[float], list[Reference]]:
+    def retrieve(self, messages: list[str], *args, **kwargs) -> tuple[list[float], list[Reference]]:
         """ "
         returns similarity scores and a list of references.
         """
@@ -131,9 +127,7 @@ class Validator(ABC):
     ) -> bool:
         pass
 
-    def validate_references(
-        self, references: list[Reference], query: str, limit: int, *args, **kwargs
-    ) -> bool:
+    def validate_references(self, references: list[Reference], query: str, limit: int, *args, **kwargs) -> bool:
         """
         Validates if the references are relevant to the query.
         """

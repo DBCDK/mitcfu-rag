@@ -91,21 +91,13 @@ class KNNSearch:
             Labels corresponding to embeddings
         """
         if len(embeddings.shape) != 2:
-            raise ValueError(
-                f"Embedding array must be 2D (found {len(embeddings.shape)}D)"
-            )
+            raise ValueError(f"Embedding array must be 2D (found {len(embeddings.shape)}D)")
         if embeddings.shape[0] != labels.shape[0]:
-            raise ValueError(
-                f"Incompatible lengths: embeddings={embeddings.shape[0]} vs labels={labels.shape[0]}"
-            )
+            raise ValueError(f"Incompatible lengths: embeddings={embeddings.shape[0]} vs labels={labels.shape[0]}")
         if embeddings.dtype != np.float32:
-            raise TypeError(
-                f"embeddings array must be of dtype float32 ({embeddings.dtype} found)"
-            )
+            raise TypeError(f"embeddings array must be of dtype float32 ({embeddings.dtype} found)")
 
-        index = faiss.index_factory(
-            embeddings.shape[1], "Flat", faiss.METRIC_INNER_PRODUCT
-        )
+        index = faiss.index_factory(embeddings.shape[1], "Flat", faiss.METRIC_INNER_PRODUCT)
         embeddings_copy = embeddings.copy()
         faiss.normalize_L2(embeddings_copy)
         index.add(embeddings_copy)
@@ -118,9 +110,7 @@ class KNNSearch:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self.executor, self.__search, embedding, k)
 
-    async def search(
-        self, embedding: np.array, k: int = 10, min_similarity: float = 0.1
-    ) -> list[tuple[str, float]]:
+    async def search(self, embedding: np.array, k: int = 10, min_similarity: float = 0.1) -> list[tuple[str, float]]:
         """
         Searches for k nearest neighbours among indexed embeddings using cosine similarity.
 
@@ -139,15 +129,11 @@ class KNNSearch:
         indices = indices[0, :]
 
         result = [
-            (str(self.labels[idx]), float(sim))
-            for sim, idx in zip(similarities, indices)
-            if sim >= min_similarity
+            (str(self.labels[idx]), float(sim)) for sim, idx in zip(similarities, indices) if sim >= min_similarity
         ]
         return result
 
-    def sync_search(
-        self, embedding: np.array, k: int = 10, min_similarity: float = 0.1
-    ):
+    def sync_search(self, embedding: np.array, k: int = 10, min_similarity: float = 0.1):
         """
         Synchronous version of search().
 
@@ -173,9 +159,7 @@ class KNNSearch:
 
         # Build result list
         result = [
-            (str(self.labels[idx]), float(sim))
-            for sim, idx in zip(similarities, indices)
-            if sim >= min_similarity
+            (str(self.labels[idx]), float(sim)) for sim, idx in zip(similarities, indices) if sim >= min_similarity
         ]
 
         return result
@@ -187,13 +171,9 @@ class KNNSearch:
         :param label:
             Label to retrieve embeddings for
         """
-        return np.array(
-            [self.index.reconstruct(int(i)) for i in self.label2index[label]]
-        )
+        return np.array([self.index.reconstruct(int(i)) for i in self.label2index[label]])
 
-    def label_similarity(
-        self, embedding: np.array, label: str, k: int = None
-    ) -> np.array:
+    def label_similarity(self, embedding: np.array, label: str, k: int = None) -> np.array:
         """
         Find cosine similarity between supplied embedding and the
         embeddings associated with the supplied label. Returns the n
@@ -257,21 +237,13 @@ class KNNSearch:
 
         # Basic shape checks (same as in build)
         if len(embeddings.shape) != 2:
-            raise ValueError(
-                f"Embedding array must be 2D (found {len(embeddings.shape)}D)"
-            )
+            raise ValueError(f"Embedding array must be 2D (found {len(embeddings.shape)}D)")
         if embeddings.shape[0] != labels.shape[0]:
-            raise ValueError(
-                f"Incompatible lengths: embeddings={embeddings.shape[0]} vs labels={labels.shape[0]}"
-            )
+            raise ValueError(f"Incompatible lengths: embeddings={embeddings.shape[0]} vs labels={labels.shape[0]}")
         if embeddings.dtype != np.float32:
-            raise TypeError(
-                f"embeddings array must be of dtype float32 ({embeddings.dtype} found)"
-            )
+            raise TypeError(f"embeddings array must be of dtype float32 ({embeddings.dtype} found)")
         if embeddings.shape[1] != self.index.d:
-            raise ValueError(
-                f"Incompatible embedding dimension: {embeddings.shape[1]} vs {self.index.d}"
-            )
+            raise ValueError(f"Incompatible embedding dimension: {embeddings.shape[1]} vs {self.index.d}")
 
         # Normalize and add to FAISS index
         embeddings_copy = embeddings.copy()
@@ -306,9 +278,7 @@ class KNNSearch:
         labels_to_delete = set(labels_to_delete)
 
         # Indices we want to keep
-        keep_indices = [
-            i for i, label in enumerate(self.labels) if label not in labels_to_delete
-        ]
+        keep_indices = [i for i, label in enumerate(self.labels) if label not in labels_to_delete]
 
         # Nothing to delete
         if len(keep_indices) == len(self.labels):
@@ -316,17 +286,13 @@ class KNNSearch:
 
         # Everything deleted: reset to empty index and mappings
         if not keep_indices:
-            self.index = faiss.index_factory(
-                self.index.d, "Flat", faiss.METRIC_INNER_PRODUCT
-            )
+            self.index = faiss.index_factory(self.index.d, "Flat", faiss.METRIC_INNER_PRODUCT)
             self.labels = np.empty((0,), dtype=self.labels.dtype)
             self.label2index = {}
             return
 
         # Reconstruct all embeddings from current index
-        all_embeddings = np.vstack(
-            [self.index.reconstruct(i) for i in range(self.index.ntotal)]
-        ).astype("f")
+        all_embeddings = np.vstack([self.index.reconstruct(i) for i in range(self.index.ntotal)]).astype("f")
 
         new_embeddings = all_embeddings[keep_indices]
         new_labels = self.labels[keep_indices]
@@ -383,12 +349,8 @@ class KNNSearch:
         if len(embedding_copy.shape) == 1:
             embedding_copy = embedding_copy.reshape(1, -1)
         if embedding_copy.shape[1] != self.index.d:
-            raise ValueError(
-                f"Incompatible shapes: {embedding_copy.shape[1]} vs {self.index.d}"
-            )
+            raise ValueError(f"Incompatible shapes: {embedding_copy.shape[1]} vs {self.index.d}")
         if embedding.dtype != np.float32:
-            raise TypeError(
-                f"embedding array must be of dtype float32 ({embedding.dtype} found)"
-            )
+            raise TypeError(f"embedding array must be of dtype float32 ({embedding.dtype} found)")
         faiss.normalize_L2(embedding_copy)
         return embedding_copy

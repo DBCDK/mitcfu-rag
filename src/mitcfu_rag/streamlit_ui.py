@@ -8,9 +8,7 @@ from mitcfu_rag.tools.llm_formatting import select_model_function, GEMMA_4_26B
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 relative_img_path = os.path.join(current_dir, "faktalink_icon.png")
-STREAMING_ENDPOINT = os.environ.get(
-    "MITCFU_UI_STREAM_URL", "http://ai-p301:5009/v1/chat/completions"
-)
+STREAMING_ENDPOINT = os.environ.get("MITCFU_UI_STREAM_URL", "http://ai-p301:5009/v1/chat/completions")
 
 version = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
@@ -50,11 +48,9 @@ st.sidebar.button("New Chat", on_click=clear_chat_history)
 st.image(relative_img_path, width=150)
 
 
-greeting = (
-    "Hej 👋 Jeg er MitCFU-RAG og jeg kan hjælpe dig med at finde information om materialer\
+greeting = "Hej 👋 Jeg er MitCFU-RAG og jeg kan hjælpe dig med at finde information om materialer\
               fra MitCFU. Men indtil videre er jeg vist stadig mest en kopi af FaktaChat. \
               \n\nHvad kan jeg hjælpe dig med?"
-)
 
 # Initialize chat
 if "messages" not in st.session_state:

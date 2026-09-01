@@ -69,9 +69,7 @@ class AgenticRAG(RAG):
         """
         if input.get("agent", "") == "RAG":
             if input.get("reformulated_queries"):
-                results = await asyncio.gather(
-                    self.retriever.async_rerank_retrieve(input, n=limit)
-                )
+                results = await asyncio.gather(self.retriever.async_rerank_retrieve(input, n=limit))
             else:
                 results = await asyncio.gather(self.retriever.async_retrieve(input))
             similarities, references = results[0]
@@ -79,13 +77,9 @@ class AgenticRAG(RAG):
         elif input.get("agent", "") == "FOLLOW_UP":
             input["FOLLOW_UP"] = True
             if input.get("reformulated_queries"):
-                results = await asyncio.gather(
-                    self.retriever.async_rerank_retrieve(input, n=limit, follow_up=True)
-                )
+                results = await asyncio.gather(self.retriever.async_rerank_retrieve(input, n=limit, follow_up=True))
             else:
-                results = await asyncio.gather(
-                    self.retriever.async_retrieve(input, follow_up=True)
-                )
+                results = await asyncio.gather(self.retriever.async_retrieve(input, follow_up=True))
             similarities, references = results[0]
             similarities = similarities[:limit]
             references = references[:limit]
