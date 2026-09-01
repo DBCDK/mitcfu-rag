@@ -127,33 +127,45 @@ the only two working CLI tools this project ships.
 
 ---
 
-## Phase 4 — Dependency list cleanup (`pyproject.toml`)
+## Phase 4 — Dependency list cleanup (`pyproject.toml`) ✅ done (branch `cleanup-dead-code-phase1`, not yet committed)
 
 Verified by grepping for direct imports of every declared dependency across
 `src/`:
 
-- [ ] **Remove `langchain`** (bare package) — zero direct imports anywhere;
+- [x] **Removed `langchain`** (bare package) — zero direct imports anywhere;
       only `langchain_community`, `langchain_text_splitters`, and
-      `langchain_unstructured` are actually imported.
-- [ ] **Remove `accelerate`** — zero direct imports, and no `device_map="auto"`
-      usage anywhere (both embedding-loading call sites pass an explicit
-      `torch.device`). Remove, `uv sync`, and smoke-test that
-      `streaming-service-mitcfu` still starts and loads models correctly —
-      this one is a "verify before trusting" removal, not a slam dunk.
-- [ ] **Remove `tokenizers`** — zero direct imports; already pulled
-      transitively and unpinned by `transformers`, so the explicit top-level
-      entry does nothing today.
-- [ ] **Add `langchain-core`** explicitly — used directly
+      `langchain_unstructured` are actually imported. Confirmed gone from
+      the resolved lockfile entirely (`grep -c 'name = "langchain"$'
+      uv.lock` → 0) — nothing else pulls it in transitively either.
+- [x] **Kept `accelerate` — do NOT remove.** Static analysis (zero direct
+      imports, no literal `device_map="auto"`) suggested this was unused,
+      but actually removing it and loading a real model
+      (`AutoModel.from_pretrained(name, device_map=torch.device("cpu"))`,
+      the exact pattern used in `retrievers/indexes/multilinguale5.py` and
+      `streaming_multilingual_retriever.py`) failed hard:
+      `ValueError: Using a device_map ... requires accelerate`. Current
+      `transformers` requires `accelerate` for *any* `device_map` argument,
+      not just `"auto"` — the plan's original assumption was wrong. Restored
+      it immediately and re-verified the same load + forward pass succeeds
+      with it present. Left as an explicit dependency, unchanged.
+- [x] **Removed `tokenizers`** — zero direct imports; still present in the
+      resolved lockfile as a transitive dependency of `transformers` (`grep
+      -c 'name = "tokenizers"' uv.lock` → 2), so removing the redundant
+      explicit top-level pin changed nothing observable.
+- [x] **Added `langchain-core`** explicitly — used directly
       (`tests/test_generic_parser.py:4`: `from langchain_core.documents import Document`;
-      `generic_parser.py`'s loaders return `Document` objects). Currently only
-      installs because `langchain-community` happens to pull it in
-      transitively — an undeclared direct dependency is a latent break
-      waiting for someone to bump `langchain-community`.
-- [ ] Re-run `uv lock` after all the above and commit the updated `uv.lock`.
+      `generic_parser.py`'s loaders return `Document` objects). Was already
+      installing transitively via `langchain-community`; now declared
+      directly so a future `langchain-community` bump can't silently drop it.
+- [x] Re-ran `uv lock`; `uv.lock` updated accordingly (net: `langchain` and
+      `psutil`-via-`accelerate` briefly dropped then `accelerate`+`psutil`
+      restored; `langchain-core` already present, now also pinned directly).
 
-**Verify:** `uv sync --frozen`, `pytest`, and a full local start of
-`streaming-service-mitcfu` (or at minimum importing every module in
-`mitcfu_rag` — `python -c "import mitcfu_rag.service"` etc.) all still work.
+**Verify:** `uv sync --frozen` succeeds. `pytest` — 18 passed. Real
+model-load smoke test (`sentence-transformers/all-MiniLM-L6-v2` via
+`AutoTokenizer`/`AutoModel.from_pretrained(..., device_map=torch.device("cpu"))`
+plus a forward pass) succeeds with the final dependency set — this is the
+load path the actual retrievers use, not just an import check.
 
 ---
 

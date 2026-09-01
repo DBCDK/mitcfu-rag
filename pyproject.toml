@@ -12,7 +12,7 @@ maintainers = [
 ]
 dependencies = [
     "dbc-data",
-    "langchain",
+    "langchain-core",
     "langchain-text-splitters",
     "langchain-community",
     "langchain-unstructured",
@@ -25,13 +25,12 @@ dependencies = [
     "rich",
     "transformers",
     "torch",
+    "accelerate",
     "dbc_pyutils",
     "tornado",
     "pydantic",
     "aiohttp",
     "requests",
-    "tokenizers",
-    "accelerate",
     "faiss-cpu>=1.14.2",
     "jq",
 ]
