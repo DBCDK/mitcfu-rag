@@ -11,7 +11,6 @@ maintainers = [
     { name = "ai", email = "ai@dbc.dk" }
 ]
 dependencies = [
-    "dbc-data",
     "langchain-core",
     "langchain-text-splitters",
     "langchain-community",
@@ -26,7 +25,6 @@ dependencies = [
     "transformers",
     "torch",
     "accelerate",
-    "dbc_pyutils",
     "tornado",
     "pydantic",
     "openai",
@@ -41,6 +39,10 @@ dev = [
     "pytest",
     "ruff",
     "pip-audit",
+]
+dbc = [
+    "dbc-data",
+    "dbc_pyutils",
 ]
 
 [project.scripts]
