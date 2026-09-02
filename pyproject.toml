@@ -54,8 +54,6 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools.package-data]
-mitcfu_rag = ["faktalink_icon.png"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
