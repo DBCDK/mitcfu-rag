@@ -4,8 +4,6 @@
 GEMMA_4_26B = "gemma-4-26b-a4b-it"
 
 # DEFAULT_MODEL also determines the output format of the service.
-# if the vLLM endpoint the model is served through differs in output format,
-# a wrapper needs to be added to llm_formatting.py to mimic this style.
 DEFAULT_MODEL = GEMMA_4_26B
 
 # AGENT PROMPT TEMPLATES

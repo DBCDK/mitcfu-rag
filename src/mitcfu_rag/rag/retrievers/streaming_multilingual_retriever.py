@@ -22,7 +22,7 @@ example of usage:
 import logging
 from mitcfu_rag.rag.rag import Retriever, Reference
 from mitcfu_rag.tools import KNNSearch
-from mitcfu_rag.tools.llm_formatting import clean_sources_from_messages
+from mitcfu_rag.tools.message_history import clean_sources_from_messages
 
 # from infinity_emb import AsyncEngineArray, EngineArgs, AsyncEmbeddingEngine
 

@@ -25,7 +25,7 @@ import os
 import asyncio
 from openai import AsyncOpenAI
 from mitcfu_rag.rag.rag import Generator, Reference
-from mitcfu_rag.tools.llm_formatting import clean_sources_from_messages
+from mitcfu_rag.tools.message_history import clean_sources_from_messages
 from mitcfu_rag.config import GEMMA_4_26B
 
 logger = logging.getLogger(__name__)
