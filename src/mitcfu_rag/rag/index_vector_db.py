@@ -43,7 +43,6 @@ def main():
         document_dict = {}
         logger.info("Created empty document dict.")
 
-
     new_documents, documents_to_delete = read_kafka_topic(
         document_dict_keys=set(document_dict.keys()),
         kafka_topic=args.kafka_topic,
@@ -75,7 +74,9 @@ def main():
 
 
 def parse_args():
-    KAFKA_BOOTSTRP_SERVERS = "kafkadata-prod-dc1.dbccloud.dk, kafkadata-prod-dc2.dbccloud.dk, kafkadata-prod-dc3.dbccloud.dk"
+    KAFKA_BOOTSTRP_SERVERS = (
+        "kafkadata-prod-dc1.dbccloud.dk, kafkadata-prod-dc2.dbccloud.dk, kafkadata-prod-dc3.dbccloud.dk"
+    )
     default_kafka_group = f"ai-dev-mitcfu-vector-db-{datetime.now().isoformat()}"
     parser = argparse.ArgumentParser(
         description="Reads cfu-documents from kafka and indexes them in FAISS vector database"
@@ -131,9 +132,7 @@ def parse_args():
         default=False,
         help="The batch size for the embedding process. If not specified, it will be set to the length of the data.",
     )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Set logging level to DEBUG"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Set logging level to DEBUG")
     return parser.parse_args()
 
 
@@ -146,7 +145,9 @@ def load_document_dict(path_to_mitcfu_documents: str):
     return mitcfu_dict
 
 
-def save_document_dict(mitcfu_documents_dict: dict, new_documents: dict, documents_to_delete: list, path_to_mitcfu_documents: str):
+def save_document_dict(
+    mitcfu_documents_dict: dict, new_documents: dict, documents_to_delete: list, path_to_mitcfu_documents: str
+):
     mitcfu_documents_dict.update(new_documents)
     for doc in documents_to_delete:
         if doc in mitcfu_documents_dict:
@@ -194,14 +195,12 @@ def read_kafka_topic(
                     pworkid = js.get("workId")
                     if "work-of:875080-cfu" in pworkid:
                         mitcfu_id = _get_mitcfu_id(js)
-                        key2mitcfu_id[key] = mitcfu_id # used to handle tombstones
+                        key2mitcfu_id[key] = mitcfu_id  # used to handle tombstones
                         if mitcfu_id not in document_dict_keys:
                             new_document_dict[key] = js
                         message_counter += 1
                         if limit and message_counter >= limit:
-                            logger.info(
-                                f"Reached limit of {limit} cfu-documents. Stopping consumer."
-                            )
+                            logger.info(f"Reached limit of {limit} cfu-documents. Stopping consumer.")
                             kafka_consumer.close()
                             break
                 else:  # hit tombstone
@@ -220,9 +219,7 @@ def read_kafka_topic(
         f"Finished consuming {kafka_topic}. Found {len(new_document_dict)} new documents and {len(keys_for_deletion)} tombstones."
     )
     mitcfu_ids_for_deletion = [key2mitcfu_id[key] for key in keys_for_deletion if key in key2mitcfu_id]
-    new_document_dict_mitcfu_ids = {
-        _get_mitcfu_id(doc): doc for k, doc in new_document_dict.items()
-    }
+    new_document_dict_mitcfu_ids = {_get_mitcfu_id(doc): doc for k, doc in new_document_dict.items()}
     return new_document_dict_mitcfu_ids, mitcfu_ids_for_deletion
 
 
@@ -231,9 +228,7 @@ def _get_mitcfu_id(jed_doc: dict) -> str:
     return local_id.split(":")[1]
 
 
-def generate_embeddings_and_labels(
-    new_documents: dict, embedding_model_path: str, batch_size: int|None=None
-):
+def generate_embeddings_and_labels(new_documents: dict, embedding_model_path: str, batch_size: int | None = None):
     embedding_model = e5multilingualEmbedder(embedding_model_path)
     logger.info(f"Loaded {embedding_model_path} on device: {embedding_model.device}")
 
@@ -268,9 +263,7 @@ def generate_embeddings_and_labels(
 
         # Check if the batch size is reached, so we can start embedding the current batch. Otherwise, we continue filling the batch
         if len(abstracts_to_embed_batch) >= batch_size:
-            embeddings_for_this_batch = embedding_model.embed_documents(
-                abstracts_to_embed_batch
-            )
+            embeddings_for_this_batch = embedding_model.embed_documents(abstracts_to_embed_batch)
             embeddings.extend(embeddings_for_this_batch)
             labels.extend(labels_for_batch)
 
@@ -280,9 +273,7 @@ def generate_embeddings_and_labels(
 
     # Check if there are any remaining embeddings in the (final) batch
     if abstracts_to_embed_batch:
-        embeddings_for_this_batch = embedding_model.embed_documents(
-            abstracts_to_embed_batch
-        )
+        embeddings_for_this_batch = embedding_model.embed_documents(abstracts_to_embed_batch)
         embeddings.extend(embeddings_for_this_batch)
         labels.extend(labels_for_batch)
 
@@ -311,9 +302,7 @@ def create_faiss_database(
 
 
 def load_faiss_database(faiss_database_path: str) -> KNNSearch:
-    faiss_database = KNNSearch.load(
-        faiss_database_path + "/embeddings", faiss_database_path + "/labels.npy"
-    )
+    faiss_database = KNNSearch.load(faiss_database_path + "/embeddings", faiss_database_path + "/labels.npy")
     return faiss_database
 
 
@@ -327,9 +316,7 @@ def validate_abstract(document: dict) -> bool:
     abstract = " ".join(abstract_list)
     # before appending, check if the text is non-string type
     if not isinstance(abstract, str):
-        logger.debug(
-            f"Abstract is not a string: {abstract} in doc {document} with id {document['workId']}"
-        )
+        logger.debug(f"Abstract is not a string: {abstract} in doc {document} with id {document['workId']}")
         return False
 
     if len(abstract) < 150:
@@ -340,8 +327,7 @@ def validate_abstract(document: dict) -> bool:
 
 def __check_args(args: argparse.Namespace):
     if (args.index_input_path is None or len(args.index_input_path) < 1) and (
-        args.index_output_path is None
-        or len(args.index_output_path) < 1
+        args.index_output_path is None or len(args.index_output_path) < 1
     ):
         logger.error("No index input or output file specified. Exiting.")
         sys.exit(1)

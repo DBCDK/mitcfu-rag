@@ -41,39 +41,35 @@ or locally via this url:
 `localhost:<PORT_NUMBER>`
 
 ## Create faiss embeddings
-### How to run <my_command>
-Run `pip install -e .` from the root of the project.
-Run `conda install -c conda-forge faiss`
+`create-faiss-index` reads CFU documents from Kafka and indexes them into a FAISS
+vector database. Run `pip install -e .` and `conda install -c conda-forge faiss`
+first, as above.
 
-First run `touch mitcfu-index-file-path`
-Then run `create-faiss-index --path_to_db mitcfu-faiss-db --path_to_folder /data/mitcfu-rag/jed-docs --path_to_index_file mitcfu-index-file-path --batch_size 10 --create_new_index_extract`
+To build a new index from scratch:
+`create-faiss-index --index-output-path mitcfu_faiss_index_file.json --kafka-topic cisterne-work-jed-1-3 --kafka-group-id <your-group-id> --batch-size 100`
 
-This will start the indexing of the documents in the folder "--path_to_folder" and save the FAISS index and labels in the path specified after "--path_to_db".
-"""
+To update an existing index:
+`create-faiss-index --database-input-path mitcfu_faiss_index --index-input-path mitcfu_faiss_index_file.json --kafka-topic cisterne-work-jed-1-3 --kafka-group-id <your-group-id> --batch-size 100`
+
+See `Jenkinsfile-update-vector-db` for the exact invocations used in the nightly
+production rebuild, and `create-faiss-index --help` for the full set of options
+(Kafka bootstrap servers, embedding model, limit, etc.).
 
 ## How to run tests for this project
-### Unit tests 
+### Unit tests
+Run `pytest` (or `uv run pytest`) from the root of the project. Tests live under
+`tests/` and currently cover `GenericParser` (`tools/generic_parser.py`) and
+`KNNSearch` (`tools/knn_searcher.py`).
 
-### Validation tests
-
-### Performance tests
 
 ### Sanity checks before Merge Request
-
+- `uv run pytest` — must pass.
+- `uv run ruff format`
+- `uv run ruff check`
 
 ## Artifacts built in this project
-
-
-## Related Jenkins jobs on is.dbc.dk
-
-
-## Related artifacts from Artifactory
-
-
-## Related repositories
-
-
-## Production version of the service
- 
- 
-## Documentation on confluence
+- A Docker image for the streaming service, built from `Dockerfile` and tagged
+  per branch/build number (see `Jenkinsfile`), deployed to Kubernetes.
+- The FAISS vector index, its embeddings/labels, and the JED document metadata
+  index (`mitcfu_faiss_index.tgz`, `mitcfu_faiss_index_file.json`), rebuilt or
+  updated nightly by `Jenkinsfile-update-vector-db` and published to Artifactory.

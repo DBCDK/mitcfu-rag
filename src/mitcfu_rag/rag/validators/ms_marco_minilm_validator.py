@@ -2,21 +2,19 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
-:mod:`fakta_chat.embedding_retriever - embedding_retriever
+:mod:`mitcfu_rag.rag.validators.ms_marco_minilm_validator` -- ms-marco cross-encoder validator
 
-============
-EmbeddingRetriever
-============
+=============
+MsValidator
+=============
 
-EmbeddingRetriever retrieves relevant references based on the messages from the chat sent.
-There is no underlying database and EmbeddingRetriever returns an dummy document.
+MsValidator scores and filters retrieved references against the user's query
+using the `ms-marco-MiniLM-L-6-v2` cross-encoder model, so only references
+relevant enough to pass a similarity threshold are kept.
 
 example of usage:
-    from fakta_chat.embedding_retriever import EmbeddingRetriever
-    d_retriever = EmbeddingRetriever()
-    messages = messages = ["Hej", "Er der noget om biblioteker?"]
-    refs = d_retriever.retrieve(messages)
-    print(f'relevant references: {refs}')
+    validator = MsValidator()
+    filtered_references = validator.validate_references(query, references)
 """
 
 import logging
@@ -35,13 +33,9 @@ class MsValidator(Validator):
         self.cross_sentence_model = AutoModelForSequenceClassification.from_pretrained(
             "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
         )
-        self.cross_sentence_tokenizer = AutoTokenizer.from_pretrained(
-            "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
-        )
+        self.cross_sentence_tokenizer = AutoTokenizer.from_pretrained("/data/mitCFU-models/ms-marco-MiniLM-L-6-v2")
 
-    def validate(
-        self, generated_response: str, references: list[Reference], query: str
-    ):
+    def validate(self, generated_response: str, references: list[Reference], query: str):
         pass
 
     def validate_references(self, query, references, threshold=0.1):
@@ -51,9 +45,7 @@ class MsValidator(Validator):
             ref.score = scores.get(ref.text, 0.0)
 
         filtered_references = [ref for ref in references if ref.score > threshold]
-        sorted_filtered_references = sorted(
-            filtered_references, key=lambda x: x.score, reverse=True
-        )
+        sorted_filtered_references = sorted(filtered_references, key=lambda x: x.score, reverse=True)
 
         return sorted_filtered_references
 
