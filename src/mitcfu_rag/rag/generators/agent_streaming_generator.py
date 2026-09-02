@@ -45,6 +45,12 @@ def _vllm_base_url() -> str:
     return url.removesuffix("/chat/completions")
 
 
+def _max_tokens() -> int | None:
+    """Read MITCFU_MAX_TOKENS. Unset or empty means no limit (None)."""
+    value = os.environ.get("MITCFU_MAX_TOKENS")
+    return int(value) if value else None
+
+
 class AgentStreamingGenerator(Generator):
     def __init__(self):
         self.streaming_delays = [0.01, 0.02, 0.03]
@@ -54,6 +60,7 @@ class AgentStreamingGenerator(Generator):
         self.clients: dict[str, AsyncOpenAI] = {
             GEMMA_4_26B: AsyncOpenAI(base_url=_vllm_base_url(), api_key="unused"),
         }
+        self.max_tokens = _max_tokens()
         self.system_message = (
             "Du er MitCFU-Chat. Du hjælper med søgninger i MitCFU kataloget. Du svarer altid på dansk."
         )
@@ -139,13 +146,15 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         )
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"Input for agent {input['agent_type']}: {messages}")
-        stream = await client.chat.completions.create(
-            model=self.request_model_names.get(model_key, model_key),
-            messages=messages,
-            stream=True,
-            max_tokens=1000,
-            temperature=0.1,
-        )
+        create_kwargs = {
+            "model": self.request_model_names.get(model_key, model_key),
+            "messages": messages,
+            "stream": True,
+            "temperature": 0.1,
+        }
+        if self.max_tokens is not None:
+            create_kwargs["max_tokens"] = self.max_tokens
+        stream = await client.chat.completions.create(**create_kwargs)
         async for chunk in stream:
             if not chunk.choices:
                 continue
