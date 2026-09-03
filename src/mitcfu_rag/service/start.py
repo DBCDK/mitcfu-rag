@@ -13,6 +13,7 @@ mounted only when installed -- see `_dbc_optional`.
 """
 
 import argparse
+import asyncio
 import logging
 
 import uvicorn
@@ -119,13 +120,22 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
-def main():
-    args = parse_args()
+async def _serve(args) -> None:
+    # `create_app` constructs `AgenticRAG`, which opens an `aiohttp.ClientSession` --
+    # that requires a running event loop, so app construction happens here, inside
+    # the loop `main()` drives, rather than before `uvicorn.run()` starts one.
     app = create_app(args)
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     logger.info(f"Starting endpoint at port {args.port}")
-    uvicorn.run(app, host="0.0.0.0", port=args.port, log_config=None)
+    config = uvicorn.Config(app, host="0.0.0.0", port=args.port, log_config=None)
+    server = uvicorn.Server(config)
+    await server.serve()
+
+
+def main():
+    args = parse_args()
+    asyncio.run(_serve(args))
 
 
 if __name__ == "__main__":

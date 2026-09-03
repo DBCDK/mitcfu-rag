@@ -2,17 +2,20 @@
 """Tests for `mitcfu_rag.service` -- the FastAPI streaming service.
 
 Uses a lightweight fake in place of `AgenticGraph`/`AgenticRAG` so these
-tests never load real embedding/torch models, and monkeypatches
-`mitcfu_rag.service._dbc_optional.DBC_AVAILABLE` to exercise both the
-"dbc_pyutils installed" and "not installed" code paths deterministically
-(this repo's dev `.venv` has `dbc_pyutils` installed, so the "available"
-branch also runs for real, without extra setup).
+tests never load real embedding/torch models. `dbc_pyutils` is only
+installed via the non-default `dbc` dependency group, so a plain dev
+`.venv` does *not* have it -- the "available" branch is exercised by
+monkeypatching `mitcfu_rag.service._dbc_optional` with fakes rather than
+depending on the real package being installed.
 """
 
 import json
+import types
 import unittest
 from unittest import mock
 
+from fastapi import Request
+from fastapi.responses import PlainTextResponse
 from fastapi.testclient import TestClient
 
 from mitcfu_rag.service import _dbc_optional
@@ -44,6 +47,47 @@ class _FakeAgenticGraph:
         self.graph = _FakeGraph(chunks)
 
 
+class _FakeStatistics:
+    def __init__(self, name=None):
+        self.name = name
+
+    def describe(self):
+        return {"name": self.name, "total-success": 0, "total-failure": 0}
+
+
+class _FakePrometheusMiddleware:
+    def __init__(self, app, excluded_paths=frozenset()):
+        self.app = app
+        self.excluded_paths = excluded_paths
+
+    async def __call__(self, scope, receive, send):
+        await self.app(scope, receive, send)
+
+
+async def _fake_metrics_endpoint(request: Request):
+    return PlainTextResponse("# fake metrics\n")
+
+
+def _dbc_available_patches():
+    """Fakes standing in for the real `dbc_pyutils` symbols, so the
+    "available" gate branch is exercised without needing `dbc_pyutils`
+    installed (it only ships via the non-default `dbc` dependency group)."""
+    fake_build_info = types.SimpleNamespace(
+        get_info=lambda package: {"build_number": "42", "git_revision": "deadbeef", "version": "1.2.3"}
+    )
+    return mock.patch.multiple(
+        _dbc_optional,
+        DBC_AVAILABLE=True,
+        build_info=fake_build_info,
+        create_instance_id=lambda num_digits=8: "test-instance",
+        Statistics=_FakeStatistics,
+        install_base_handler=lambda app: None,
+        PrometheusMiddleware=_FakePrometheusMiddleware,
+        metrics_endpoint=_fake_metrics_endpoint,
+        setup_logging=lambda: None,
+    )
+
+
 def _build_app(chunks=(_sse_chunk("hi"),)):
     args = parse_args(["embedding-model-path", "faiss-path"])
     with (
@@ -55,19 +99,21 @@ def _build_app(chunks=(_sse_chunk("hi"),)):
 
 class TestStatusAndMetricsGating(unittest.TestCase):
     def test_status_enriched_when_dbc_available(self):
-        app = _build_app()
-        response = TestClient(app).get("/status")
+        with _dbc_available_patches():
+            app = _build_app()
+            response = TestClient(app).get("/status")
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertTrue(body["ok"])
-        self.assertIn("instance-id", body)
-        self.assertIn("statistics", body)
+        self.assertEqual(body["instance-id"], "test-instance")
+        self.assertEqual(body["statistics"], [{"name": "query", "total-success": 0, "total-failure": 0}])
         self.assertEqual(body["ab-id"], 1)
 
     def test_metrics_mounted_when_dbc_available(self):
-        app = _build_app()
-        response = TestClient(app).get("/metrics")
+        with _dbc_available_patches():
+            app = _build_app()
+            response = TestClient(app).get("/metrics")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/plain", response.headers["content-type"])
