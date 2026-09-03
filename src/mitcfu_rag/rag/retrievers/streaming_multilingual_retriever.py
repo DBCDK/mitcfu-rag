@@ -52,23 +52,15 @@ class EmbeddingRetriever(Retriever):
         self.device = "cpu"
         # embedding model for faiss index
         self.model = AutoModel.from_pretrained(model_path, device_map=self.device)
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_path, device_map=self.device
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path, device_map=self.device)
         self.model.to(self.device)
         self.model.eval()
         # cross-model for rerank
-        self.cross_model = AutoModelForSequenceClassification.from_pretrained(
-            cross_model_path, device_map=self.device
-        )
-        self.cross_tokenizer = AutoTokenizer.from_pretrained(
-            cross_model_path, device_map=self.device
-        )
+        self.cross_model = AutoModelForSequenceClassification.from_pretrained(cross_model_path, device_map=self.device)
+        self.cross_tokenizer = AutoTokenizer.from_pretrained(cross_model_path, device_map=self.device)
         self.cross_model.to(self.device)
         self.cross_model.eval()
-        self.searcher = KNNSearch.load(
-            embeddings_path + "/embeddings", embeddings_path + "/labels.npy"
-        )
+        self.searcher = KNNSearch.load(embeddings_path + "/embeddings", embeddings_path + "/labels.npy")
         if jed_document_path:
             self.jed_document_path = jed_document_path
             self.all_articles = self.initiate_articles()
@@ -77,9 +69,7 @@ class EmbeddingRetriever(Retriever):
             self.all_articles = {}
             self.all_materialtypes = set()
         self.validator = None
-        self.task = (
-            "Given a web search query, retrieve relevant passages that answer the query"
-        )
+        self.task = "Given a web search query, retrieve relevant passages that answer the query"
 
     def initiate_articles(self):
         with open(self.jed_document_path) as f:
@@ -104,21 +94,11 @@ class EmbeddingRetriever(Retriever):
     def format_doc(self, doc_id, doc):
         # work info
         text = " ".join(doc.get("abstract"))
-        subjects = [
-            sub.get("display")
-            for sub in doc.get("subjects", {}).get("all", {}).get("subjects", [])
-        ]
-        material_types_general = [
-            mat.get("general").get("display") for mat in doc.get("materialTypes", [])
-        ]
-        material_types_specific = [
-            mat.get("general").get("specific") for mat in doc.get("materialTypes", [])
-        ]
-        genre_and_form = doc.get("genreAndForm", [])
+        subjects = [sub.get("display") for sub in doc.get("subjects", {}).get("all", {}).get("subjects", [])]
+        material_types_general = [mat.get("general").get("display") for mat in doc.get("materialTypes", [])]
+        material_types_specific = [mat.get("general").get("specific") for mat in doc.get("materialTypes", [])]
         languages = [lan.get("display") for lan in doc.get("mainLanguages", [])]
-        creators_person = [
-            lan.get("display") for lan in doc.get("creators", {}).get("persons", [])
-        ]
+        creators_person = [lan.get("display") for lan in doc.get("creators", {}).get("persons", [])]
         series_titles = [serie.get("title") for serie in doc.get("series", [])]
         # manifestation info
         manifestation = doc.get("manifestations", {}).get("all")[0]
@@ -149,9 +129,7 @@ class EmbeddingRetriever(Retriever):
     async def async_retrieve(self, messages: list[str], n: int = 5, follow_up=True):
         return await self.retrieve(messages, n, follow_up=follow_up)
 
-    async def async_rerank_retrieve(
-        self, messages: list[str], n: int = 5, follow_up=True
-    ):
+    async def async_rerank_retrieve(self, messages: list[str], n: int = 5, follow_up=True):
         return await self.rerank_retrieve(messages, n, follow_up=follow_up)
 
     async def retrieve(self, input: list[str], n: int = 3, follow_up: bool = False):
@@ -167,34 +145,20 @@ class EmbeddingRetriever(Retriever):
     # https://huggingface.co/intfloat/multilingual-e5-large
     async def get_docs(self, query: str, limit: int = 3):
         model_device = next(self.model.parameters()).device
-        batch_dict = self.tokenizer(
-            query, max_length=512, padding=True, truncation=True, return_tensors="pt"
-        )
+        batch_dict = self.tokenizer(query, max_length=512, padding=True, truncation=True, return_tensors="pt")
         batch_dict = {k: v.to(model_device) for k, v in batch_dict.items()}
         with torch.no_grad():
             outputs = self.model(**batch_dict)
-        embeddings = average_pool(
-            outputs.last_hidden_state, batch_dict["attention_mask"]
-        )
-        embedded_query = (
-            F.normalize(embeddings, p=2, dim=1)
-            .detach()
-            .cpu()
-            .numpy()
-            .astype(np.float32)
-        )
+        embeddings = average_pool(outputs.last_hidden_state, batch_dict["attention_mask"])
+        embedded_query = F.normalize(embeddings, p=2, dim=1).detach().cpu().numpy().astype(np.float32)
         return await self.search(embedded_query, limit)
 
     async def search(self, embedded_query, limit, filters=None):
         hits = await self.searcher.search(embedded_query, limit * 100)
         ids, scores = zip(*hits)
-        retrieved_articles = [
-            self.all_articles[id.rsplit("_chunk", maxsplit=1)[0]] for id in ids
-        ]
+        retrieved_articles = [self.all_articles[id.rsplit("_chunk", maxsplit=1)[0]] for id in ids]
         if filters:
-            filtered_articles = [
-                article for article in retrieved_articles if filtered(article, filters)
-            ]
+            filtered_articles = [article for article in retrieved_articles if filtered(article, filters)]
             return scores, filtered_articles[:limit]
         else:
             return scores, retrieved_articles[:limit]
@@ -210,9 +174,7 @@ class EmbeddingRetriever(Retriever):
             _, articles = await self.get_docs(query, limit=limit)
             for art in articles:
                 articleid2article[art.id] = art
-            search_results = await self.cross_select_top_sentences(
-                articles, query, limit=int(40 / len(queries))
-            )
+            search_results = await self.cross_select_top_sentences(articles, query, limit=int(40 / len(queries)))
             all_results[query] = search_results
 
         if len(queries) > 1:
@@ -247,17 +209,12 @@ async def reciprocal_rank_fusion(search_results_dict, k=100):
     fused_scores = {}
 
     for query, doc_scores in search_results_dict.items():
-        for rank, (doc, score) in enumerate(
-            sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)
-        ):
+        for rank, (doc, score) in enumerate(sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)):
             if doc not in fused_scores:
                 fused_scores[doc] = 0
             fused_scores[doc] += 1 / (rank + k)
 
-    reranked_results = {
-        doc: score
-        for doc, score in sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
-    }
+    reranked_results = {doc: score for doc, score in sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)}
     return reranked_results
 
 
@@ -269,8 +226,6 @@ def filtered(article, filters):
     return passed_filters == len(filters.keys())
 
 
-def average_pool(
-    last_hidden_states: torch.Tensor, attention_mask: torch.Tensor
-) -> torch.Tensor:
+def average_pool(last_hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
     last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
     return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]

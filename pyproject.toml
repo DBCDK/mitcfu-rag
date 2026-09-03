@@ -12,7 +12,7 @@ maintainers = [
 ]
 dependencies = [
     "dbc-data",
-    "langchain",
+    "langchain-core",
     "langchain-text-splitters",
     "langchain-community",
     "langchain-unstructured",
@@ -25,13 +25,12 @@ dependencies = [
     "rich",
     "transformers",
     "torch",
+    "accelerate",
     "dbc_pyutils",
     "tornado",
     "pydantic",
     "aiohttp",
     "requests",
-    "tokenizers",
-    "accelerate",
     "faiss-cpu>=1.14.2",
     "jq",
 ]
@@ -46,10 +45,6 @@ dev = [
 
 [project.scripts]
 create-faiss-index = "mitcfu_rag.rag.index_vector_db:main"
-mitcfu-RAG-sh = "mitcfu_rag.term_ui:cli"
-evaluate = "mitcfu_rag.evaluation_tools.evaluation:run"
-evaluate-retrieval = "mitcfu_rag.evaluation_tools.evaluate_retrieval:run"
-compare-retrievers = "mitcfu_rag.evaluation_tools.compare_retrievers:run"
 streaming-service-mitcfu = "mitcfu_rag.service:cli"
 
 [tool.setuptools]
@@ -59,8 +54,6 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools.package-data]
-"mitcfu_rag.evaluation_tool" = ["evaluation_tool/data/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

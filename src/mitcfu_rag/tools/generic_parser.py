@@ -22,27 +22,18 @@ class GenericParser:
     def extract_metadata(JED_dict: dict, _: int) -> dict:
         try:
             title = JED_dict.get("titles", {}).get("main", [None])[0]
-            material_type = (
-                JED_dict.get("materialTypes", [{}])[0].get("general", {}).get("display")
-            )
+            material_type = JED_dict.get("materialTypes", [{}])[0].get("general", {}).get("display")
             publication_date = (
                 JED_dict.get("manifestations", {})
                 .get("all", [{}])[0]
                 .get("edition", {})
                 .get("publicationDateForRanking")
             )
-            persons = (
-                JED_dict.get("manifestations", {})
-                .get("all", [{}])[0]
-                .get("contributors", {})
-                .get("persons", [])
-            )
+            persons = JED_dict.get("manifestations", {}).get("all", [{}])[0].get("contributors", {}).get("persons", [])
             person_names = set()
             for person in persons:
                 if person.get("firstName") or person.get("lastName"):
-                    person_names.add(
-                        f"{person.get('firstName', '')} {person.get('lastName', '')}"
-                    )
+                    person_names.add(f"{person.get('firstName', '')} {person.get('lastName', '')}")
 
             metadata_dict = {
                 "mainTitle": title,
@@ -121,9 +112,7 @@ class GenericParser:
         try:
             filename = os.path.basename(JED_path)
             filename_without_json = os.path.splitext(filename)[0]
-            jq_schema_and_filekey = (
-                f'.["{filename_without_json}"]'  # .abstract | join(" ")'
-            )
+            jq_schema_and_filekey = f'.["{filename_without_json}"]'  # .abstract | join(" ")'
             loader = JSONLoader(
                 file_path=JED_path,
                 jq_schema=jq_schema_and_filekey,

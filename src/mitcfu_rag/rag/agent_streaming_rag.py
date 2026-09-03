@@ -26,12 +26,10 @@ import asyncio
 from typing import Generator, Any
 from mitcfu_rag.rag.rag import RAG
 
-# from mitcfu_rag.rag.retrievers.streaming_mistral_retriever import Mistrale5Retriever
 from mitcfu_rag.rag.retrievers.streaming_multilingual_retriever import (
     EmbeddingRetriever,
 )
 
-# from mitcfu_rag.rag.retrievers.multilinguale5_large_retriever import EmbeddingRetriever
 from mitcfu_rag.rag.generators.agent_streaming_generator import AgentStreamingGenerator
 
 logger = logging.getLogger(__name__)
@@ -71,9 +69,7 @@ class AgenticRAG(RAG):
         """
         if input.get("agent", "") == "RAG":
             if input.get("reformulated_queries"):
-                results = await asyncio.gather(
-                    self.retriever.async_rerank_retrieve(input, n=limit)
-                )
+                results = await asyncio.gather(self.retriever.async_rerank_retrieve(input, n=limit))
             else:
                 results = await asyncio.gather(self.retriever.async_retrieve(input))
             similarities, references = results[0]
@@ -81,13 +77,9 @@ class AgenticRAG(RAG):
         elif input.get("agent", "") == "FOLLOW_UP":
             input["FOLLOW_UP"] = True
             if input.get("reformulated_queries"):
-                results = await asyncio.gather(
-                    self.retriever.async_rerank_retrieve(input, n=limit, follow_up=True)
-                )
+                results = await asyncio.gather(self.retriever.async_rerank_retrieve(input, n=limit, follow_up=True))
             else:
-                results = await asyncio.gather(
-                    self.retriever.async_retrieve(input, follow_up=True)
-                )
+                results = await asyncio.gather(self.retriever.async_retrieve(input, follow_up=True))
             similarities, references = results[0]
             similarities = similarities[:limit]
             references = references[:limit]

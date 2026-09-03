@@ -27,13 +27,9 @@ def load_tokenizers(model_names: list[str], use_ceph: bool = False):
     tokenizers = {}
     for model_name in model_names:
         if use_ceph:
-            tokenizers[model_name] = AutoTokenizer.from_pretrained(
-                f"/data/{model_name}"
-            )
+            tokenizers[model_name] = AutoTokenizer.from_pretrained(f"/data/{model_name}")
         else:
-            tokenizers[model_name] = AutoTokenizer.from_pretrained(
-                MODEL_MAP[model_name]
-            )
+            tokenizers[model_name] = AutoTokenizer.from_pretrained(MODEL_MAP[model_name])
     return tokenizers
 
 

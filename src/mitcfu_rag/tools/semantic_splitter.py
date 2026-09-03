@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-:mod:`fakta_chat.tools.semantic_splitter -- splits text based on semantic boundaries
+:mod:`mitcfu_rag.tools.semantic_splitter -- splits text based on semantic boundaries
 
 =================
 Semantic Splitter
@@ -64,8 +64,8 @@ class SemanticSplitter:
         :param embedder:
             Embedder instance to use on chunks
         """
-        (self.breakpoint_threshold, self.breakpoint_threshold_type, self.embedder) = (
-            self.__configure(breakpoint_threshold, breakpoint_threshold_type, embedder)
+        (self.breakpoint_threshold, self.breakpoint_threshold_type, self.embedder) = self.__configure(
+            breakpoint_threshold, breakpoint_threshold_type, embedder
         )
 
     def split_text(self, text: str) -> list[str]:
@@ -112,9 +112,7 @@ class SemanticSplitter:
 
         return chunks
 
-    def __get_threshold(
-        self, distances, breakpoint_threshold, breakpoint_threshold_type
-    ) -> float:
+    def __get_threshold(self, distances, breakpoint_threshold, breakpoint_threshold_type) -> float:
         match breakpoint_threshold_type:
             case "cosine-distance":
                 return breakpoint_threshold
@@ -134,9 +132,7 @@ class SemanticSplitter:
         if not breakpoint_threshold_type:
             breakpoint_threshold_type = "cosine-distance"
         if breakpoint_threshold_type not in get_args(BreakpointThresholdType):
-            raise KeyError(
-                f"Unknown breakpoint_threshold_type: {breakpoint_threshold_type}"
-            )
+            raise KeyError(f"Unknown breakpoint_threshold_type: {breakpoint_threshold_type}")
         if not breakpoint_threshold:
             breakpoint_threshold = default_thresholds[breakpoint_threshold_type]
 

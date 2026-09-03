@@ -69,9 +69,7 @@ class RAG(ABC):
         pass
 
     @abstractmethod
-    def stream_response(
-        self, messages: list[dict[str, Any]], *args, **kwargs
-    ) -> Generator[str, None, None]:
+    def stream_response(self, messages: list[dict[str, Any]], *args, **kwargs) -> Generator[str, None, None]:
         """
         yields response tokens from rag request.
         """
@@ -86,66 +84,16 @@ class RAG(ABC):
         pass
 
 
-class Parser(ABC):
-    def __call__(self, messages: list[str], *args, **kwargs) -> list[str]:
-        return self.preprocess(messages)
-
-    @abstractmethod
-    def preprocess(self, messages: list[str], *args, **kwargs) -> list[str]:
-        pass
-
-
 class Retriever(ABC):
     def __call__(self, messages: list[str], *args, **kwargs):
         return self.retrieve(messages)
 
     @abstractmethod
-    def retrieve(
-        self, messages: list[str], *args, **kwargs
-    ) -> tuple[list[float], list[Reference]]:
+    def retrieve(self, messages: list[str], *args, **kwargs) -> tuple[list[float], list[Reference]]:
         """ "
         returns similarity scores and a list of references.
         """
         pass
-
-
-class Ensembler(ABC):
-    retrievers: list[Retriever]
-
-    # to use ensemblers with the same interface as retrievers
-    def __call__(
-        self, retrievers: list[Retriever], *args, **kwargs
-    ) -> tuple[list[float], list[Reference]]:
-        return None, self.ensemble(retrievers)
-
-    @abstractmethod
-    def ensemble(self, messages: list[str], *args, **kwargs) -> list[Reference]:
-        """
-        Ensembles the results of a list of retrievers using the retrieve function.
-        Retrievers are taken defined in the class initialization.
-        """
-        pass
-
-    @abstractmethod
-    def ensemble_by_ranked_docs(
-        self, ref_lists: list[list[Reference]], *args, **kwargs
-    ) -> list[Reference]:
-        """
-        Ensembles the lists of ranked references from different retrievers.
-        This function is useful if retrievers will have further input parameters
-        than the default ones defined in the retrieve function in the Retriever class.
-        """
-        pass
-
-    def retrieve(
-        self, messages: list[str], *args, **kwargs
-    ) -> tuple[None, list[Reference]]:
-        """
-        For testing/ comparing different retrieval methods to each other,
-        class needs to be compatible with Retriever.retrieve(),
-        returning a tuple of (None (instead of scores), reranked references).
-        """
-        return None, self.ensemble(messages, *args, **kwargs)
 
 
 class Generator(ABC):
@@ -179,25 +127,10 @@ class Validator(ABC):
     ) -> bool:
         pass
 
-    def validate_references(
-        self, references: list[Reference], query: str, limit: int, *args, **kwargs
-    ) -> bool:
+    def validate_references(self, references: list[Reference], query: str, limit: int, *args, **kwargs) -> bool:
         """
         Validates if the references are relevant to the query.
         """
-        pass
-
-
-class Summarizer(ABC):
-    def __call__(
-        self, current_summary: str, query: str, answer: str, *args, **kwargs
-    ) -> str:
-        return self.summarize(current_summary, query, answer)
-
-    @abstractmethod
-    def summarize(
-        self, current_summary: str, query: str, answer: str, *args, **kwargs
-    ) -> str:
         pass
 
 

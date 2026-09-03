@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-:mod:`fakta_chat.tools.embedder -- Embeds texts
+:mod:`mitcfu_rag.tools.embedder -- Embeds texts
 
 ========
 Embedder
