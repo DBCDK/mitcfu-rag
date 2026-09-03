@@ -51,6 +51,8 @@ def create_app(args) -> FastAPI:
         info = None
         stats = {}
 
+    logger.info(f"DBC Utils is available: {_dbc_optional.DBC_AVAILABLE}")
+
     app = FastAPI(title="mitcfu-rag service")
     app.state.agentic_graph = agentic_graph
     app.state.default_model = DEFAULT_MODEL
