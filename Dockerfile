@@ -23,7 +23,7 @@ RUN wget -nv --no-check-certificate ${MODEL_PATH} -O ms-marco-MiniLM-L-6-v2.tgz 
     tar -xzvf mitcfu_faiss_index.tgz && \
     rm ms-marco-MiniLM-L-6-v2.tgz && \
     rm mitcfu_faiss_index.tgz && \
-    uv sync --no-dev --frozen
+    uv sync --no-dev --frozen --group dbc
 
 # Ensure uv env is on path
 ENV PATH="/home/python/.venv/bin:$PATH"
