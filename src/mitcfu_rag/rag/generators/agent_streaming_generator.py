@@ -78,8 +78,8 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
     async def generate(
         self,
         references: list[Reference],
-        input: list[dict],
-        prompt_template: str = None,
+        input: dict,
+        prompt_template: dict,
     ):
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"parsed_references: {references}")
