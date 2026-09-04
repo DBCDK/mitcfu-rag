@@ -23,13 +23,10 @@ from mitcfu_rag.service.start import create_app
 from mitcfu_rag.service.start import parse_args
 
 
-def _sse_chunk(token: str) -> str:
-    """An SSE chunk shaped like `AgentStreamingGenerator`'s real output."""
-    return f"data: {json.dumps({'choices': [{'delta': {'content': token}}]})}\n\n"
-
-
 class _FakeGraph:
-    """Stand-in for `AgenticGraph.graph`: replays canned SSE chunks."""
+    """Stand-in for `AgenticGraph.graph`: replays canned content deltas,
+    exactly as `AgentStreamingGenerator.generate` yields plain strings
+    (no SSE framing -- that's `endpoints.chat_completions`'s job)."""
 
     def __init__(self, chunks):
         self._chunks = chunks
@@ -88,7 +85,7 @@ def _dbc_available_patches():
     )
 
 
-def _build_app(chunks=(_sse_chunk("hi"),)):
+def _build_app(chunks=("hi",)):
     args = parse_args(["embedding-model-path", "faiss-path"])
     with (
         mock.patch("mitcfu_rag.service.start.AgenticRAG", return_value=object()),
@@ -136,7 +133,7 @@ class TestStatusAndMetricsGating(unittest.TestCase):
 
 class TestChatCompletions(unittest.TestCase):
     def test_non_streaming_response_shape(self):
-        app = _build_app(chunks=[_sse_chunk("The"), _sse_chunk(" answer")])
+        app = _build_app(chunks=["The", " answer"])
         response = TestClient(app).post(
             "/v1/chat/completions",
             json={"messages": [{"role": "user", "content": "hi"}], "stream": False},
@@ -148,8 +145,8 @@ class TestChatCompletions(unittest.TestCase):
         self.assertEqual(body["choices"][0]["finish_reason"], "stop")
         self.assertEqual(body["choices"][0]["message"], {"role": "assistant", "content": "The answer"})
 
-    def test_streaming_response_passes_through_sse_chunks_and_terminates(self):
-        app = _build_app(chunks=[_sse_chunk("The"), _sse_chunk(" answer")])
+    def test_streaming_response_frames_deltas_as_sse_and_terminates(self):
+        app = _build_app(chunks=["The", " answer"])
         response = TestClient(app).post(
             "/v1/chat/completions",
             json={"messages": [{"role": "user", "content": "hi"}], "stream": True},
@@ -157,8 +154,15 @@ class TestChatCompletions(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.text.endswith("data: [DONE]\n\n"))
-        self.assertIn("The", response.text)
-        self.assertIn("answer", response.text)
+        frames = [
+            json.loads(line.removeprefix("data: "))
+            for line in response.text.split("\n\n")
+            if line and line != "data: [DONE]"
+        ]
+        deltas = [frame["choices"][0]["delta"].get("content") for frame in frames]
+        self.assertEqual(deltas, ["The", " answer", None])
+        self.assertEqual(frames[-1]["choices"][0]["finish_reason"], "stop")
+        self.assertTrue(all(frame["object"] == "chat.completion.chunk" for frame in frames))
 
 
 if __name__ == "__main__":

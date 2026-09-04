@@ -1977,7 +1977,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
-    { name = "aiohttp" },
     { name = "faiss-cpu" },
     { name = "fastapi" },
     { name = "httpx" },
@@ -2018,7 +2017,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "accelerate" },
-    { name = "aiohttp" },
     { name = "faiss-cpu", specifier = ">=1.14.2" },
     { name = "fastapi" },
     { name = "httpx" },

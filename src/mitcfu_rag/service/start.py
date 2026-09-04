@@ -36,7 +36,6 @@ def create_app(args) -> FastAPI:
         faiss_index=args.faiss_path,
         jed_document_path=args.article_index_path,
         validator_model=args.validator_model_path,
-        use_ceph=args.use_ceph,
     )
     agentic_graph = AgenticGraph(type=args.graph_type, model=model)
 
@@ -102,12 +101,6 @@ def parse_args(argv=None):
         dest="graph_type",
         help="type of langgraph graph to use. default is service.",
         default="service",
-    )
-    parser.add_argument(
-        "--use-ceph",
-        dest="use_ceph",
-        action="store_true",
-        help="Set this flag if running on Ceph or in dockerfile",
     )
     parser.add_argument("-a", "--ab-id", dest="ab_id", help="ab id of service. default is 1", default=1)
     parser.add_argument(

@@ -9,6 +9,8 @@ No `dbc_pyutils` imports here: DBC integration lives entirely behind
 runs identically with or without `dbc_pyutils` installed.
 """
 
+import json
+import logging
 import resource
 import time
 import uuid
@@ -17,8 +19,9 @@ from fastapi import APIRouter
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
+from openai import APIError
 
-from mitcfu_rag.tools.llm_formatting import async_gen_wrapper
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -49,21 +52,52 @@ async def chat_completions(request: Request):
     agentic_graph = request.app.state.agentic_graph
     result = await agentic_graph.graph.ainvoke({"input": messages})
 
+    chat_id = f"chatcmpl-{uuid.uuid4().hex}"
+    created = int(time.time())
+
+    def frame(delta=None, finish_reason=None):
+        return {
+            "id": chat_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": model_name,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {"content": delta} if delta is not None else {},
+                    "finish_reason": finish_reason,
+                }
+            ],
+        }
+
     if stream:
 
         async def chunk_generator():
-            async for chunk in result["output"]:
-                yield chunk
+            try:
+                async for delta in result["output"]:
+                    yield f"data: {json.dumps(frame(delta=delta))}\n\n"
+                yield f"data: {json.dumps(frame(finish_reason='stop'))}\n\n"
+            except APIError as e:
+                logger.warning(f"Upstream LLM error mid-stream: {e}")
+                error_frame = {"error": {"message": str(e), "type": e.__class__.__name__}}
+                yield f"data: {json.dumps(error_frame)}\n\n"
             yield "data: [DONE]\n\n"
 
         return StreamingResponse(chunk_generator(), media_type="text/event-stream")
 
-    output = "".join([token async for token in async_gen_wrapper(result["output"], default_model)])
+    try:
+        output = "".join([token async for token in result["output"]])
+    except APIError as e:
+        logger.warning(f"Upstream LLM error: {e}")
+        return JSONResponse(
+            {"error": {"message": str(e), "type": e.__class__.__name__}},
+            status_code=502,
+        )
     return JSONResponse(
         {
-            "id": f"chatcmpl-{uuid.uuid4().hex}",
+            "id": chat_id,
             "object": "chat.completion",
-            "created": int(time.time()),
+            "created": created,
             "model": model_name,
             "choices": [
                 {
