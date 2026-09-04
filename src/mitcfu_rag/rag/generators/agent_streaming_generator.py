@@ -23,6 +23,7 @@ import random
 import logging
 import os
 import asyncio
+import httpx
 from openai import AsyncOpenAI
 from mitcfu_rag.rag.rag import Generator, Reference
 from mitcfu_rag.tools.message_history import clean_sources_from_messages
@@ -51,6 +52,14 @@ def _max_tokens() -> int | None:
     return int(value) if value else None
 
 
+def _llm_timeout_seconds() -> float:
+    """Read MITCFU_LLM_TIMEOUT_SECONDS. The openai SDK default (600s read, 2
+    retries) can leave an interactive chat request hanging for up to 30
+    minutes on a stalled vLLM backend.
+    """
+    return float(os.environ.get("MITCFU_LLM_TIMEOUT_SECONDS", "60"))
+
+
 class AgentStreamingGenerator(Generator):
     def __init__(self):
         self.streaming_delays = [0.01, 0.02, 0.03]
@@ -58,7 +67,11 @@ class AgentStreamingGenerator(Generator):
             GEMMA_4_26B: os.environ.get("MITCFU_VLLM_MODEL", ""),
         }
         self.clients: dict[str, AsyncOpenAI] = {
-            GEMMA_4_26B: AsyncOpenAI(base_url=_vllm_base_url(), api_key="unused"),
+            GEMMA_4_26B: AsyncOpenAI(
+                base_url=_vllm_base_url(),
+                api_key="unused",
+                timeout=httpx.Timeout(_llm_timeout_seconds(), connect=5.0),
+            ),
         }
         self.max_tokens = _max_tokens()
         self.system_message = (
