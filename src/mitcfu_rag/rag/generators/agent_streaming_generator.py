@@ -23,11 +23,11 @@ import random
 import logging
 import os
 import asyncio
+from dataclasses import dataclass
 import httpx
 from openai import AsyncOpenAI
 from mitcfu_rag.rag.rag import Generator, Reference
 from mitcfu_rag.tools.message_history import clean_sources_from_messages
-from mitcfu_rag.config import GEMMA_4_26B
 
 logger = logging.getLogger(__name__)
 
@@ -60,19 +60,36 @@ def _llm_timeout_seconds() -> float:
     return float(os.environ.get("MITCFU_LLM_TIMEOUT_SECONDS", "60"))
 
 
+def _served_model_name() -> str:
+    """Read MITCFU_VLLM_MODEL: the model name vLLM was launched/aliased with
+    (its --served-model-name). vLLM validates the request's `model` field
+    against this exactly and 404s on any mismatch - unlike the other knobs
+    in this module there is no safe default, so fail fast at startup instead
+    of silently sending an empty model field that vLLM would reject anyway.
+    """
+    value = os.environ.get("MITCFU_VLLM_MODEL")
+    if not value:
+        raise RuntimeError("MITCFU_VLLM_MODEL must be set to the vLLM served model name")
+    return value
+
+
+@dataclass(frozen=True)
+class ModelBackend:
+    client: AsyncOpenAI
+    served_model_name: str
+
+
 class AgentStreamingGenerator(Generator):
     def __init__(self):
         self.streaming_delays = [0.01, 0.02, 0.03]
-        self.request_model_names = {
-            GEMMA_4_26B: os.environ.get("MITCFU_VLLM_MODEL", ""),
-        }
-        self.clients: dict[str, AsyncOpenAI] = {
-            GEMMA_4_26B: AsyncOpenAI(
+        self.backend = ModelBackend(
+            client=AsyncOpenAI(
                 base_url=_vllm_base_url(),
                 api_key="unused",
                 timeout=httpx.Timeout(_llm_timeout_seconds(), connect=5.0),
             ),
-        }
+            served_model_name=_served_model_name(),
+        )
         self.max_tokens = _max_tokens()
         self.system_message = (
             "Du er MitCFU-Chat. Du hjælper med søgninger i MitCFU kataloget. Du svarer altid på dansk."
@@ -85,8 +102,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
 """
 
     async def aclose(self):
-        for client in self.clients.values():
-            await client.close()
+        await self.backend.client.close()
 
     async def generate(
         self,
@@ -96,14 +112,13 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
     ):
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"parsed_references: {references}")
-        logger.info(f"Replying as {prompt_template['name']} with model {prompt_template['model']}")
+        logger.info(f"Replying as {prompt_template['name']} with model {self.backend.served_model_name}")
         messages = input["input"]
         cleaned_messages = clean_sources_from_messages(messages)
 
         async for chunk in self.llm_generate(
             {
                 "messages": cleaned_messages,
-                "model_name": prompt_template["model"],
                 "prompt_template": prompt_template["prompt"],
                 "agent_type": prompt_template["name"],
             },
@@ -149,8 +164,6 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         return [{"role": "system", "content": system}, *msgs]
 
     async def llm_generate(self, input: dict, parsed_references: list[Reference]):
-        model_key = input["model_name"]
-        client = self.clients[model_key]
         messages = self.build_messages(
             input["messages"],
             input["prompt_template"],
@@ -160,14 +173,14 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"Input for agent {input['agent_type']}: {messages}")
         create_kwargs = {
-            "model": self.request_model_names.get(model_key, model_key),
+            "model": self.backend.served_model_name,
             "messages": messages,
             "stream": True,
             "temperature": 0.1,
         }
         if self.max_tokens is not None:
             create_kwargs["max_tokens"] = self.max_tokens
-        stream = await client.chat.completions.create(**create_kwargs)
+        stream = await self.backend.client.chat.completions.create(**create_kwargs)
         async for chunk in stream:
             if not chunk.choices:
                 continue
