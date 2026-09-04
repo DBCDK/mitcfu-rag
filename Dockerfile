@@ -27,8 +27,9 @@ RUN wget -nv --no-check-certificate ${MODEL_PATH} -O ms-marco-MiniLM-L-6-v2.tgz 
 
 # Ensure uv env is on path
 ENV PATH="/home/python/.venv/bin:$PATH"
+ENV MITCFU_VLLM_MODEL="google/gemma-4-26B-A4B-it"
 # /data/mitcfu-rag-1-0 is a symlink to the model on the k8s volume mount
 # temporarily use non-symlinked version while switching embedding models
-CMD ["streaming-service-mitcfu", "/data/multilingual-e5-large-instruct", "mitcfu_faiss_index", "--article_index_path", "mitcfu_jed_documents.json", "--validator-model-path", "ms-marco-MiniLM-L-6-v2", "--port", "5000", "--use-ceph"]
+CMD ["streaming-service-mitcfu", "/data/multilingual-e5-large-instruct", "mitcfu_faiss_index", "--article_index_path", "mitcfu_jed_documents.json", "--validator-model-path", "ms-marco-MiniLM-L-6-v2", "--port", "5000"]
 
 EXPOSE 5000
