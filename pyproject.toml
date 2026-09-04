@@ -29,7 +29,7 @@ dependencies = [
     "dbc_pyutils",
     "tornado",
     "pydantic",
-    "aiohttp",
+    "openai",
     "requests",
     "faiss-cpu>=1.14.2",
     "jq",
