@@ -38,7 +38,7 @@ pipeline {
 				sh """#!/usr/bin/env bash
 				set -xe
 				rm -rf .venv/ embeddings labels.npy mitcfu_faiss_index mitcfu_faiss_index.tgz mitcfu_faiss_index_file.json
-				uv sync --frozen
+				uv sync --frozen --group dbc
 				source .venv/bin/activate
 				if ${params.BUILD_FROM_SCRATCH} ; then
 					echo "Creating index from scratch"
