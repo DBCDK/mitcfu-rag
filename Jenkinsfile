@@ -69,40 +69,40 @@ pipeline {
 				}
 			}
 		}
-		stage("set gitops variables for ai-prod") {
-			when {
-				branch "main"
-			}
-			steps {
-				script {
-					setGitopsVersion("ai-prod", "MITCFU_RAG_1_0_VERSION", "${env.DOCKER_TAG}")
-				}
-			}
-		}
-		stage("wait for ai-prod to be ready") {
-			agent {
-				docker {
-					label workerNode
-					image "docker-dbc.artifacts.dbccloud.dk/k8s-deploy-env:latest"
-					args '-u 0:0'
-					alwaysPull true
-				}
-			}
-			environment {
-				KUBECONFIG = credentials("kubecert-mi")
-				KUBECTL = "kubectl --kubeconfig '${KUBECONFIG}'"
-			}
-			when {
-				branch "main"
-			}
-			steps {
-				script {
-					sh """
-						$KUBECTL -n ai-prod rollout status deployment/mitcfu-rag-1-0 --timeout=1200s
-					"""
-				}
-			}
-		}
+		// stage("set gitops variables for ai-prod") {
+		// 	when {
+		// 		branch "main"
+		// 	}
+		// 	steps {
+		// 		script {
+		// 			setGitopsVersion("ai-prod", "MITCFU_RAG_1_0_VERSION", "${env.DOCKER_TAG}")
+		// 		}
+		// 	}
+		// }
+		// stage("wait for ai-prod to be ready") {
+		// 	agent {
+		// 		docker {
+		// 			label workerNode
+		// 			image "docker-dbc.artifacts.dbccloud.dk/k8s-deploy-env:latest"
+		// 			args '-u 0:0'
+		// 			alwaysPull true
+		// 		}
+		// 	}
+		// 	environment {
+		// 		KUBECONFIG = credentials("kubecert-mi")
+		// 		KUBECTL = "kubectl --kubeconfig '${KUBECONFIG}'"
+		// 	}
+		// 	when {
+		// 		branch "main"
+		// 	}
+		// 	steps {
+		// 		script {
+		// 			sh """
+		// 				$KUBECTL -n ai-prod rollout status deployment/mitcfu-rag-1-0 --timeout=1200s
+		// 			"""
+		// 		}
+		// 	}
+		// }
 	}
 	post {
 		success {
