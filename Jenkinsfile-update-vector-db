@@ -77,6 +77,21 @@ pipeline {
 				build job: "ai/mitcfu-rag/mitcfu-rag-service/main", wait: false, propagate: false
 			}
 		}
+		stage("Trigger morty build") {
+			agent {
+				docker {
+					label workerNode
+					image "docker-dbc.artifacts.dbccloud.dk/build-env"
+					alwaysPull true
+				}
+			}
+			when {
+				branch 'main'
+			}
+			steps {
+				build job: "ai/morty/morty-service/main", wait: false, propagate: false
+			}
+		}
 	}
 	post {
 		unstable { slackSend message: "build became unstable for ${env.JOB_NAME}: ${env.BUILD_URL}", channel: slackReceivers }
