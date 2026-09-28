@@ -32,10 +32,10 @@ def create_app(args) -> FastAPI:
     """Builds the FastAPI application for the given parsed CLI args."""
     # Fetch once, up front, so a missing/invalid glyph-gate token or an
     # unreachable gateway fails fast before the (slow) embedding/faiss models
-    # below get loaded. AgenticRAG calls the gateway again when it constructs
-    # the generator's backend -- both calls resolve to the same list, this
-    # just makes it available on `app.state` without reaching three
-    # attributes deep into the RAG graph.
+    # below get loaded, and so `app.state` and the generator's `ModelBackend`
+    # can't diverge -- passed into AgenticRAG below rather than fetched again,
+    # since two independent live calls to glyph-gate's /v1/models could
+    # otherwise return different lists.
     available_models = served_model_names()
     default_model = available_models[0]
 
@@ -44,6 +44,7 @@ def create_app(args) -> FastAPI:
         embedding_model=args.embedding_model_path,
         faiss_index=args.faiss_path,
         jed_document_path=args.article_index_path,
+        available_models=available_models,
         validator_model=args.validator_model_path,
     )
     agentic_graph = AgenticGraph(type=args.graph_type, model=model)

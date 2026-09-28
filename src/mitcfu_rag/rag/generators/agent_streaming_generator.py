@@ -127,7 +127,14 @@ class ModelBackend:
 
 
 class AgentStreamingGenerator(Generator):
-    def __init__(self):
+    def __init__(self, available_models: list[str]):
+        """`available_models` is fetched once by the caller (`start.create_app`,
+        via `served_model_names()`) and passed in rather than fetched again here --
+        two independent live calls to glyph-gate's `/v1/models` could otherwise
+        return different lists, letting a model pass `endpoints.py`'s validation
+        against one list but fail `ModelBackend.resolve()`'s check against the
+        other.
+        """
         self.streaming_delays = [0.01, 0.02, 0.03]
         self.backend = ModelBackend(
             client=AsyncOpenAI(
@@ -135,7 +142,7 @@ class AgentStreamingGenerator(Generator):
                 api_key=_gateway_token(),
                 timeout=httpx.Timeout(_llm_timeout_seconds(), connect=5.0),
             ),
-            available_models=served_model_names(),
+            available_models=available_models,
         )
         self.max_tokens = _max_tokens()
         self.system_message = (

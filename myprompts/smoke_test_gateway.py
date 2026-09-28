@@ -18,12 +18,13 @@ import asyncio
 import logging
 
 from mitcfu_rag.rag.generators.agent_streaming_generator import AgentStreamingGenerator
+from mitcfu_rag.rag.generators.agent_streaming_generator import served_model_names
 
 logging.basicConfig(level=logging.DEBUG)
 
 
 async def main():
-    generator = AgentStreamingGenerator()
+    generator = AgentStreamingGenerator(served_model_names())
     print(f"Discovered models: {generator.backend.available_models}")
     print(f"Default model: {generator.backend.default_model}")
 
