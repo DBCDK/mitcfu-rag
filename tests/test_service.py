@@ -23,6 +23,9 @@ from mitcfu_rag.service.start import create_app
 from mitcfu_rag.service.start import parse_args
 
 
+FAKE_MODELS = ["gemma-4-26b-a4b-it", "other-model"]
+
+
 class _FakeGraph:
     """Stand-in for `AgenticGraph.graph`: replays canned content deltas,
     exactly as `AgentStreamingGenerator.generate` yields plain strings
@@ -30,8 +33,11 @@ class _FakeGraph:
 
     def __init__(self, chunks):
         self._chunks = chunks
+        self.received_states = []
 
     async def ainvoke(self, state):
+        self.received_states.append(state)
+
         async def _output():
             for chunk in self._chunks:
                 yield chunk
@@ -85,11 +91,12 @@ def _dbc_available_patches():
     )
 
 
-def _build_app(chunks=("hi",)):
+def _build_app(chunks=("hi",), models=FAKE_MODELS):
     args = parse_args(["embedding-model-path", "faiss-path"])
     with (
         mock.patch("mitcfu_rag.service.start.AgenticRAG", return_value=object()),
         mock.patch("mitcfu_rag.service.start.AgenticGraph", return_value=_FakeAgenticGraph(list(chunks))),
+        mock.patch("mitcfu_rag.service.start.served_model_names", return_value=list(models)),
     ):
         return create_app(args)
 
@@ -163,6 +170,61 @@ class TestChatCompletions(unittest.TestCase):
         self.assertEqual(deltas, ["The", " answer", None])
         self.assertEqual(frames[-1]["choices"][0]["finish_reason"], "stop")
         self.assertTrue(all(frame["object"] == "chat.completion.chunk" for frame in frames))
+
+    def test_defaults_to_first_configured_model_when_omitted(self):
+        app = _build_app()
+        TestClient(app).post(
+            "/v1/chat/completions",
+            json={"messages": [{"role": "user", "content": "hi"}], "stream": False},
+        )
+
+        state = app.state.agentic_graph.graph.received_states[-1]
+        self.assertEqual(state["model"], FAKE_MODELS[0])
+
+    def test_routes_explicit_model_through_to_the_graph(self):
+        app = _build_app()
+        response = TestClient(app).post(
+            "/v1/chat/completions",
+            json={
+                "messages": [{"role": "user", "content": "hi"}],
+                "model": "other-model",
+                "stream": False,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["model"], "other-model")
+        state = app.state.agentic_graph.graph.received_states[-1]
+        self.assertEqual(state["model"], "other-model")
+
+    def test_rejects_unknown_model(self):
+        app = _build_app()
+        response = TestClient(app).post(
+            "/v1/chat/completions",
+            json={
+                "messages": [{"role": "user", "content": "hi"}],
+                "model": "no-such-model",
+                "stream": False,
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        error = response.json()["error"]
+        self.assertIn("no-such-model", error["message"])
+        self.assertEqual(error["param"], "model")
+        self.assertEqual(app.state.agentic_graph.graph.received_states, [])
+
+
+class TestListModels(unittest.TestCase):
+    def test_lists_configured_models(self):
+        app = _build_app()
+        response = TestClient(app).get("/v1/models")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["object"], "list")
+        self.assertEqual([m["id"] for m in body["data"]], FAKE_MODELS)
+        self.assertTrue(all(m["object"] == "model" for m in body["data"]))
 
 
 if __name__ == "__main__":

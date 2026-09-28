@@ -37,7 +37,20 @@ async def chat_completions(request: Request):
     messages = body.get("messages", [])
     stream = body.get("stream", False)
     default_model = request.app.state.default_model
+    available_models = request.app.state.available_models
     model_name = body.get("model", default_model)
+
+    if model_name not in available_models:
+        return JSONResponse(
+            {
+                "error": {
+                    "message": f"model '{model_name}' not found. Available models: {', '.join(available_models)}",
+                    "type": "invalid_request_error",
+                    "param": "model",
+                }
+            },
+            status_code=400,
+        )
 
     # The rag pipeline expects content to be a str, not a list of dicts
     messages = [
@@ -50,7 +63,7 @@ async def chat_completions(request: Request):
     ]
 
     agentic_graph = request.app.state.agentic_graph
-    result = await agentic_graph.graph.ainvoke({"input": messages})
+    result = await agentic_graph.graph.ainvoke({"input": messages, "model": model_name})
 
     chat_id = f"chatcmpl-{uuid.uuid4().hex}"
     created = int(time.time())
@@ -108,6 +121,21 @@ async def chat_completions(request: Request):
             ],
         }
     )
+
+
+@router.get("/v1/models")
+async def list_models(request: Request):
+    """OpenAI-style model listing, so callers (including the Streamlit demo
+    UI) can discover which models this deployment can actually route to,
+    instead of guessing a `model` value for `/v1/chat/completions`."""
+    created = int(time.time())
+    return {
+        "object": "list",
+        "data": [
+            {"id": model_name, "object": "model", "created": created, "owned_by": "mitcfu-rag"}
+            for model_name in request.app.state.available_models
+        ],
+    }
 
 
 @router.get("/status")

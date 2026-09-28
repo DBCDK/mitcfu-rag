@@ -35,3 +35,6 @@ custom-rag-sandbox.ipynb
 #Example files
 Examples/
 .vscode/settings.json
+/myprompts/glyph-gate-main
+/myprompts/glyph-gate-main.zip
+/myprompts/openapi.json

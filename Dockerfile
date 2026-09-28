@@ -27,7 +27,11 @@ RUN wget -nv --no-check-certificate ${MODEL_PATH} -O ms-marco-MiniLM-L-6-v2.tgz 
 
 # Ensure uv env is on path
 ENV PATH="/home/python/.venv/bin:$PATH"
-ENV MITCFU_VLLM_MODEL="google/gemma-4-26B-A4B-it"
+# glyph-gate base URL; the model list (and its default, the first entry) is
+# fetched from GET /v1/models at startup instead of being pinned here.
+ENV MITCFU_LLM_GATEWAY_URL="https://llm.dbc.dk"
+# MITCFU_LLM_GATEWAY_TOKEN (the glyph-gate bearer token) must be injected at
+# deploy time as a k8s secret -- never bake a bearer token into the image.
 # /data/mitcfu-rag-1-0 is a symlink to the model on the k8s volume mount
 # temporarily use non-symlinked version while switching embedding models
 CMD ["streaming-service-mitcfu", "/data/multilingual-e5-large-instruct", "mitcfu_faiss_index", "--article_index_path", "mitcfu_jed_documents.json", "--validator-model-path", "ms-marco-MiniLM-L-6-v2", "--port", "5000"]

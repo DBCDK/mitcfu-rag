@@ -1,10 +1,9 @@
-# the model that should be used in evaluation, chatUI
-# MODELS TO USE
-
-GEMMA_4_26B = "gemma-4-26b-a4b-it"
-
-# DEFAULT_MODEL also determines the output format of the service.
-DEFAULT_MODEL = GEMMA_4_26B
+# Which LLM(s) the service can route requests to is fetched from glyph-gate's
+# GET /v1/models at startup (see MITCFU_LLM_GATEWAY_URL / MITCFU_LLM_GATEWAY_TOKEN
+# and mitcfu_rag.rag.generators.agent_streaming_generator.served_model_names),
+# not a source constant -- the client picks a model per-request via the `model`
+# field on /v1/chat/completions, and this service's own GET /v1/models lists
+# what's actually available.
 
 # AGENT PROMPT TEMPLATES
 RAG_TEMPLATE = {
