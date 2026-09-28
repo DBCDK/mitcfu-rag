@@ -101,11 +101,15 @@ prod token, deploy config).
    configured default) as the fallback model. This replaces `served_model_names()` with a gateway
    call and keeps `endpoints.py`'s existing "reject unknown model" behavior almost unchanged.
 
-4. **Error handling.** `endpoints.py` already catches `openai.APIError` around streaming/
-   non-streaming chat completions, and glyph-gate's error shape matches. Add explicit handling for
-   401 (missing/expired token) and 403 (denied by policy / missing capability) so those surface as
-   a clear upstream-auth error rather than a generic 502, and consider surfacing 429
-   (rate-limited) distinctly too since it's a normal operating condition, not a bug.
+4. **Error handling — done.** `endpoints.py` maps `openai.APIStatusError` 401/403/429 to
+   `authentication_error`/`permission_denied`/`rate_limit_exceeded` with matching HTTP status
+   (`_upstream_error_payload`), falling back to a generic 502 `upstream_error` for anything else.
+   Also wrapped the graph's `ainvoke()` call itself (the router's own LLM call, which runs before
+   any response starts) — previously an upstream error there would have been an unhandled
+   exception, not the nice JSON error body. Mid-stream errors (after SSE has already sent a 200)
+   still only get the improved error-body `type`, not a changed status code, since HTTP status
+   can't change once streaming has started. Covered by 6 new tests in `tests/test_service.py`
+   (`TestChatCompletionsUpstreamErrors`).
 
 5. **Dockerfile / deploy config.** Drop `MITCFU_VLLM_MODELS`/vLLM URL, add the gateway URL and
    wire the token in as a secret (not a plain `ENV`). Set the default model to
