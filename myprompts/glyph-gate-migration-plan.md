@@ -120,13 +120,32 @@ prod token, deploy config).
    completions) instead of `served_model_names`; add cases for token-missing/invalid and for the
    dynamic model list.
 
-7. **Optional/separate follow-up: embeddings.** glyph-gate's `/v1/embeddings` example model is
-   literally `intfloat/multilingual-e5-large-instruct`, the same model `multilinguale5.py` runs
-   locally — tempting to move that off local GPU/CPU compute too. Keep this as a *separate* phase
-   gated on confirming the gateway's embedding output is numerically consistent with the local
-   model (pooling/normalization must match exactly, since the FAISS index was built with the local
-   embedder). The reranker (`ms-marco-MiniLM` cross-encoder) has no equivalent in the glyph-gate
-   spec, so it stays local regardless.
+7. **Separate follow-up: embeddings, with a full re-index.** glyph-gate's `/v1/embeddings` example
+   model is literally `intfloat/multilingual-e5-large-instruct`, the same model run locally today
+   in two places: `multilinguale5.py`'s `e5multilingualEmbedder` (used by `index_vector_db.py` /
+   `create-faiss-index` to *build* the FAISS index from Kafka) and
+   `streaming_multilingual_retriever.py`'s `EmbeddingRetriever` (used at *query* time by the running
+   service). Decision: don't try to verify bit-for-bit equivalence with glyph-gate's embedding
+   output — assume it differs and rebuild the index rather than risk a silent, undetectable
+   retrieval-quality regression from mixing embedding sources.
+
+   This makes it a bigger, riskier piece of work than the chat-completions swap, so it's tracked as
+   its own follow-up, not bundled into finishing this branch:
+   - **7a.** Add a glyph-gate-backed embedder (reusing the `MITCFU_LLM_GATEWAY_URL`/
+     `MITCFU_LLM_GATEWAY_TOKEN` plumbing from phase 1) that calls `POST /v1/embeddings`.
+   - **7b.** Swap `index_vector_db.py` (`create-faiss-index`) to use it.
+   - **7c.** Swap `EmbeddingRetriever`'s query-time embedding to use it too, dropping the local
+     `AutoModel`/`AutoTokenizer` load for the embedding model specifically. The `ms-marco-MiniLM`
+     cross-encoder reranker (also loaded inside `EmbeddingRetriever`) has no equivalent in the
+     glyph-gate spec (no rerank capability), so it stays local regardless.
+   - **7d.** Rebuild the full FAISS index from scratch via a full Kafka reingestion, using the new
+     gateway-backed embedder. Deploy the new query-time code and the rebuilt index **together** —
+     old-index-vectors + new-query-vectors (or vice versa) would silently corrupt retrieval with no
+     error, so this can't be rolled out incrementally.
+   - **7e.** Update `Jenkinsfile-update-vector-db` (the nightly rebuild job) to use the gateway
+     embedder too, and provision it with a token.
+   - **7f.** Requires the `inference.embeddings` capability granted on the token(s) used for
+     indexing/query, separate from `inference.chat.completions`.
 
 ## Remaining open items
 

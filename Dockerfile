@@ -1,7 +1,5 @@
 FROM docker-dbc.artifacts.dbccloud.dk/dbc-python3:latest
 
-RUN apt-get update && apt-get install -y --no-install-recommends wget
-
 ARG MODEL_PATH=${ARTIFACTORY_URL}/${AI_DOCKER_LAYERS}/mitcfu-rag/ms-marco-MiniLM-L-6-v2.tgz
 ARG FAISS_PATH=${ARTIFACTORY_URL}/${AI_DOCKER_LAYERS}/mitcfu-rag/mitcfu_faiss_index.tgz
 ARG INDEX_PATH=${ARTIFACTORY_URL}/${AI_DOCKER_LAYERS}/mitcfu-rag/mitcfu_faiss_index_file.json
@@ -29,7 +27,7 @@ RUN wget -nv --no-check-certificate ${MODEL_PATH} -O ms-marco-MiniLM-L-6-v2.tgz 
 ENV PATH="/home/python/.venv/bin:$PATH"
 # glyph-gate base URL; the model list (and its default, the first entry) is
 # fetched from GET /v1/models at startup instead of being pinned here.
-ENV MITCFU_LLM_GATEWAY_URL="https://llm.dbc.dk"
+ENV MITCFU_LLM_GATEWAY_URL="http://glyph-gate-1-0.ai-prod.svc.cloud.dbc.dk"
 # MITCFU_LLM_GATEWAY_TOKEN (the glyph-gate bearer token) must be injected at
 # deploy time as a k8s secret -- never bake a bearer token into the image.
 # /data/mitcfu-rag-1-0 is a symlink to the model on the k8s volume mount
