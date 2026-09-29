@@ -91,11 +91,19 @@ def served_model_names() -> list[str]:
     except httpx.HTTPError as exc:
         raise RuntimeError(f"Failed to fetch model list from glyph-gate at {base_url}: {exc}") from exc
 
-    models = []
-    for entry in response.json().get("data", []):
-        card = entry.get("dbc_model_card") or {}
-        if "chat_completions" in (card.get("capabilities") or []):
-            models.append(entry["id"])
+    try:
+        models = []
+        for entry in response.json().get("data", []):
+            card = entry.get("dbc_model_card") or {}
+            if "chat_completions" in (card.get("capabilities") or []):
+                models.append(entry["id"])
+    except (ValueError, KeyError, AttributeError) as exc:
+        # ValueError covers json.JSONDecodeError (a subclass); KeyError/AttributeError
+        # cover a response that's valid JSON but doesn't match the documented shape
+        # (missing "id", non-dict entry/model card, etc). Same fail-fast treatment as
+        # the network-error case above: a malformed response is just as unusable as
+        # an unreachable gateway, and deserves the same clear, greppable message.
+        raise RuntimeError(f"Malformed response from glyph-gate at {base_url}: {exc}") from exc
 
     if not models:
         raise RuntimeError(f"No chat_completions-capable models available to this glyph-gate token at {base_url}")

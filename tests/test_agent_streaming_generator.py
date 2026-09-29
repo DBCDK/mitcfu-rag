@@ -13,9 +13,10 @@ from mitcfu_rag.rag.generators import agent_streaming_generator as gen
 
 
 class _FakeResponse:
-    def __init__(self, status_code=200, json_data=None):
+    def __init__(self, status_code=200, json_data=None, json_error=None):
         self.status_code = status_code
         self._json_data = json_data or {}
+        self._json_error = json_error
 
     def raise_for_status(self):
         if self.status_code >= 400:
@@ -24,6 +25,8 @@ class _FakeResponse:
             raise httpx.HTTPStatusError("error", request=request, response=response)
 
     def json(self):
+        if self._json_error is not None:
+            raise self._json_error
         return self._json_data
 
 
@@ -112,6 +115,26 @@ class TestServedModelNames(unittest.TestCase):
         del os.environ["MITCFU_LLM_GATEWAY_TOKEN"]
         with self.assertRaises(RuntimeError):
             gen.served_model_names()
+
+    def test_raises_runtimeerror_on_non_json_response(self):
+        response = _FakeResponse(json_error=ValueError("not json"))
+        with mock.patch.object(gen.httpx, "Client", return_value=_FakeClient(response)):
+            with self.assertRaisesRegex(RuntimeError, "Malformed response"):
+                gen.served_model_names()
+
+    def test_raises_runtimeerror_on_entry_missing_id(self):
+        response = _FakeResponse(
+            json_data={"data": [{"dbc_model_card": {"capabilities": ["chat_completions"]}}]}
+        )
+        with mock.patch.object(gen.httpx, "Client", return_value=_FakeClient(response)):
+            with self.assertRaisesRegex(RuntimeError, "Malformed response"):
+                gen.served_model_names()
+
+    def test_raises_runtimeerror_on_non_dict_entry(self):
+        response = _FakeResponse(json_data={"data": ["not-a-dict"]})
+        with mock.patch.object(gen.httpx, "Client", return_value=_FakeClient(response)):
+            with self.assertRaisesRegex(RuntimeError, "Malformed response"):
+                gen.served_model_names()
 
 
 if __name__ == "__main__":
