@@ -17,7 +17,8 @@ aren't set:
 
 - `MITCFU_LLM_GATEWAY_URL` — the glyph-gate base URL, e.g. `https://llm.dbc.dk`.
 - `MITCFU_LLM_GATEWAY_TOKEN` — a bearer token issued by llm-access for this app. Never commit this;
-  inject it as a secret (the Docker image does not set it — see the Dockerfile).
+  inject it as a secret (the Docker image does not set it — see the Dockerfile). You can use the 
+  `llm-access-skolegpt-prod-token` that has been set up in Bitwarden for skoleGPT, for example.
 
 The available models are discovered at startup via `GET /v1/models` on the gateway (filtered to
 whatever the token is authorized for), not a fixed list — so no separate "which model" env var is
