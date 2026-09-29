@@ -19,7 +19,7 @@ dependencies = [
     "streamlit",
     "scikit-learn",
     "numpy",
-    "nltk",
+    "nltk>=3.10.3",
     "sentence_transformers",
     "rich",
     "transformers",
@@ -64,6 +64,12 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120
+
+[tool.uv]
+constraint-dependencies = [
+    "anyio>=4.15.1",
+    "gitpython>=3.1.62",
+]
 
 [[tool.uv.index]]
 name = "dbc-devpi"
