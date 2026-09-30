@@ -32,18 +32,28 @@ from mitcfu_rag.tools.message_history import clean_sources_from_messages
 logger = logging.getLogger(__name__)
 
 
-def _vllm_base_url() -> str:
-    """Read MITCFU_VLLM_URL and strip a trailing /chat/completions if present.
+def _gateway_base_url() -> str:
+    """Read MITCFU_LLM_GATEWAY_URL: the glyph-gate host, e.g. https://llm.dbc.dk.
 
-    Today's deployed env value is the full completions URL; AsyncOpenAI.base_url
-    wants the .../v1 prefix and appends chat/completions itself. This strip is a
-    defensive safety net, not a long-term crutch.
+    Callers append the /v1 path themselves (AsyncOpenAI.base_url wants the .../v1
+    prefix and appends chat/completions itself; the raw model-list fetch below
+    hits /v1/models directly).
     """
-    url = os.environ.get(
-        "MITCFU_VLLM_URL",
-        "http://vllm-gemma-4-26b-a4b-1-0.ai-staging.svc.cloud.dbc.dk/v1/chat/completions",
-    )
-    return url.removesuffix("/chat/completions")
+    url = os.environ.get("MITCFU_LLM_GATEWAY_URL")
+    if not url:
+        raise RuntimeError("MITCFU_LLM_GATEWAY_URL must be set to the glyph-gate base URL (e.g. https://llm.dbc.dk)")
+    return url.rstrip("/")
+
+
+def _gateway_token() -> str:
+    """Read MITCFU_LLM_GATEWAY_TOKEN: the bearer token issued by llm-access for this app.
+
+    Never log this value.
+    """
+    token = os.environ.get("MITCFU_LLM_GATEWAY_TOKEN")
+    if not token:
+        raise RuntimeError("MITCFU_LLM_GATEWAY_TOKEN must be set to a glyph-gate bearer token")
+    return token
 
 
 def _max_tokens() -> int | None:
@@ -60,35 +70,87 @@ def _llm_timeout_seconds() -> float:
     return float(os.environ.get("MITCFU_LLM_TIMEOUT_SECONDS", "60"))
 
 
-def _served_model_name() -> str:
-    """Read MITCFU_VLLM_MODEL: the model name vLLM was launched/aliased with
-    (its --served-model-name). vLLM validates the request's `model` field
-    against this exactly and 404s on any mismatch - unlike the other knobs
-    in this module there is no safe default, so fail fast at startup instead
-    of silently sending an empty model field that vLLM would reject anyway.
+def served_model_names() -> list[str]:
+    """Fetch the chat-completions-capable models this app's glyph-gate token can see.
+
+    Calls GET /v1/models on the gateway instead of reading a deploy-time env var list:
+    glyph-gate already filters that response to what the token is authorized for. This
+    additionally filters to models whose model card advertises the chat_completions
+    capability, since /v1/models can also list audio- or embeddings-only models. The
+    first entry is the default used when a request doesn't specify `model`.
+
+    Raises RuntimeError if the gateway is unreachable, denies the request, or the
+    resulting list is empty - there is no safe default model to fall back to.
     """
-    value = os.environ.get("MITCFU_VLLM_MODEL")
-    if not value:
-        raise RuntimeError("MITCFU_VLLM_MODEL must be set to the vLLM served model name")
-    return value
+    base_url = _gateway_base_url()
+    token = _gateway_token()
+    try:
+        with httpx.Client(timeout=_llm_timeout_seconds()) as client:
+            response = client.get(f"{base_url}/v1/models", headers={"Authorization": f"Bearer {token}"})
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise RuntimeError(f"Failed to fetch model list from glyph-gate at {base_url}: {exc}") from exc
+
+    try:
+        models = []
+        for entry in response.json().get("data", []):
+            card = entry.get("dbc_model_card") or {}
+            if "chat_completions" in (card.get("capabilities") or []):
+                models.append(entry["id"])
+    except (ValueError, KeyError, AttributeError) as exc:
+        # ValueError covers json.JSONDecodeError (a subclass); KeyError/AttributeError
+        # cover a response that's valid JSON but doesn't match the documented shape
+        # (missing "id", non-dict entry/model card, etc). Same fail-fast treatment as
+        # the network-error case above: a malformed response is just as unusable as
+        # an unreachable gateway, and deserves the same clear, greppable message.
+        raise RuntimeError(f"Malformed response from glyph-gate at {base_url}: {exc}") from exc
+
+    if not models:
+        raise RuntimeError(f"No chat_completions-capable models available to this glyph-gate token at {base_url}")
+    return models
 
 
 @dataclass(frozen=True)
 class ModelBackend:
     client: AsyncOpenAI
-    served_model_name: str
+    available_models: list[str]
+
+    @property
+    def default_model(self) -> str:
+        return self.available_models[0]
+
+    def resolve(self, requested_model: str | None) -> str:
+        """Returns `requested_model` if it's one of this backend's served
+        models, or the default (first) model if none was requested.
+
+        The primary check on a bad `model` lives in `endpoints.chat_completions`
+        (it fails the request before any retrieval work runs); this is a
+        defensive fallback for other callers of the generator.
+        """
+        if requested_model is None:
+            return self.default_model
+        if requested_model not in self.available_models:
+            raise ValueError(f"Unknown model {requested_model!r}. Available models: {', '.join(self.available_models)}")
+        return requested_model
 
 
 class AgentStreamingGenerator(Generator):
-    def __init__(self):
+    def __init__(self, available_models: list[str]):
+        """`available_models` is fetched once by the caller (`start.create_app`,
+        via `served_model_names()`) and passed in rather than fetched again here --
+        two independent live calls to glyph-gate's `/v1/models` could otherwise
+        return different lists, letting a model pass `endpoints.py`'s validation
+        against one list but fail `ModelBackend.resolve()`'s check against the
+        other.
+        """
         self.streaming_delays = [0.01, 0.02, 0.03]
         self.backend = ModelBackend(
             client=AsyncOpenAI(
-                base_url=_vllm_base_url(),
-                api_key="unused",
+                base_url=f"{_gateway_base_url()}/v1",
+                api_key=_gateway_token(),
                 timeout=httpx.Timeout(_llm_timeout_seconds(), connect=5.0),
             ),
-            served_model_name=_served_model_name(),
+            available_models=available_models,
         )
         self.max_tokens = _max_tokens()
         self.system_message = (
@@ -112,7 +174,8 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
     ):
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"parsed_references: {references}")
-        logger.info(f"Replying as {prompt_template['name']} with model {self.backend.served_model_name}")
+        model_name = self.backend.resolve(input.get("model"))
+        logger.info(f"Replying as {prompt_template['name']} with model {model_name}")
         messages = input["input"]
         cleaned_messages = clean_sources_from_messages(messages)
 
@@ -121,6 +184,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
                 "messages": cleaned_messages,
                 "prompt_template": prompt_template["prompt"],
                 "agent_type": prompt_template["name"],
+                "model": model_name,
             },
             references,
         ):
@@ -173,7 +237,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"Input for agent {input['agent_type']}: {messages}")
         create_kwargs = {
-            "model": self.backend.served_model_name,
+            "model": input["model"],
             "messages": messages,
             "stream": True,
             "temperature": 0.1,
@@ -185,7 +249,7 @@ Du kan få hjælp og vejdledning til brug af MitCFU her https://wiki.mitcfu.dk/.
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
-            reasoning = getattr(delta, "reasoning_content", None)
+            reasoning = getattr(delta, "reasoning", None)
             if reasoning and logger.isEnabledFor(logging.DEBUG):
                 logger.debug(f"Reasoning: {reasoning}")
             if delta.content:

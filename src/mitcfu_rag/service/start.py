@@ -19,8 +19,8 @@ import logging
 import uvicorn
 from fastapi import FastAPI
 
-from mitcfu_rag.config import DEFAULT_MODEL
 from mitcfu_rag.rag.agent_streaming_rag import AgenticRAG
+from mitcfu_rag.rag.generators.agent_streaming_generator import served_model_names
 from mitcfu_rag.rag.langgraph_graphs import AgenticGraph
 from mitcfu_rag.service import _dbc_optional
 from mitcfu_rag.service.endpoints import router
@@ -30,11 +30,21 @@ logger = logging.getLogger(__name__)
 
 def create_app(args) -> FastAPI:
     """Builds the FastAPI application for the given parsed CLI args."""
+    # Fetch once, up front, so a missing/invalid glyph-gate token or an
+    # unreachable gateway fails fast before the (slow) embedding/faiss models
+    # below get loaded, and so `app.state` and the generator's `ModelBackend`
+    # can't diverge -- passed into AgenticRAG below rather than fetched again,
+    # since two independent live calls to glyph-gate's /v1/models could
+    # otherwise return different lists.
+    available_models = served_model_names()
+    default_model = available_models[0]
+
     logger.info("Loading model")
     model = AgenticRAG(
         embedding_model=args.embedding_model_path,
         faiss_index=args.faiss_path,
         jed_document_path=args.article_index_path,
+        available_models=available_models,
         validator_model=args.validator_model_path,
     )
     agentic_graph = AgenticGraph(type=args.graph_type, model=model)
@@ -54,7 +64,8 @@ def create_app(args) -> FastAPI:
 
     app = FastAPI(title="mitcfu-rag service")
     app.state.agentic_graph = agentic_graph
-    app.state.default_model = DEFAULT_MODEL
+    app.state.available_models = available_models
+    app.state.default_model = default_model
     app.state.dbc_available = _dbc_optional.DBC_AVAILABLE
     app.state.instance_id = instance_id
     app.state.build_info = info
