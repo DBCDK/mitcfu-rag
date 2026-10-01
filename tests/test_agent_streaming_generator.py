@@ -61,6 +61,8 @@ class TestServedModelNames(unittest.TestCase):
         )
         patcher.start()
         self.addCleanup(patcher.stop)
+        # Don't let a developer's shell setting reorder the lists below.
+        os.environ.pop("MITCFU_DEFAULT_MODEL", None)
 
     def test_filters_to_chat_completions_capable_models(self):
         response = _FakeResponse(
@@ -128,6 +130,35 @@ class TestServedModelNames(unittest.TestCase):
         )
         with mock.patch.object(gen.httpx, "Client", return_value=_FakeClient(response)):
             with self.assertRaisesRegex(RuntimeError, "Malformed response"):
+                gen.served_model_names()
+
+    def _three_model_response(self):
+        return _FakeResponse(
+            json_data={
+                "data": [
+                    {"id": "model-a", "dbc_model_card": {"capabilities": ["chat_completions"]}},
+                    {"id": "model-b", "dbc_model_card": {"capabilities": ["chat_completions"]}},
+                    {"id": "model-c", "dbc_model_card": {"capabilities": ["chat_completions"]}},
+                ]
+            }
+        )
+
+    def test_default_model_env_moves_model_to_front(self):
+        os.environ["MITCFU_DEFAULT_MODEL"] = "model-c"
+        with mock.patch.object(gen.httpx, "Client", return_value=_FakeClient(self._three_model_response())):
+            models = gen.served_model_names()
+        self.assertEqual(models, ["model-c", "model-a", "model-b"])
+
+    def test_empty_default_model_env_keeps_gateway_order(self):
+        os.environ["MITCFU_DEFAULT_MODEL"] = ""
+        with mock.patch.object(gen.httpx, "Client", return_value=_FakeClient(self._three_model_response())):
+            models = gen.served_model_names()
+        self.assertEqual(models, ["model-a", "model-b", "model-c"])
+
+    def test_raises_when_default_model_env_not_available(self):
+        os.environ["MITCFU_DEFAULT_MODEL"] = "model-x"
+        with mock.patch.object(gen.httpx, "Client", return_value=_FakeClient(self._three_model_response())):
+            with self.assertRaisesRegex(RuntimeError, "MITCFU_DEFAULT_MODEL"):
                 gen.served_model_names()
 
     def test_raises_runtimeerror_on_non_dict_entry(self):
