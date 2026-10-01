@@ -27,6 +27,9 @@ needed.
 Optional tuning:
 - `MITCFU_MAX_TOKENS` — cap on generated tokens; unset/empty means no limit.
 - `MITCFU_LLM_TIMEOUT_SECONDS` — HTTP timeout for LLM calls, default `60`.
+- `MITCFU_DEFAULT_MODEL` — model used when a request doesn't send `model`; it's also listed first
+  by `GET /v1/models`. Unset means the first model glyph-gate lists. Startup fails if it names a
+  model the token can't see.
 
 ### Starting the streaming service
 Start the service with the following parameters

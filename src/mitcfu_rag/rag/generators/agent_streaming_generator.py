@@ -70,6 +70,12 @@ def _llm_timeout_seconds() -> float:
     return float(os.environ.get("MITCFU_LLM_TIMEOUT_SECONDS", "60"))
 
 
+def _default_model_name() -> str | None:
+    """Read MITCFU_DEFAULT_MODEL: the model used when a request doesn't specify
+    `model`. Unset or empty means the first model glyph-gate lists."""
+    return os.environ.get("MITCFU_DEFAULT_MODEL") or None
+
+
 def served_model_names() -> list[str]:
     """Fetch the chat-completions-capable models this app's glyph-gate token can see.
 
@@ -77,10 +83,12 @@ def served_model_names() -> list[str]:
     glyph-gate already filters that response to what the token is authorized for. This
     additionally filters to models whose model card advertises the chat_completions
     capability, since /v1/models can also list audio- or embeddings-only models. The
-    first entry is the default used when a request doesn't specify `model`.
+    first entry is the default used when a request doesn't specify `model`; if
+    MITCFU_DEFAULT_MODEL is set, that model is moved to the front.
 
-    Raises RuntimeError if the gateway is unreachable, denies the request, or the
-    resulting list is empty - there is no safe default model to fall back to.
+    Raises RuntimeError if the gateway is unreachable, denies the request, the
+    resulting list is empty - there is no safe default model to fall back to - or
+    MITCFU_DEFAULT_MODEL names a model that isn't in the list.
     """
     base_url = _gateway_base_url()
     token = _gateway_token()
@@ -107,6 +115,15 @@ def served_model_names() -> list[str]:
 
     if not models:
         raise RuntimeError(f"No chat_completions-capable models available to this glyph-gate token at {base_url}")
+
+    default_model = _default_model_name()
+    if default_model is not None:
+        if default_model not in models:
+            raise RuntimeError(
+                f"MITCFU_DEFAULT_MODEL={default_model!r} is not available to this glyph-gate token at "
+                f"{base_url}. Available models: {', '.join(models)}"
+            )
+        models = [default_model] + [m for m in models if m != default_model]
     return models
 
 
