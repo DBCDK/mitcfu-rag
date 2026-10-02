@@ -20,7 +20,7 @@ dependencies = [
     "scikit-learn",
     "numpy",
     "nltk>=3.10.3",
-    "sentence_transformers",
+    "sentence_transformers>=6.1.0",
     "rich",
     "transformers",
     "torch",
