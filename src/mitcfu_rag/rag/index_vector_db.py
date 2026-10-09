@@ -13,6 +13,8 @@ storing them in a FAISS db
 import argparse
 import json
 import logging
+import os
+import requests
 import numpy as np
 import sys
 
@@ -22,6 +24,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dbc_data import kafka
 from dbc_pyutils import Time
 from mitcfu_rag.rag.retrievers.indexes.multilinguale5 import e5multilingualEmbedder
+from mitcfu_rag.rag.retrievers.indexes.api_embedder import APIEmbedder
 from mitcfu_rag.tools.knn_searcher import KNNSearch
 
 logger = logging.getLogger(__name__)
@@ -164,7 +167,6 @@ def read_kafka_topic(
     kafka_bootstrap_servers: str,
     limit: int | None = None,
 ):
-
     # Setup Kafka consumer
     options = {
         "bootstrap.servers": kafka_bootstrap_servers,
@@ -229,7 +231,7 @@ def _get_mitcfu_id(jed_doc: dict) -> str:
 
 
 def generate_embeddings_and_labels(new_documents: dict, embedding_model_path: str, batch_size: int | None = None):
-    embedding_model = e5multilingualEmbedder(embedding_model_path)
+    embedding_model = APIEmbedder(embedding_model_path)
     logger.info(f"Loaded {embedding_model_path} on device: {embedding_model.device}")
 
     text_splitter = RecursiveCharacterTextSplitter(
