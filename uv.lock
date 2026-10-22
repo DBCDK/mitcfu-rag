@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -444,11 +444,11 @@ wheels = [
 
 [[package]]
 name = "certifi"
-version = "2026.5.20"
+version = "2026.10.19"
 source = { registry = "https://devpi.dbccloud.dk/dbc/packages/+simple/" }
-sdist = { url = "https://devpi.dbccloud.dk/root/pypi/+f/69d/ea482ab64caa7/certifi-2026.5.20.tar.gz", hash = "sha256:69dea482ab64caa7b9f6aba1c6bf48bb6a5448d1c0f1b17ab42ad8c763a5344d" }
+sdist = { url = "https://devpi.dbccloud.dk/root/pypi/+f/035/c1e85572b141b/certifi-2026.10.19.tar.gz", hash = "sha256:035c1e85572b141bf1c3a3eff0e33a8eb74917522f2559075ff8d2fea780a1ae" }
 wheels = [
-    { url = "https://devpi.dbccloud.dk/root/pypi/+f/3c5/2e209ba0a4ad7/certifi-2026.5.20-py3-none-any.whl", hash = "sha256:3c52e209ba0a4ad7aebe60436a4ab349c39e1e602e8c134221e546902ad25897" },
+    { url = "https://devpi.dbccloud.dk/root/pypi/+f/42d/35340cc5b9ba7/certifi-2026.10.19-py3-none-any.whl", hash = "sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b" },
 ]
 
 [[package]]
@@ -2039,7 +2039,7 @@ requires-dist = [
     { name = "requests" },
     { name = "rich" },
     { name = "scikit-learn" },
-    { name = "sentence-transformers" },
+    { name = "sentence-transformers", specifier = ">=6.1.0" },
     { name = "streamlit" },
     { name = "torch" },
     { name = "transformers" },
