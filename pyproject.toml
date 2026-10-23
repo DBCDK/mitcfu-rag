@@ -16,7 +16,6 @@ dependencies = [
     "langchain-community",
     "langchain-unstructured",
     "langgraph",
-    "streamlit",
     "scikit-learn",
     "numpy",
     "nltk>=3.10.3",
@@ -41,6 +40,7 @@ dev = [
     "pytest",
     "ruff",
     "pip-audit",
+    "streamlit",
 ]
 dbc = [
     "dbc-data",
