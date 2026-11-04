@@ -81,17 +81,3 @@ class e5multilingualEmbedder(Embedder):
 
     def get_detailed_instruct(self, query: str) -> str:
         return f"{query}"
-
-
-def validate_abstract(document):
-    _, doc = next(iter(document.items()))
-    abstract = doc.get("abstract")
-    # before appending, check if the text is non-string type
-    if not isinstance(abstract, str):
-        logger.debug(f"Abstract is not a string: {abstract} in doc {doc} with id {doc['id']}")
-        return False
-
-    if len(abstract) < 150:  # noqa: SIM103
-        return False
-
-    return True

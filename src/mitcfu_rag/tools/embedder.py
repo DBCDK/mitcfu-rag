@@ -59,12 +59,26 @@ class OpenAIEmbedder(Embedder):
         :param api_key:
             Bearer token, if the endpoint requires one
         """
-        self.name = model
+        self.model = model
         # openai.OpenAI wants the `.../v1` base and appends `embeddings` itself, and refuses to start without a key
         self.client = OpenAI(base_url=base_url.rstrip("/").removesuffix("/embeddings"), api_key=api_key or "unused")
 
-    def encode(self, texts: list[str]) -> np.array:
-        """Encodes strings"""
-        # float, since not every OpenAI-compatible server supports the sdk's default base64 encoding
-        response = self.client.embeddings.create(model=self.name, input=texts, encoding_format="float")
-        return np.array([d.embedding for d in sorted(response.data, key=lambda d: d.index)], dtype=np.float32)
+    def encode(self, texts: list[str]) -> np.ndarray:
+        if not texts:
+            return np.empty((0, 0), dtype=np.float32)
+
+        response = self.client.embeddings.create(
+            model=self.model,
+            input=texts,
+            encoding_format="float",
+        )
+
+        if len(response.data) != len(texts):
+            raise ValueError(f"Expected {len(texts)} embeddings, received {len(response.data)}.")
+
+        embeddings = np.asarray([d.embedding for d in sorted(response.data, key=lambda d: d.index)], dtype=np.float32)
+
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        normalized_embeddings = embeddings / np.maximum(norms, 1e-12)
+
+        return normalized_embeddings
