@@ -23,6 +23,7 @@ import asyncio
 import json
 import logging
 import os
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -33,7 +34,6 @@ from mitcfu_rag.rag.rag import Reference, Retriever
 from mitcfu_rag.tools import KNNSearch
 from mitcfu_rag.tools.embedding_factory import create_embedder
 from mitcfu_rag.tools.message_history import clean_sources_from_messages
-
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ class EmbeddingRetriever(Retriever):
         return all_materialtypes
 
     def format_doc(self, doc_id, doc):
-        # Existing reference formatting intentionally preserved.
+        # Work info
         text = " ".join(doc.get("abstract"))
         subjects = [sub.get("display") for sub in doc.get("subjects", {}).get("all", {}).get("subjects", [])]
         material_types_general = [mat.get("general").get("display") for mat in doc.get("materialTypes", [])]
