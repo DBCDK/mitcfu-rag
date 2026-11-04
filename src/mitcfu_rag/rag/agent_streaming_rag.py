@@ -41,6 +41,7 @@ class AgenticRAG(RAG):
         embedding_model,
         faiss_index,
         jed_document_path,
+        available_models,
         validator_model=None,
     ):
         """
@@ -54,7 +55,7 @@ class AgenticRAG(RAG):
             cross_model_path=validator_model,
         )
         self.reranker = None
-        self.generator = AgentStreamingGenerator()
+        self.generator = AgentStreamingGenerator(available_models)
         if validator_model:
             self.validator = None
         self.summarizer = None
