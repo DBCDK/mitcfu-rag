@@ -87,8 +87,11 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="query related subject")
     parser.add_argument(
         "embedding_model_path",
+        nargs="?",
+        default=None,
         metavar="embedding-model-path",
-        help="path to embedding model",
+        help="Optional path to local embedding model."
+        "Ignored when EMBEDDING_BACKEND=api (e.g. when using GlyphGate for embeddings).",
     )
     parser.add_argument(
         "faiss_path",

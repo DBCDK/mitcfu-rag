@@ -35,8 +35,8 @@ def create_embedder(
 
     if selected == "api":
         return OpenAIEmbedder(
-            base_url=api_url if api_url is not None else os.getenv("EMBEDDING_API_URL", ""),
-            api_key=api_key if api_key is not None else os.getenv("EMBEDDING_API_KEY", ""),
+            base_url=api_url if api_url is not None else os.getenv("MITCFU_LLM_GATEWAY_URL", ""),
+            api_key=api_key if api_key is not None else os.getenv("MITCFU_LLM_GATEWAY_KEY", ""),
             model=name,
             expected_dimensions=expected_dimensions,
         )
@@ -45,7 +45,8 @@ def create_embedder(
         model_path = local_model_path if local_model_path is not None else os.getenv("LOCAL_EMBEDDING_MODEL_PATH", "")
         if not model_path:
             raise ValueError("LOCAL_EMBEDDING_MODEL_PATH is required when EMBEDDING_BACKEND=local")
-        # Deliberately lazy: importing the local embedder loads PyTorch/transformers.
+
+        # Deliberately lazy import: importing the local embedder loads PyTorch/transformers.
         from mitcfu_rag.rag.retrievers.indexes.multilinguale5 import e5multilingualEmbedder
 
         return e5multilingualEmbedder(model_path)

@@ -75,14 +75,10 @@ class EmbeddingRetriever(Retriever):
             if backend == "local"
             else None,
         )
-        logger.info("Query embeddings: backend=%s, model=%s", backend, self.embedder.name)
+        logger.info("Query embeddings: backend=%s, model=%s", backend, self.embedder.model)
 
-        # Reranking is independent of query/document embeddings; retain the
-        # existing CPU-based cross-encoder. AgenticRAG passes validator_model
-        # as cross_model_path, which can be None, so use a valid default.
-        reranker_path = cross_model_path or CROSS_MODEL_PATH
-        self.cross_model = AutoModelForSequenceClassification.from_pretrained(reranker_path)
-        self.cross_tokenizer = AutoTokenizer.from_pretrained(reranker_path)
+        self.cross_model = AutoModelForSequenceClassification.from_pretrained(cross_model_path, device_map=self.device)
+        self.cross_tokenizer = AutoTokenizer.from_pretrained(cross_model_path, device_map=self.device)
         self.cross_model.to(self.device)
         self.cross_model.eval()
 
