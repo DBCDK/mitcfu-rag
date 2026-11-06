@@ -59,7 +59,7 @@ selected_model = st.sidebar.selectbox("Model", available_models) if available_mo
 
 
 greeting = "Hej 👋 Jeg er MitCFU-RAG og jeg kan hjælpe dig med at finde information om materialer\
-              fra MitCFU. Men indtil videre er jeg vist stadig mest en kopi af FaktaChat. \
+              fra MitCFU. \
               \n\nHvad kan jeg hjælpe dig med?"
 
 # Initialize chat

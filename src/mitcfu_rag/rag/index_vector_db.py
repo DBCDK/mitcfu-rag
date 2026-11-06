@@ -13,15 +13,15 @@ storing them in a FAISS db
 import argparse
 import json
 import logging
-import numpy as np
-import sys
-
+import os
+from pathlib import Path
 from datetime import datetime
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+import numpy as np
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dbc_data import kafka
 from dbc_pyutils import Time
-from mitcfu_rag.rag.retrievers.indexes.multilinguale5 import e5multilingualEmbedder
+from mitcfu_rag.tools.embedding_factory import create_embedder, DEFAULT_MODEL
 from mitcfu_rag.tools.knn_searcher import KNNSearch
 
 logger = logging.getLogger(__name__)
@@ -29,19 +29,14 @@ logger = logging.getLogger(__name__)
 
 def main():
     args = parse_args()
-    __check_args(args)
+    check_args(args)
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
-
-    if args.index_input_path and len(args.index_input_path) > 1:
+    if args.index_input_path:
         document_dict = load_document_dict(args.index_input_path)
-        logger.info(f"Loaded {len(document_dict)} documents from {args.index_input_path}")
+        logger.info("Loaded %s documents from %s", len(document_dict), args.index_input_path)
     else:
         document_dict = {}
-        logger.info("Created empty document dict.")
 
     new_documents, documents_to_delete = read_kafka_topic(
         document_dict_keys=set(document_dict.keys()),
@@ -51,26 +46,33 @@ def main():
         limit=args.limit,
     )
 
-    # create embeddings and labels for the new documents
-    new_embeddings, new_labels = generate_embeddings_and_labels(
-        new_documents, args.embedding_model, batch_size=args.batch_size
-    )
+    # Instantiate the embedder only if there is anything to encode. Deletions-only
+    # runs don't require an embedding service or local model to be available.
+    if new_documents:
+        embedder = create_embedder(
+            backend=args.embedding_backend,
+            model=args.embedding_model,
+            local_model_path=args.local_model_path,
+        )
+        logger.info("Embedding via backend %s, model %s", args.embedding_backend, embedder.name)
+        new_embeddings, new_labels = generate_embeddings_and_labels(new_documents, embedder, batch_size=args.batch_size)
+    else:
+        new_embeddings = np.empty((0, 0), dtype=np.float32)
+        new_labels = np.empty((0,), dtype=str)
 
-    # create/update the faiss database
+    # Do not write updated documents.json if the embedding/FAISS write fails.
     create_faiss_database(
         args.database_input_path,
         new_embeddings,
         new_labels,
         documents_to_delete,
+        output_path=args.database_output_path,
     )
 
-    # save the updated document_dict
-    if args.index_output_path and len(args.index_output_path) > 0:
-        logger.info(f"Writing new index file to {args.index_output_path}")
-        save_document_dict(document_dict, new_documents, documents_to_delete, args.index_output_path)
-    else:
-        logger.info(f"Overwriting existing index file at {args.index_input_path}")
-        save_document_dict(document_dict, new_documents, documents_to_delete, args.index_input_path)
+    index_path = args.index_output_path or args.index_input_path
+    if index_path is not None:
+        save_document_dict(document_dict, new_documents, documents_to_delete, index_path)
+        logger.info("Saved document dictionary to %s", index_path)
 
 
 def parse_args():
@@ -79,60 +81,45 @@ def parse_args():
     )
     default_kafka_group = f"ai-dev-mitcfu-vector-db-{datetime.now().isoformat()}"
     parser = argparse.ArgumentParser(
-        description="Reads cfu-documents from kafka and indexes them in FAISS vector database"
+        description="Reads CFU documents from Kafka and indexes them in a FAISS vector database"
+    )
+    parser.add_argument(
+        "--embedding-backend",
+        choices=("api", "local"),
+        default=os.getenv("EMBEDDING_BACKEND", "api"),
+        help="Embedding implementation (default: EMBEDDING_BACKEND or api)",
     )
     parser.add_argument(
         "--embedding-model",
-        help="huggingface repo/name of the model to use. Documents are formatted to be optimized for intfloat/multilingual-e5-large-instruct",
-        default="intfloat/multilingual-e5-large-instruct",
+        default=os.getenv("EMBEDDING_MODEL", DEFAULT_MODEL),
+        help="Deployed embedding model ID for API mode",
+    )
+    parser.add_argument(
+        "--local-model-path",
+        default=None,
+        help="Path to local E5 model; defaults to LOCAL_EMBEDDING_MODEL_PATH",
     )
     parser.add_argument(
         "--database-input-path",
         type=str,
-        help="Path to existing faiss database",
+        help="Directory of an existing FAISS database (embeddings + labels.npy)",
     )
     parser.add_argument(
-        "--index-input-path",
+        "--database-output-path",
         type=str,
         default=None,
-        help="The path to the existing index file.",
+        help="Directory to save FAISS index; defaults to input directory or current directory",
     )
+    parser.add_argument("--index-input-path", type=str, default=None)
+    parser.add_argument("--index-output-path", type=str, default=None)
+    parser.add_argument("--kafka-topic", default="cisterne-work-jed-1-3")
+    parser.add_argument("--kafka-group-id", default=default_kafka_group)
+    parser.add_argument("--kafka-bootstrap-servers", default=KAFKA_BOOTSTRP_SERVERS)
+    parser.add_argument("-l", "--limit", type=int, default=None, help="Limit the number of harvested CFU documents")
     parser.add_argument(
-        "--index-output-path",
-        type=str,
-        default=None,
-        help="Path to save the index file. Must be supplied if not updating existing index file.",
+        "--batch-size", type=int, default=32, help="Maximum text chunks per embedding API call (default: 32)"
     )
-    parser.add_argument(
-        "--kafka-topic",
-        help="Which kafka-topic to consume",
-        default="cisterne-work-jed-1-3",
-    )
-    parser.add_argument(
-        "--kafka-group-id",
-        help="what to call this group of consumers.",
-        default=default_kafka_group,
-    )
-    parser.add_argument(
-        "--kafka-bootstrap-servers",
-        help="where to fetch kafka broker info",
-        default=KAFKA_BOOTSTRP_SERVERS,
-    )
-    parser.add_argument(
-        "-l",
-        "--limit",
-        type=int,
-        dest="limit",
-        help="if set, limits the number of harvested documents",
-        default=None,
-    )
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=False,
-        help="The batch size for the embedding process. If not specified, it will be set to the length of the data.",
-    )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Set logging level to DEBUG")
+    parser.add_argument("-v", "--verbose", action="store_true")
     return parser.parse_args()
 
 
@@ -164,7 +151,6 @@ def read_kafka_topic(
     kafka_bootstrap_servers: str,
     limit: int | None = None,
 ):
-
     # Setup Kafka consumer
     options = {
         "bootstrap.servers": kafka_bootstrap_servers,
@@ -228,106 +214,117 @@ def _get_mitcfu_id(jed_doc: dict) -> str:
     return local_id.split(":")[1]
 
 
-def generate_embeddings_and_labels(new_documents: dict, embedding_model_path: str, batch_size: int | None = None):
-    embedding_model = e5multilingualEmbedder(embedding_model_path)
-    logger.info(f"Loaded {embedding_model_path} on device: {embedding_model.device}")
-
+def generate_embeddings_and_labels(
+    new_documents: dict, embedder, batch_size: int = 32
+) -> tuple[np.ndarray, np.ndarray]:
+    """Split abstracts and embed in bounded batches; preserve chunk/label alignment."""
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=2048,
         chunk_overlap=20,
         length_function=len,
         is_separator_regex=False,
     )
+    vectors: list[np.ndarray] = []
+    labels: list[str] = []
+    batch_texts: list[str] = []
+    batch_labels: list[str] = []
 
-    if not batch_size or batch_size <= 0:
-        batch_size = len(new_documents)
-        logger.info(f"Batch size not specified, setting it to {batch_size}")
+    def flush_batch() -> None:
+        if not batch_texts:
+            return
+        embedded = np.asarray(embedder.embed_documents(batch_texts), dtype=np.float32)
+        if embedded.ndim != 2 or embedded.shape[0] != len(batch_labels):
+            raise ValueError(f"Embedder returned shape {embedded.shape} for {len(batch_labels)} chunks")
+        if not np.isfinite(embedded).all():
+            raise ValueError("Embedder returned invalid (NaN/Inf) embeddings")
+        vectors.append(embedded)
+        labels.extend(batch_labels)
+        batch_texts.clear()
+        batch_labels.clear()
 
-    embeddings = []
-    labels = []
-    abstracts_to_embed_batch = []
-    labels_for_batch = []
-    logger.info(f"Embedding {len(new_documents)} documents in batches of {batch_size}")
+    logger.info("Embedding abstracts from %s documents (max %s chunks/request)", len(new_documents), batch_size)
     for doc_id, doc in new_documents.items():
         if not validate_abstract(doc):
             continue
-
-        abstract_list = doc.get("abstract")
-        abstract = " ".join(abstract_list)
-        text = f"{abstract}"
-
-        chunks = text_splitter.split_text(text)
-        for i, chunk in enumerate(chunks):
-            abstracts_to_embed_batch.append(chunk)
-            labels_for_batch.append(f"{doc_id}_chunk{i}")
-
-        # Check if the batch size is reached, so we can start embedding the current batch. Otherwise, we continue filling the batch
-        if len(abstracts_to_embed_batch) >= batch_size:
-            embeddings_for_this_batch = embedding_model.embed_documents(abstracts_to_embed_batch)
-            embeddings.extend(embeddings_for_this_batch)
-            labels.extend(labels_for_batch)
-
-            # Reset the batch for both embeddings and labels
-            abstracts_to_embed_batch.clear()
-            labels_for_batch.clear()
-
-    # Check if there are any remaining embeddings in the (final) batch
-    if abstracts_to_embed_batch:
-        embeddings_for_this_batch = embedding_model.embed_documents(abstracts_to_embed_batch)
-        embeddings.extend(embeddings_for_this_batch)
-        labels.extend(labels_for_batch)
-
-    return np.array(embeddings), np.array(labels)
+        abstract = " ".join(doc["abstract"])
+        for i, chunk in enumerate(text_splitter.split_text(abstract)):
+            batch_texts.append(chunk)
+            batch_labels.append(f"{doc_id}_chunk{i}")
+            # Flush *inside* the chunk loop; a long document cannot exceed the cap.
+            if len(batch_texts) == batch_size:
+                flush_batch()
+    flush_batch()
+    if not vectors:
+        return np.empty((0, 0), dtype=np.float32), np.empty((0,), dtype=str)
+    return np.vstack(vectors).astype(np.float32), np.asarray(labels, dtype=str)
 
 
 def create_faiss_database(
-    faiss_database_path: str,
+    faiss_database_path: str | None,
     embeddings: np.ndarray,
     labels: np.ndarray,
-    documents_to_delete: list,
-):
-    # if updating existing database, load it here
-    if faiss_database_path and len(faiss_database_path) > 0:
-        faiss_database = load_faiss_database(faiss_database_path)
+    documents_to_delete: list[str],
+    *,
+    output_path: str | None = None,
+) -> None:
+    """Update or build the KNNSearch index; support deletion-only and empty runs."""
+    if embeddings.ndim != 2 or len(labels) != embeddings.shape[0]:
+        raise ValueError("Embedding matrix/label count mismatch")
+    if not faiss_database_path and embeddings.shape[0] == 0:
+        if documents_to_delete:
+            raise ValueError("Cannot apply deletions without an existing FAISS database")
+        logger.info("No embeddings to index; skipping empty FAISS build")
+        return
+    if not documents_to_delete and embeddings.shape[0] == 0:
+        logger.info("No new vectors or deletions; skipping FAISS update")
+        return
 
-        # update db with new embeddings and labels
-        faiss_database.update(embeddings, labels)
+    if faiss_database_path:
+        faiss_database = load_faiss_database(faiss_database_path)
+        if embeddings.shape[0]:
+            faiss_database.update(embeddings, labels)
     else:
         faiss_database = build_faiss_database(embeddings, labels)
 
-    # delete documents marked for deletion
-    faiss_database.delete_by_prefix(documents_to_delete)
+    if documents_to_delete:
+        faiss_database.delete_by_prefix(documents_to_delete)
 
-    faiss_database.save(index_path="embeddings", labels_path="labels")
+    destination = Path(output_path or faiss_database_path or ".")
+    destination.mkdir(parents=True, exist_ok=True)
+    faiss_database.save(
+        index_path=str(destination / "embeddings"),
+        labels_path=str(destination / "labels"),
+    )
+    logger.info("Saved FAISS index and labels to %s", destination)
 
 
 def load_faiss_database(faiss_database_path: str) -> KNNSearch:
-    faiss_database = KNNSearch.load(faiss_database_path + "/embeddings", faiss_database_path + "/labels.npy")
-    return faiss_database
+    path = Path(faiss_database_path)
+    return KNNSearch.load(str(path / "embeddings"), str(path / "labels.npy"))
 
 
-def build_faiss_database(embeddings, labels):
-    faiss_database = KNNSearch.build(embeddings, labels)
-    return faiss_database
+def build_faiss_database(embeddings: np.ndarray, labels: np.ndarray):
+    return KNNSearch.build(embeddings, labels)
 
 
 def validate_abstract(document: dict) -> bool:
     abstract_list = document.get("abstract")
-    abstract = " ".join(abstract_list)
-    # before appending, check if the text is non-string type
-    if not isinstance(abstract, str):
-        logger.debug(f"Abstract is not a string: {abstract} in doc {document} with id {document['workId']}")
+    if not isinstance(abstract_list, list) or not all(isinstance(item, str) for item in abstract_list):
+        logger.debug("Skipping document with invalid abstract: %s", document.get("workId"))
         return False
-
-    if len(abstract) < 150:
-        return False
-
-    return True
+    return len(" ".join(abstract_list)) >= 150
 
 
-def __check_args(args: argparse.Namespace):
-    if (args.index_input_path is None or len(args.index_input_path) < 1) and (
-        args.index_output_path is None or len(args.index_output_path) < 1
-    ):
-        logger.error("No index input or output file specified. Exiting.")
-        sys.exit(1)
+def check_args(args: argparse.Namespace):
+    if not (args.index_input_path or args.index_output_path):
+        raise ValueError("Specify --index-input-path and/or --index-output-path")
+    if args.batch_size <= 0:
+        raise ValueError("--batch-size must be positive")
+    if args.limit is not None and args.limit <= 0:
+        raise ValueError("--limit must be positive")
+
+
+if __name__ == "__main__":
+    main()

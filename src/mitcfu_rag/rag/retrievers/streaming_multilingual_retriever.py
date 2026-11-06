@@ -19,19 +19,21 @@ example of usage:
     print(f'relevant references: {refs}')
 """
 
+import asyncio
+import json
 import logging
-from mitcfu_rag.rag.rag import Retriever, Reference
-from mitcfu_rag.tools import KNNSearch
-from mitcfu_rag.tools.message_history import clean_sources_from_messages
+import os
+from pathlib import Path
 
-# from infinity_emb import AsyncEngineArray, EngineArgs, AsyncEmbeddingEngine
-
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
-from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
 import numpy as np
 import torch
 import torch.nn.functional as F
-import json
+from transformers import AutoModel, AutoModelForSequenceClassification, AutoTokenizer
+
+from mitcfu_rag.rag.rag import Reference, Retriever
+from mitcfu_rag.tools import KNNSearch
+from mitcfu_rag.tools.embedding_factory import create_embedder
+from mitcfu_rag.tools.message_history import clean_sources_from_messages
 
 logger = logging.getLogger(__name__)
 
@@ -43,56 +45,74 @@ CROSS_MODEL_PATH = "/data/mitCFU-models/ms-marco-MiniLM-L-6-v2"
 class EmbeddingRetriever(Retriever):
     def __init__(
         self,
-        model_path=MODEL_PATH,
-        embeddings_path=EMBEDDINGS_PATH,
-        cross_model_path=CROSS_MODEL_PATH,
-        jed_document_path=None,
+        model_path: str | None = None,
+        embeddings_path: str = EMBEDDINGS_PATH,
+        cross_model_path: str | None = None,
+        jed_document_path: str | None = None,
+        *,
+        embedding_backend: str | None = None,
+        embedder=None,
     ):
-        # We should not use GPU for such small models, since they will take up the whole k8s GPU regardless of their size
+        """Construct query embedder and local reranker.
+
+        ``model_path`` is a *local Hugging Face model path*, retained for
+        compatibility with AgenticRAG's ``embedding_model`` argument.
+        API mode ignores that path and reads EMBEDDING_MODEL from the same
+        environment configuration as the indexing script. In local mode,
+        model_path overrides LOCAL_EMBEDDING_MODEL_PATH if provided.
+
+        ``embedder`` optionally injects an implementation in tests.
+        """
         self.device = "cpu"
-        # embedding model for faiss index
-        self.model = AutoModel.from_pretrained(model_path, device_map=self.device)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, device_map=self.device)
-        self.model.to(self.device)
-        self.model.eval()
-        # cross-model for rerank
+        backend = (
+            (embedding_backend if embedding_backend is not None else os.getenv("EMBEDDING_BACKEND", "api"))
+            .strip()
+            .lower()
+        )
+        self.embedder = embedder or create_embedder(
+            backend=backend,
+            local_model_path=(model_path or os.getenv("LOCAL_EMBEDDING_MODEL_PATH") or MODEL_PATH)
+            if backend == "local"
+            else None,
+        )
+        logger.info("Query embeddings: backend=%s, model=%s", backend, self.embedder.model)
+
         self.cross_model = AutoModelForSequenceClassification.from_pretrained(cross_model_path, device_map=self.device)
         self.cross_tokenizer = AutoTokenizer.from_pretrained(cross_model_path, device_map=self.device)
         self.cross_model.to(self.device)
         self.cross_model.eval()
-        self.searcher = KNNSearch.load(embeddings_path + "/embeddings", embeddings_path + "/labels.npy")
+
+        index_dir = Path(embeddings_path)
+        self.searcher = KNNSearch.load(str(index_dir / "embeddings"), str(index_dir / "labels.npy"))
+        self.jed_document_path = jed_document_path
         if jed_document_path:
-            self.jed_document_path = jed_document_path
             self.all_articles = self.initiate_articles()
             self.all_materialtypes = self.identify_all_materialtypes()
         else:
             self.all_articles = {}
             self.all_materialtypes = set()
+
         self.validator = None
         self.task = "Given a web search query, retrieve relevant passages that answer the query"
 
     def initiate_articles(self):
-        with open(self.jed_document_path) as f:
-            all_documents = json.load(f)
+        with open(self.jed_document_path, encoding="utf-8") as file:
+            all_documents = json.load(file)
         all_articles = {}
-
         for document in all_documents:
             for doc_id, doc in document.items():
-                text = doc.get("abstract")
-                if text:
+                if doc.get("abstract"):
                     all_articles[str(doc_id)] = self.format_doc(doc_id, doc)
-
         return all_articles
 
     def identify_all_materialtypes(self):
-        # initiate materialtype filters
         all_materialtypes = set()
-        for articleid, article in self.all_articles.items():
-            all_materialtypes.update(set(article.materialtypes))
+        for article in self.all_articles.values():
+            all_materialtypes.update(article.materialtypes)
         return all_materialtypes
 
     def format_doc(self, doc_id, doc):
-        # work info
+        # Work info
         text = " ".join(doc.get("abstract"))
         subjects = [sub.get("display") for sub in doc.get("subjects", {}).get("all", {}).get("subjects", [])]
         material_types_general = [mat.get("general").get("display") for mat in doc.get("materialTypes", [])]
@@ -100,12 +120,10 @@ class EmbeddingRetriever(Retriever):
         languages = [lan.get("display") for lan in doc.get("mainLanguages", [])]
         creators_person = [lan.get("display") for lan in doc.get("creators", {}).get("persons", [])]
         series_titles = [serie.get("title") for serie in doc.get("series", [])]
-        # manifestation info
         manifestation = doc.get("manifestations", {}).get("all")[0]
         creators_publisher = manifestation.get("publisher", [])
         audience_subject = manifestation.get("audience", {}).get("generalAudience", [])
         article_link = "https://mitcfu.dk/MaterialeInfo/?faust=" + str(doc_id)
-        # some movie urls are not based on faust, but can be found in accessUrls.
         if access_urls := manifestation.get("access", {}).get("accessUrls", []):
             for url in access_urls:
                 if "https://link.mitcfu.dk/m/" in url.get("url", ""):
@@ -126,106 +144,128 @@ class EmbeddingRetriever(Retriever):
             series=series_titles,
         )
 
-    async def async_retrieve(self, messages: list[str], n: int = 5, follow_up=True):
+    async def async_retrieve(self, messages: dict, n: int = 5, follow_up=True):
         return await self.retrieve(messages, n, follow_up=follow_up)
 
-    async def async_rerank_retrieve(self, messages: list[str], n: int = 5, follow_up=True):
-        return await self.rerank_retrieve(messages, n, follow_up=follow_up)
+    async def async_rerank_retrieve(self, messages: dict, n: int = 5, follow_up=True):
+        return await self.rerank_retrieve(messages, limit=n, follow_up=follow_up)
 
-    async def retrieve(self, input: list[str], n: int = 3, follow_up: bool = False):
+    async def retrieve(self, input: dict, n: int = 3, follow_up: bool = False):
         messages = clean_sources_from_messages(input["input"])
+        if not messages:
+            return [], []
         if follow_up:
-            query = f"Instruct: {self.task}\nQuery: {', '.join([message['content'] for message in messages])}"
+            question = ", ".join(message["content"] for message in messages)
         else:
-            query = f"Instruct: {self.task}\nQuery: {messages[-1]['content']}"
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f"Retrieving resources for {query}")
+            question = messages[-1]["content"]
+        query = f"Instruct: {self.task}\nQuery: {question}"
+        logger.debug("Retrieving resources for %s", query)
         return await self.get_docs(query, n)
 
-    # https://huggingface.co/intfloat/multilingual-e5-large
     async def get_docs(self, query: str, limit: int = 3):
-        model_device = next(self.model.parameters()).device
-        batch_dict = self.tokenizer(query, max_length=512, padding=True, truncation=True, return_tensors="pt")
-        batch_dict = {k: v.to(model_device) for k, v in batch_dict.items()}
-        with torch.no_grad():
-            outputs = self.model(**batch_dict)
-        embeddings = average_pool(outputs.last_hidden_state, batch_dict["attention_mask"])
-        embedded_query = F.normalize(embeddings, p=2, dim=1).detach().cpu().numpy().astype(np.float32)
+        """Generate one (1, dimensions) vector without blocking the event loop.
+
+        Both API and local backends expose embed_documents() -> float32 NumPy
+        rows. This path preserves the existing E5 query instruction prefix.
+        """
+        if limit <= 0:
+            return [], []
+        embedded_query = await asyncio.to_thread(self.embedder.embed_documents, [query])
+        embedded_query = np.asarray(embedded_query, dtype=np.float32)
+        if embedded_query.ndim != 2 or embedded_query.shape[0] != 1:
+            raise ValueError(f"Expected one query embedding row, got {embedded_query.shape}")
+        if not np.isfinite(embedded_query).all():
+            raise ValueError("Query embedding contains NaN or infinity")
         return await self.search(embedded_query, limit)
 
     async def search(self, embedded_query, limit, filters=None):
+        """Map FAISS chunk IDs back to original document references.
+
+        Keep scores and returned references aligned even if filtering removes
+        documents; an index/JSON mismatch is logged and skipped.
+        """
+        if limit <= 0:
+            return [], []
         hits = await self.searcher.search(embedded_query, limit * 100)
-        ids, scores = zip(*hits)
-        retrieved_articles = [self.all_articles[id.rsplit("_chunk", maxsplit=1)[0]] for id in ids]
-        if filters:
-            filtered_articles = [article for article in retrieved_articles if filtered(article, filters)]
-            return scores, filtered_articles[:limit]
-        else:
-            return scores, retrieved_articles[:limit]
+        if not hits:
+            return [], []
+        scores, retrieved_articles = [], []
+        for chunk_id, score in hits:
+            doc_id = str(chunk_id).rsplit("_chunk", maxsplit=1)[0]
+            article = self.all_articles.get(doc_id)
+            if article is None:
+                logger.warning("FAISS returned unknown document id %s", doc_id)
+                continue
+            if filters and not filtered(article, filters):
+                continue
+            retrieved_articles.append(article)
+            scores.append(score)
+            if len(retrieved_articles) == limit:
+                break
+        return scores, retrieved_articles
 
     async def rerank_retrieve(self, input: dict, limit: int = 50, follow_up=True):
-        queries = input["reformulated_queries"]
+        queries = input.get("reformulated_queries") or []
+        if not queries or limit <= 0:
+            return [], []
         all_results = {}
         articleid2article = {}
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f"Retrieving resources for {queries}")
-        for query in queries:
-            query = f"Instruct: {self.task}\nQuery: {query}"
+        logger.debug("Retrieving resources for %s", queries)
+        for original_query in queries:
+            query = f"Instruct: {self.task}\nQuery: {original_query}"
             _, articles = await self.get_docs(query, limit=limit)
-            for art in articles:
-                articleid2article[art.id] = art
-            search_results = await self.cross_select_top_sentences(articles, query, limit=int(40 / len(queries)))
-            all_results[query] = search_results
+            for article in articles:
+                articleid2article[article.id] = article
+            scores = await self.cross_select_top_sentences(
+                articles, query, limit=max(1, min(limit, 40 // len(queries)))
+            )
+            all_results[query] = scores
 
         if len(queries) > 1:
-            reranked_result = await reciprocal_rank_fusion(all_results)
-            return [], [articleid2article[_id] for _id in reranked_result.keys()]
+            ranked_ids = list((await reciprocal_rank_fusion(all_results)).keys())
         else:
-            return [], list(all_results[queries[0]].keys())
+            # The original implementation incorrectly indexed with the *raw*
+            # query and returned ID strings instead of Reference objects.
+            ranked_ids = list(next(iter(all_results.values())).keys())
+        return [], [articleid2article[doc_id] for doc_id in ranked_ids[:limit]]
 
     async def cross_select_top_sentences(self, articles, query, limit=50):
-        sentences = [art.text for art in articles]
-        features = self.cross_tokenizer(
-            [query] * len(sentences),
-            sentences,
-            padding=True,
-            truncation=True,
-            return_tensors="pt",
-        ).to(self.device)
-        with torch.no_grad():
-            scores = self.cross_model(**features).logits.flatten().cpu()
+        if not articles or limit <= 0:
+            return {}
 
-        # Get indices of the top sentences sorted by cosine similarity
+        def score_on_cpu():
+            sentences = [art.text for art in articles]
+            features = self.cross_tokenizer(
+                [query] * len(sentences),
+                sentences,
+                padding=True,
+                truncation=True,
+                return_tensors="pt",
+            ).to(self.device)
+            with torch.no_grad():
+                return self.cross_model(**features).logits.flatten().cpu().numpy()
+
+        # The reranker is synchronous CPU work, so also offload it from the
+        # async streaming response path.
+        scores = await asyncio.to_thread(score_on_cpu)
         top_indices = np.argsort(-scores)[:limit]
-        # print("Num top indices: ", len(top_indices))
-
-        # Collect the top sentences and their respective cosine scores
-        top_article_ids_with_scores = {articles[i].id: scores[i] for i in top_indices}
-
-        return top_article_ids_with_scores
+        return {articles[i].id: float(scores[i]) for i in top_indices}
 
 
 async def reciprocal_rank_fusion(search_results_dict, k=100):
     fused_scores = {}
-
-    for query, doc_scores in search_results_dict.items():
-        for rank, (doc, score) in enumerate(sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)):
-            if doc not in fused_scores:
-                fused_scores[doc] = 0
-            fused_scores[doc] += 1 / (rank + k)
-
-    reranked_results = {doc: score for doc, score in sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)}
-    return reranked_results
+    for doc_scores in search_results_dict.values():
+        for rank, (doc, _score) in enumerate(sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)):
+            fused_scores[doc] = fused_scores.get(doc, 0) + 1 / (rank + k)
+    return dict(sorted(fused_scores.items(), key=lambda x: x[1], reverse=True))
 
 
 def filtered(article, filters):
-    passed_filters = 0
-    for filter_key, filter_values in filters:
-        if set([filter_values]).intersection(set([article.filter_key])):
-            passed_filters += 1
-    return passed_filters == len(filters.keys())
-
-
-def average_pool(last_hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
-    last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
-    return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
+    """Return True when each field intersects with its allowed values."""
+    for field, allowed in filters.items():
+        actual = getattr(article, field, None)
+        actual_values = actual if isinstance(actual, (list, tuple, set)) else [actual]
+        allowed_values = allowed if isinstance(allowed, (list, tuple, set)) else [allowed]
+        if not set(actual_values).intersection(allowed_values):
+            return False
+    return True

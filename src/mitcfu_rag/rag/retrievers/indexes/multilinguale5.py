@@ -6,8 +6,8 @@
 e5multilingualEmbedder
 ========
 
-e5multilingualEmbedder embeds JEDs with e5-mistral-7b-instruct model from Huggingface.
-multilingual-e5-large ranks high on ScanEval for Danish (total: 60.7) and can encode 512 tokens.
+e5multilingualEmbedder embeds JEDs with multilingual-e5-large-instruct model from Huggingface.
+multilingual-e5-large-instruct ranks high on ScanEval for Danish (total: 60.7) and can encode 1024 tokens.
 https://kennethenevoldsen.github.io/scandinavian-embedding-benchmark/
 Embeddings can be stored as FAISS db for fast retrieval.
 See:
@@ -31,7 +31,7 @@ __all__ = ["e5multilingualEmbedder"]
 class e5multilingualEmbedder(Embedder):
     def __init__(self, path_to_embedding_model: str):
         self.name = "multilingual-e5-large-instruct"
-        self.max_length = 512
+        self.max_length = 1024
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained(path_to_embedding_model, device_map=self.device)
         self.model = AutoModel.from_pretrained(path_to_embedding_model, device_map=self.device)
