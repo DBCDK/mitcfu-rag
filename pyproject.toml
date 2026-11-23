@@ -18,7 +18,7 @@ dependencies = [
     "langgraph",
     "scikit-learn",
     "numpy",
-    "nltk>=3.10.3",
+    "nltk>=3.10.4",
     "sentence_transformers>=6.1.0",
     "rich",
     "transformers",

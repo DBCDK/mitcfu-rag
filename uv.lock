@@ -1990,7 +1990,7 @@ requires-dist = [
     { name = "langchain-text-splitters" },
     { name = "langchain-unstructured" },
     { name = "langgraph" },
-    { name = "nltk", specifier = ">=3.10.3" },
+    { name = "nltk", specifier = ">=3.10.4" },
     { name = "numpy" },
     { name = "openai" },
     { name = "pydantic" },
@@ -2215,7 +2215,7 @@ wheels = [
 
 [[package]]
 name = "nltk"
-version = "3.10.3"
+version = "3.10.4"
 source = { registry = "https://devpi.dbccloud.dk/dbc/packages/+simple/" }
 dependencies = [
     { name = "click" },
@@ -2224,9 +2224,9 @@ dependencies = [
     { name = "regex" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://devpi.dbccloud.dk/root/pypi/+f/bb9/327a461c3811c/nltk-3.10.3.tar.gz", hash = "sha256:bb9327a461c3811c2fa4900e03840401f2126adfb30c0072827c433bd2444ea4" }
+sdist = { url = "https://devpi.dbccloud.dk/root/pypi/+f/446/79f4e9220abfd/nltk-3.10.4.tar.gz", hash = "sha256:44679f4e9220abfd496d2c8cdb22f8425ccbe557604f9aa5cacb1c44003dabc1" }
 wheels = [
-    { url = "https://devpi.dbccloud.dk/root/pypi/+f/ff9/598a8e20518ee/nltk-3.10.3-py3-none-any.whl", hash = "sha256:ff9598a8e20518ee0d557745890cc4435b9578489e2dcbc69c4f81fa060caf7c" },
+    { url = "https://devpi.dbccloud.dk/root/pypi/+f/769/ba5413f265b7d/nltk-3.10.4-py3-none-any.whl", hash = "sha256:769ba5413f265b7d3e87cd163cc28efa01e29eeef8bb6080bc907949d9fcfb51" },
 ]
 
 [[package]]
